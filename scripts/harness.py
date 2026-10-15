@@ -195,12 +195,74 @@ def files(root: Path) -> list[Path]:
     return [root / name for name in sorted(set(names)) if name and (root / name).is_file()]
 
 
+def merge_policy(root: Path, ref: str | None = None) -> dict:
+    policy = load_json(root, ".harness/merge-policy.json", ref)
+    checks = policy.get("required_checks")
+    repository_name = policy.get("repository")
+    if (policy.get("schema_version") != 1 or policy.get("mode") != "peer-agent"
+            or policy.get("merge_method") != "squash"
+            or policy.get("require_up_to_date") is not True
+            or policy.get("require_current_head_approval") is not True
+            or not isinstance(repository_name, str)
+            or not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository_name)
+            or not isinstance(checks, list) or not checks
+            or not all(isinstance(name, str) and name.strip() for name in checks)):
+        raise HarnessError("Политика peer-agent отсутствует или неполна")
+    return policy
+
+
+def review_plan(root: Path, branch: str, base: str, head: str,
+                author: str, reviewer: str) -> dict:
+    """Read-only preflight. Live checks and substantive review are still required."""
+    base_sha = git(root, "rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}").strip()
+    head_sha = git(root, "rev-parse", "--verify", "--end-of-options", f"{head}^{{commit}}").strip()
+    base_files = git(root, "ls-tree", "-r", "--name-only", base_sha, ".harness").splitlines()
+    bootstrap = ".harness/project.json" not in base_files
+    if bootstrap and branch != "codex/h00-harness":
+        raise HarnessError("В main ещё нет harness; сначала нужен review H0")
+    policy_ref = head_sha if bootstrap else base_sha
+    policy = merge_policy(root, policy_ref)
+    project = load_json(root, ".harness/project.json", policy_ref)
+    remote = git(root, "remote", "get-url", project["remote"]).strip().removesuffix(".git")
+    if remote not in (f"https://github.com/{policy['repository']}",
+                      f"git@github.com:{policy['repository']}"):
+        raise HarnessError("Origin не соответствует репозиторию merge-policy")
+    task = resolve_task(root, None, branch, policy_ref)
+    expected_author = project["roles"][task["role"]]["github"]
+    peer_role = "A" if task["role"] == "B" else "B"
+    expected_peer = project["roles"][peer_role]["github"]
+    if author.casefold() != expected_author.casefold():
+        raise HarnessError(f"Автор PR задачи {task['id']} должен быть {expected_author}")
+    if reviewer.casefold() != expected_peer.casefold() or reviewer.casefold() == author.casefold():
+        raise HarnessError(f"Проверку и merge выполняет аккаунт напарника: {expected_peer}")
+    git(root, "merge-base", "--is-ancestor", base_sha, head_sha)
+    paths = diff_paths(root, f"{base_sha}...{head_sha}")
+    bad = sorted(path for path in paths if not allowed(task, path))
+    if bad:
+        raise HarnessError("PR выходит за принятую карточку:\n" + "\n".join(bad))
+    if not paths:
+        raise HarnessError("В PR нет изменений")
+    return {"status": "ready_for_substantive_review", "repository": policy["repository"],
+            "task": task["id"], "branch": branch, "base_branch": project["base_branch"],
+            "head": head_sha, "base": base_sha, "author": expected_author,
+            "reviewer": expected_peer, "merge_method": policy["merge_method"],
+            "required_checks": policy["required_checks"], "files": len(paths),
+            "bootstrap": bootstrap,
+            "remaining": ["Полный review и проверки критериев задачи",
+                          "Успешный CI для этого head и отсутствие открытых замечаний",
+                          "Повторная сверка head/base, approval этого head и merge с sha"]}
+
+
 def check_structure(root: Path) -> None:
     project = load_json(root, ".harness/project.json")
     task_map = tasks(root)
     if not task_map:
         raise HarnessError("Нет карточек задач")
     errors = []
+    try:
+        merge_policy(root)
+    except HarnessError as exc:
+        errors.append(str(exc))
     branches = set()
     for task_id, task in task_map.items():
         required = {"id", "role", "title", "branch", "depends_on", "allow", "spec", "acceptance"}
@@ -345,7 +407,9 @@ def prompt(root: Path, task: dict) -> str:
              f"Запиши результаты в docs/agent-log/{task['role'].lower()}/{task['id']}.md.",
              "Проверки, пропущенные из-за среды, укажи явно. Выполни локальный commit",
              "только файлов задачи после успешных проверок. Для push/PR используй",
-             "прямое поручение участника; готовый PR сам не объединяй."]
+             "прямое поручение участника; свой PR оставь агенту напарника.",
+             "Готовые PR напарника проверь по постоянному поручению AGENTS.md:",
+             "используй $scc-review; после review и успешного CI разрешены approval и merge."]
     return "\n".join(lines)
 
 
@@ -422,6 +486,12 @@ def main() -> int:
         command.add_argument("--committed-only", action="store_true")
     command = sub.add_parser("reviewer")
     command.add_argument("--branch", required=True)
+    command = sub.add_parser("review-plan")
+    command.add_argument("--branch", required=True)
+    command.add_argument("--base", default="origin/main")
+    command.add_argument("--head", default="HEAD")
+    command.add_argument("--author", required=True)
+    command.add_argument("--reviewer", required=True)
     args = parser.parse_args()
     try:
         root = repository()
@@ -465,6 +535,9 @@ def main() -> int:
             project = load_json(root, ".harness/project.json")
             peer = "A" if task["role"] == "B" else "B"
             print(project["roles"][peer]["github"])
+        elif args.command == "review-plan":
+            print(json.dumps(review_plan(root, args.branch, args.base, args.head,
+                                         args.author, args.reviewer), ensure_ascii=False, indent=2))
         else:
             task = resolve_task(root, args.task, args.branch, args.policy_ref)
             check_scope(root, task, args.base, staged=args.staged, committed_only=args.committed_only)

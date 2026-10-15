@@ -1,6 +1,6 @@
 ---
 name: scc-review
-description: Review a Syncthing Control Center task or PR against its scope, contracts, product invariants, and verification evidence.
+description: Review an SCC task or PR; approve and merge a peer PR only under the standing authorization and checks in AGENTS.md.
 ---
 
 # Review SCC
@@ -20,5 +20,15 @@ description: Review a Syncthing Control Center task or PR against its scope, con
   проверки в рабочей папке PR без редактирования кода.
 - Сообщи только конкретные дефекты с местом, сценарием и последствием; отдельно
   перечисли существенные непроверенные части. Если дефектов не найдено, скажи это.
-- Передай результат в текущем чате. Комментарий в GitHub, сообщение другому агенту
-  или слияние выполняй только по прямому поручению человека.
+- Для локального review передай результат в текущем чате. Для PR напарника действует
+  постоянное поручение `AGENTS.md`: публикуй содержательный review и, если всё готово,
+  approval и squash merge. Порядок и критерии: `docs/harness.md#peer-agent-review`.
+  Сообщения в другие чаты этим не разрешены; исходники автора не меняй.
+- Проверь GitHub-аккаунт, автора PR и назначенного напарника. Зафиксируй head/base,
+  запусти `review-plan` с реальными логинами. Успех этой команды означает готовность
+  к содержательной проверке, а не разрешение автоматически принять любой diff.
+- Перед approval повторно прочитай PR и CI для этих SHA. Approval привязывай к
+  проверенному commit_id, merge — к тому же sha. При смене head/base, красном или
+  незавершённом CI, конфликтах, draft или открытых замечаниях merge не выполняй.
+- В итоге сообщи ссылку, проверенные SHA, результаты и факт слияния либо причину
+  остановки. Не понижай требования и не используй обход защиты ради завершения.

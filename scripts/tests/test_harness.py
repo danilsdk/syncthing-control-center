@@ -26,6 +26,9 @@ class HarnessTests(unittest.TestCase):
         h.git(self.root, "init", "-b", "main")
         h.git(self.root, "config", "user.name", "Harness Test")
         h.git(self.root, "config", "user.email", "harness@example.invalid")
+        h.git(self.root, "remote", "add", "origin", "https://github.com/danilsdk/syncthing-control-center.git")
+        h.git(self.root, "commit", "--allow-empty", "-m", "before harness")
+        self.empty_base = h.git(self.root, "rev-parse", "HEAD").strip()
         self.project = {"remote": "origin", "base_branch": "main", "roles": {
             "A": {"github": "playerboom", "focus": "интеграция"},
             "B": {"github": "danilsdk", "focus": "автоматизация"}},
@@ -37,6 +40,10 @@ class HarnessTests(unittest.TestCase):
                      "deny": [], "spec": "docs/spec.md", "acceptance": ["Работает"]}
         self.write_json(".harness/project.json", self.project)
         self.write_json(".harness/tasks/B1.json", self.task)
+        self.write_json(".harness/merge-policy.json", {
+            "schema_version": 1, "repository": "danilsdk/syncthing-control-center",
+            "mode": "peer-agent", "merge_method": "squash", "required_checks": ["validate"],
+            "require_up_to_date": True, "require_current_head_approval": True})
         self.write(".github/CODEOWNERS", h.codeowners_text(self.project))
         self.write(".gitignore", ".harness/local/\n")
         self.write("docs/spec.md", "# Spec\n")
@@ -212,6 +219,108 @@ class HarnessTests(unittest.TestCase):
         with patch.object(sys, "stdin", io.StringIO(data)):
             with self.assertRaisesRegex(h.HarnessError, "рабочую ветку"):
                 h.pre_push(self.root)
+
+    def commit_engine(self):
+        self.write("backend/app/scheduling/engine.py", "enabled = True\n")
+        h.git(self.root, "add", "backend/app/scheduling/engine.py")
+        h.git(self.root, "commit", "-m", "engine")
+
+    def plan(self, **options):
+        arguments = dict(branch=self.task["branch"], base="origin/main", head="HEAD",
+                         author="danilsdk", reviewer="playerboom")
+        arguments.update(options)
+        return h.review_plan(self.root, **arguments)
+
+    def test_review_plan_pins_reviewed_head_base_and_peer(self):
+        self.commit_engine()
+        plan = self.plan()
+        self.assertEqual(plan["head"], h.git(self.root, "rev-parse", "HEAD").strip())
+        self.assertEqual(plan["base"], h.git(self.root, "rev-parse", "origin/main").strip())
+        self.assertEqual(plan["reviewer"], "playerboom")
+        self.assertEqual(plan["status"], "ready_for_substantive_review")
+        self.assertFalse(plan["bootstrap"])
+
+    def test_review_plan_rejects_self_review_and_wrong_author(self):
+        self.commit_engine()
+        for options in ({"reviewer": "danilsdk"}, {"author": "playerboom"},
+                        {"reviewer": "someone-else"}):
+            with self.subTest(options=options), self.assertRaises(h.HarnessError):
+                self.plan(**options)
+
+    def test_review_plan_uses_accepted_scope_not_pr_widening(self):
+        self.write_json(".harness/tasks/B1.json", dict(self.task, allow=["**"]))
+        self.write("backend/app/models/shared.py", "SCHEMA = 2\n")
+        h.git(self.root, "add", ".harness/tasks/B1.json", "backend/app/models/shared.py")
+        h.git(self.root, "commit", "-m", "widen scope")
+        with self.assertRaisesRegex(h.HarnessError, "карточку"):
+            self.plan()
+
+    def test_review_plan_rejects_foreign_source_of_rename(self):
+        (self.root / "backend/app/scheduling").mkdir()
+        h.git(self.root, "mv", "backend/app/models/shared.py", "backend/app/scheduling/shared.py")
+        h.git(self.root, "commit", "-m", "rename")
+        with self.assertRaisesRegex(h.HarnessError, "карточку"):
+            self.plan()
+
+    def test_review_plan_rejects_outdated_base(self):
+        self.commit_engine()
+        h.git(self.root, "switch", "main")
+        self.write("backend/app/models/shared.py", "SCHEMA = 2\n")
+        h.git(self.root, "add", "backend/app/models/shared.py")
+        h.git(self.root, "commit", "-m", "advance main")
+        h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
+        h.git(self.root, "switch", self.task["branch"])
+        with self.assertRaises(h.HarnessError):
+            self.plan()
+
+    def test_review_plan_rejects_different_remote(self):
+        self.commit_engine()
+        h.git(self.root, "remote", "set-url", "origin", "https://github.com/other/project.git")
+        with self.assertRaisesRegex(h.HarnessError, "Origin"):
+            self.plan()
+
+    def test_review_plan_bootstrap_only_allows_h0(self):
+        self.commit_engine()
+        with self.assertRaisesRegex(h.HarnessError, "H0"):
+            self.plan(base=self.empty_base)
+        task = dict(self.task, id="H0", branch="codex/h00-harness", allow=["**"])
+        self.write_json(".harness/tasks/H0.json", task)
+        h.git(self.root, "add", ".harness/tasks/H0.json")
+        h.git(self.root, "commit", "-m", "initial harness")
+        self.assertTrue(self.plan(base=self.empty_base, branch=task["branch"])["bootstrap"])
+
+    def test_review_plan_does_not_fall_back_to_pr_policy(self):
+        original_policy = (self.root / ".harness/merge-policy.json").read_text()
+        h.git(self.root, "rm", ".harness/merge-policy.json")
+        h.git(self.root, "commit", "-m", "no accepted merge policy")
+        h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
+        self.commit_engine()
+        self.write(".harness/merge-policy.json", original_policy)
+        self.write_json(".harness/tasks/B1.json", dict(self.task, allow=["**"]))
+        h.git(self.root, "add", ".harness/merge-policy.json", ".harness/tasks/B1.json")
+        h.git(self.root, "commit", "-m", "unaccepted policy in PR")
+        with self.assertRaises(h.HarnessError):
+            self.plan()
+
+    def test_review_plan_selects_b_as_reviewer_of_a(self):
+        task = dict(self.task, id="A0", role="A", branch="codex/a00-foundation",
+                    allow=["backend/app/models/**"])
+        self.write_json(".harness/tasks/A0.json", task)
+        h.git(self.root, "add", ".harness/tasks/A0.json")
+        h.git(self.root, "commit", "-m", "accepted A0 task")
+        h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
+        self.write("backend/app/models/shared.py", "SCHEMA = 2\n")
+        h.git(self.root, "add", "backend/app/models/shared.py")
+        h.git(self.root, "commit", "-m", "A0 model")
+        plan = self.plan(branch=task["branch"], author="playerboom", reviewer="danilsdk")
+        self.assertEqual(plan["task"], "A0")
+        self.assertEqual(plan["reviewer"], "danilsdk")
+
+    def test_empty_merge_checks_cannot_enable_peer_mode(self):
+        policy = json.loads((self.root / ".harness/merge-policy.json").read_text())
+        self.write_json(".harness/merge-policy.json", dict(policy, required_checks=[]))
+        with self.assertRaises(h.HarnessError):
+            h.check_structure(self.root)
 
 
 if __name__ == "__main__":
