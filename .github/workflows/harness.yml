@@ -1,0 +1,43 @@
+name: Harness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate structure
+        run: python3 scripts/harness.py check
+      - name: Check task scope against base policy
+        if: github.event_name == 'pull_request'
+        env:
+          HARNESS_BRANCH: ${{ github.head_ref }}
+          HARNESS_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git cat-file -e "$HARNESS_BASE:.harness/project.json" 2>/dev/null; then
+            python3 scripts/harness.py scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --policy-ref "$HARNESS_BASE" --committed-only
+          elif [ "$HARNESS_BRANCH" = "codex/h00-harness" ]; then
+            python3 scripts/harness.py scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --committed-only
+          else
+            echo "Base branch has no harness policy; merge H0 first." >&2
+            exit 1
+          fi
+      - name: Test harness
+        run: python3 scripts/harness.py self-test
+      - name: Prepare existing components
+        run: python3 scripts/harness.py setup
+      - name: Validate existing components
+        run: python3 scripts/harness.py product-checks

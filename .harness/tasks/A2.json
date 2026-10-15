@@ -1,0 +1,34 @@
+{
+  "id": "A2",
+  "role": "A",
+  "title": "Реестр узлов и авторизация",
+  "branch": "codex/a02-registry",
+  "depends_on": [
+    "A0",
+    "A1"
+  ],
+  "allow": [
+    "backend/app/registry/**",
+    "backend/app/api/**",
+    "backend/app/main.py",
+    "backend/app/config.py",
+    "backend/app/models/**",
+    "backend/migrations/**",
+    "tests/unit/registry/**",
+    "tests/integration/registry/**",
+    "tests/integration/auth/**",
+    ".harness/tasks/A2.json",
+    "docs/agent-log/a/A2.md"
+  ],
+  "deny": [
+    "backend/app/api/rules.py",
+    "backend/app/api/executions.py",
+    "backend/app/api/analytics.py"
+  ],
+  "spec": "docs/agent-tasks.md#a2",
+  "acceptance": [
+    "Два узла и их папки доступны через API.",
+    "Защита администратора применяется ко всем управляющим роутерам.",
+    "Недоступность и неизвестное состояние различаются; T-01/T-12 проверены."
+  ]
+}

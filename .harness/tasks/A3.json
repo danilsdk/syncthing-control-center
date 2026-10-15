@@ -1,0 +1,26 @@
+{
+  "id": "A3",
+  "role": "A",
+  "title": "События и snapshots",
+  "branch": "codex/a03-collection",
+  "depends_on": [
+    "A0",
+    "A1"
+  ],
+  "allow": [
+    "backend/app/collection/**",
+    "backend/app/api/events.py",
+    "tests/unit/collection/**",
+    "tests/integration/collection/**",
+    "docs/design/a/collection.md",
+    ".harness/tasks/A3.json",
+    "docs/agent-log/a/A3.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#a3",
+  "acceptance": [
+    "Повтор события не создаёт дубль.",
+    "Пропуски и неудачные наблюдения отмечены явно.",
+    "После возвращения узла сохранено актуальное наблюдение; T-05/T-07/T-08 проверены."
+  ]
+}

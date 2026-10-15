@@ -1,0 +1,34 @@
+{
+  "name": "backend: lint и unit/contract",
+  "when_exists": [
+    "backend/pyproject.toml",
+    "backend/app/**/*.py"
+  ],
+  "cwd": ".",
+  "commands": [
+    [
+      "{python}",
+      "-m",
+      "ruff",
+      "check",
+      "backend"
+    ],
+    [
+      "{python}",
+      "-m",
+      "pytest",
+      "tests/unit",
+      "tests/contract"
+    ]
+  ],
+  "setup_commands": [
+    [
+      "{python}",
+      "-m",
+      "pip",
+      "install",
+      "-e",
+      "./backend[dev]"
+    ]
+  ]
+}
