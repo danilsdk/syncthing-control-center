@@ -5,7 +5,13 @@ from dataclasses import dataclass
 from threading import RLock
 from uuid import UUID
 
-from app.contracts.interfaces import AdapterError, Clock, NodeConnection, SystemClock
+from app.contracts.interfaces import (
+    AdapterError,
+    Clock,
+    NodeConnection,
+    SourceCheckpoint,
+    SystemClock,
+)
 from app.syncthing_adapter.client import HttpSyncthingAdapter
 from app.syncthing_adapter.transport import HttpTransport
 
@@ -14,6 +20,7 @@ from app.syncthing_adapter.transport import HttpTransport
 class ResolvedNode:
     connection: NodeConnection
     expected_device_id: str | None = None  # None is permitted only for initial discovery.
+    checkpoint: SourceCheckpoint | None = None
 
 
 class HttpAdapterFactory:
@@ -70,6 +77,7 @@ class HttpAdapterFactory:
                     expected_device_id=target.expected_device_id,
                     clock=self._clock,
                     transport=transport,
+                    checkpoint=target.checkpoint,
                 )
             except Exception:
                 transport.close()

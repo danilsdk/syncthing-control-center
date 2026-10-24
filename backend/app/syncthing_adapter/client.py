@@ -16,11 +16,15 @@ from app.contracts.interfaces import (
     FolderConfig,
     FolderRuntime,
     NodeConnection,
+    RawTimestamp,
+    SourceCheckpoint,
     SourceEvent,
+    StreamAnchor,
     SystemClock,
     SystemObservation,
+    source_session_id,
 )
-from app.contracts.types import SyncthingFolderId
+from app.contracts.types import NonEmpty, SyncthingFolderId
 from app.syncthing_adapter.transport import HttpTransport, Transport
 
 FOLDER_ID = TypeAdapter(SyncthingFolderId)
@@ -47,21 +51,25 @@ class HttpSyncthingAdapter:
         expected_device_id: str | None = None,
         clock: Clock | None = None,
         transport: Transport | None = None,
+        checkpoint: SourceCheckpoint | None = None,
     ):
         if expected_device_id is not None and (
             not isinstance(expected_device_id, str) or not expected_device_id.strip()
         ):
             raise ValueError("Invalid expected Syncthing identity")
+        if checkpoint is not None and (
+            not isinstance(checkpoint, SourceCheckpoint) or checkpoint.node_id != connection.node_id
+        ):
+            raise ValueError("Source checkpoint must belong to the requested node")
         self._connection = connection
         self._expected_id = expected_device_id
         self._clock = clock or SystemClock()
         self._transport = transport if transport is not None else HttpTransport(connection)
         self._lock = RLock()
         self._closed = False
-        self._session = None
+        self._checkpoint = checkpoint
         self._uptime = None
-        self._tail = None
-        self._unsafe_session = None
+        self._requires_rebase = checkpoint is None or checkpoint.anchor is None
 
     def close(self) -> None:
         self._closed = True
@@ -104,32 +112,62 @@ class HttpSyncthingAdapter:
             raise AdapterError("identity_mismatch")
         return value
 
-    def _system(self):
+    def _status(self):
         value = self._json("/rest/system/status")
         try:
-            observation = SystemObservation.from_source(
-                node_id=self._connection.node_id,
-                device_id=value["myID"],
-                start_time_raw=value["startTime"],
-                observed_at=self._clock.now_utc(),
-            )
+            device_id = TypeAdapter(NonEmpty).validate_python(value["myID"])
+            start_time = TypeAdapter(RawTimestamp).validate_python(value["startTime"])
             uptime = value.get("uptime")
             if uptime is not None and (type(uptime) is not int or uptime < 0):
                 raise ValueError
         except (KeyError, TypeError, ValueError, ValidationError):
             raise AdapterError("invalid_response") from None
-        if self._expected_id is not None and observation.device_id != self._expected_id:
+        if self._expected_id is not None and device_id != self._expected_id:
             raise AdapterError("identity_mismatch")
-        # Discovery pins an identity only after a fully valid system observation.
-        self._expected_id = observation.device_id
-        if observation.source_session_id != self._session:
-            self._session, self._uptime = observation.source_session_id, None
-            self._tail, self._unsafe_session = None, None
-        if uptime is not None and self._uptime is not None and uptime < self._uptime:
-            self._unsafe_session = self._session
-        self._uptime = uptime
-        if self._unsafe_session == self._session:
+        self._expected_id = device_id
+        return device_id, start_time, uptime
+
+    def _system(self):
+        before = self._status()
+        window = self._events(self._json("/rest/events?since=0&timeout=0"))
+        after = self._status()
+        if before[:2] != after[:2]:
             raise AdapterError("session_changed")
+        if not window:
+            raise AdapterError("session_changed")  # No evidence to establish a source epoch yet.
+        saved = self._checkpoint
+        same_start = saved is not None and saved.start_time_raw == after[1]
+        matching = None
+        if same_start and saved.anchor is not None:
+            matching = next((event for event in window if event.id == saved.anchor.id), None)
+        continued = matching is not None and StreamAnchor.from_event(matching) == saved.anchor
+        uptime_regressed = (
+            before[2] is not None and after[2] is not None and after[2] < before[2]
+        ) or (
+            same_start
+            and self._uptime is not None
+            and after[2] is not None
+            and after[2] < self._uptime
+        )
+        if continued and not uptime_regressed:
+            epoch = saved.source_session_id
+        else:
+            epoch = source_session_id(
+                self._connection.node_id,
+                after[1],
+                StreamAnchor.from_event(window[0]),
+                previous_session_id=saved.source_session_id if saved is not None else None,
+            )
+            self._requires_rebase = True
+        observation = SystemObservation(
+            device_id=after[0],
+            start_time_raw=after[1],
+            source_session_id=epoch,
+            observed_at=self._clock.now_utc(),
+            stream_anchor=StreamAnchor.from_event(window[-1]),
+        )
+        self._checkpoint = SourceCheckpoint.from_observation(self._connection.node_id, observation)
+        self._uptime = after[2]
         return observation
 
     @staticmethod
@@ -264,22 +302,6 @@ class HttpSyncthingAdapter:
             raise AdapterError("invalid_response")
         return result
 
-    def _latest(self, since):
-        events = self._events(self._json("/rest/events?since=0&limit=1&timeout=0"))
-        if len(events) > 1:
-            raise AdapterError("invalid_response")
-        tail = (events[0].id, events[0].time_raw) if events else None
-        if self._tail is not None and (
-            tail is None
-            or tail[0] < self._tail[0]
-            or (tail[0] == self._tail[0] and tail[1] != self._tail[1])
-        ):
-            self._unsafe_session = self._session
-            raise AdapterError("session_changed")
-        self._tail = tail
-        if since and (tail is None or tail[0] < since):
-            raise AdapterError("session_changed")
-
     def read_events(self, since: int, timeout_seconds: int = 15) -> EventBatch:
         if type(since) is not int or not 0 <= since <= 2**63 - 1:
             raise ValueError("Invalid source event cursor")
@@ -287,7 +309,8 @@ class HttpSyncthingAdapter:
             raise ValueError("Event timeout must be an integer from 0 through 15")
         with self._operation():
             before = self._system()
-            self._latest(since)
+            if (self._requires_rebase and since != 0) or since > before.stream_anchor.id:
+                raise AdapterError("session_changed")
             events = self._events(
                 self._json(
                     "/rest/events?" + urlencode({"since": since, "timeout": timeout_seconds}),
@@ -297,17 +320,18 @@ class HttpSyncthingAdapter:
             after = self._system()
             if after.source_session_id != before.source_session_id:
                 raise AdapterError("session_changed")
-            self._latest(since)
             if any(event.id <= since for event in events):
                 raise AdapterError("invalid_response")
-            if events and (self._tail is None or self._tail[0] < events[-1].id):
-                self._unsafe_session = self._session
+            if events and after.stream_anchor.id < events[-1].id:
                 raise AdapterError("session_changed")
             try:
-                return EventBatch(
+                result = EventBatch(
                     source_session_id=after.source_session_id,
                     events=events,
                     observed_at=self._clock.now_utc(),
+                    source_checkpoint=self._checkpoint,
                 )
             except ValidationError:
                 raise AdapterError("invalid_response") from None
+            self._requires_rebase = False
+            return result

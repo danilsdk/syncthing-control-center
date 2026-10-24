@@ -1,0 +1,95 @@
+{
+  "stage": "D-01-r2",
+  "started_at": "2026-10-24T22:08:06.889647Z",
+  "result": "passed",
+  "scheme": "scc:source-epoch:v2",
+  "adapter_regression": {
+    "result": "passed",
+    "pause": {
+      "config_paused": true,
+      "requires_restart": false,
+      "source_session_id": "e4f734b5abe1b73da439425677caccaa3582e47901ec17ae466c590ef43375ea",
+      "observed_at": "2026-10-24T22:08:10.828209Z",
+      "runtime": {
+        "available": false,
+        "error_code": "invalid_response"
+      },
+      "source_runtime": {
+        "state": "",
+        "needBytes": 0,
+        "pullErrors": 0,
+        "stateChanged": "0001-01-01T00:00:00Z",
+        "globalBytes": 0,
+        "localBytes": 0,
+        "sequence": 0
+      },
+      "changed_config_fields": [
+        "paused"
+      ],
+      "file_absent_during_observation": true,
+      "absence_checks": 13
+    },
+    "resume": {
+      "config_paused": false,
+      "requires_restart": false,
+      "source_session_id": "e4f734b5abe1b73da439425677caccaa3582e47901ec17ae466c590ef43375ea",
+      "observed_at": "2026-10-24T22:08:12.960756Z",
+      "runtime": {
+        "state": "syncing",
+        "need_bytes": 63,
+        "pull_errors": 0,
+        "observed_at": "2026-10-24T22:08:12.960756Z"
+      },
+      "changed_config_fields": []
+    },
+    "transfer_after_resume": {
+      "bytes": 63,
+      "sha256": "a4b250c0e0074b11bd00e2793891071245e4cf4dd033abde28373dc7f2c6a0c0",
+      "exact_content_matched": true
+    },
+    "non_target_folders_unchanged": true,
+    "explicit_restart_test": {
+      "old_session": "e4f734b5abe1b73da439425677caccaa3582e47901ec17ae466c590ef43375ea",
+      "new_session": "42de3ca9c3ddd1e4714b98a74e84e7d9afce1b91be0f5f1815adab0d5e1a20e0",
+      "identity_preserved": true,
+      "first_source_event_id": 1
+    }
+  },
+  "backend_process_recreation": {
+    "epoch_preserved": true,
+    "native_processes_unchanged": true,
+    "checkpoint": {
+      "node_id": "00000000-0000-0000-0000-000000000001",
+      "start_time_raw": "2026-10-25T01:08:27+03:00",
+      "source_session_id": "589b2fffefd4687b4784bcaf0431a46777926002310ff13c920814bae171849c",
+      "anchor": {
+        "id": 15,
+        "time_raw": "2026-10-25T01:08:28.0143788+03:00",
+        "fingerprint": "5e160f225a369e88b72f425738d8f46761ee7829282dbc62ead8463ce7d38e35"
+      }
+    }
+  },
+  "coarse_time_collision": {
+    "mode": "test transport freezes startTime and uptime; real source events and restart",
+    "native_same_second_restart_claimed": false,
+    "actual_native_start_times": [
+      "2026-10-25T01:08:27+03:00",
+      "2026-10-25T01:08:39+03:00"
+    ],
+    "status_start_time_before_after": "2026-10-25T01:08:27+03:00",
+    "old_anchor_id": 15,
+    "new_tail_before_read": 18,
+    "old_cursor_rejected": true,
+    "old_epoch": "589b2fffefd4687b4784bcaf0431a46777926002310ff13c920814bae171849c",
+    "new_epoch": "50bfc4d9b3c79584336f0493db246d27c6af28d1fd72975ddec0195dca76d3d1",
+    "first_rebased_event_id": 1
+  },
+  "cleanup": {
+    "stopped": [
+      "node-a",
+      "node-b"
+    ],
+    "running": []
+  },
+  "completed_at": "2026-10-24T22:08:49.017166Z"
+}

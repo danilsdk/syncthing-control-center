@@ -7,7 +7,13 @@ from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
 import pytest
-from app.contracts.interfaces import AdapterError, AdapterFactory, NodeConnection, SyncthingAdapter
+from app.contracts.interfaces import (
+    AdapterError,
+    AdapterFactory,
+    NodeConnection,
+    SourceCheckpoint,
+    SyncthingAdapter,
+)
 from app.syncthing_adapter import HttpAdapterFactory, HttpSyncthingAdapter, ResolvedNode
 from app.syncthing_adapter.transport import Response
 
@@ -241,7 +247,7 @@ def test_invalid_command_never_reaches_the_network(adapter, source, folder_id, p
 
 def test_patch_is_single_field_single_attempt_without_confirmation_or_restart(adapter, source):
     assert adapter.set_paused("scc-a1-shared", True) is None
-    assert [call[0] for call in source.calls] == ["GET", "PATCH"]
+    assert [call[0] for call in source.calls] == ["GET", "GET", "GET", "PATCH"]
     patch = source.calls[-1]
     assert patch[1] == "/rest/config/folders/scc-a1-shared"
     assert json.loads(patch[2]) == {"paused": True}
@@ -282,6 +288,7 @@ def test_events_preserve_stream_ids_source_time_and_allow_gaps(adapter, source):
 
 
 def test_empty_event_batch_is_valid(adapter):
+    adapter.read_events(0, timeout_seconds=0)
     batch = adapter.read_events(3, timeout_seconds=0)
     assert batch.events == ()
 
@@ -335,25 +342,22 @@ def test_identity_change_during_long_poll_discards_batch(adapter, source):
         adapter.read_events(0, 0)
 
 
-def test_same_session_uptime_regression_is_quarantined_until_new_start_time(adapter, source):
-    adapter.read_system()
+def test_uptime_regression_changes_the_epoch_instead_of_assuming_continuity(adapter, source):
+    previous = adapter.read_system().source_session_id
     source.status["uptime"] = 0
-    with pytest.raises(AdapterError, match="session_changed"):
-        adapter.read_system()
+    current = adapter.read_system().source_session_id
+    assert current != previous
     source.status["uptime"] = 100
-    with pytest.raises(AdapterError, match="session_changed"):
-        adapter.read_system()
-    source.status["startTime"] = "2026-10-25T00:00:01+03:00"
-    assert adapter.read_system().device_id == DEVICE
+    assert adapter.read_system().source_session_id == current
 
 
-def test_stream_position_regression_with_unchanged_start_time_is_quarantined(adapter, source):
-    adapter.read_events(0, 0)
+def test_stream_position_regression_requires_rebase_and_creates_a_distinct_epoch(adapter, source):
+    previous = adapter.read_events(0, 0).source_session_id
     source.events = [event(1)]
     with pytest.raises(AdapterError, match="session_changed"):
         adapter.read_events(3, 0)
-    with pytest.raises(AdapterError, match="session_changed"):
-        adapter.read_events(0, 0)
+    current = adapter.read_events(0, 0)
+    assert current.source_session_id != previous and current.events[0].id == 1
 
 
 def test_old_cursor_after_normal_restart_does_not_poison_the_new_session(adapter, source):
@@ -418,3 +422,110 @@ def test_resolver_failure_closes_stale_client_and_never_exposes_secret_error_tex
     assert "private-url" not in repr(caught.value)
     assert source.closed
     factory.close()
+
+
+def test_same_second_restart_with_counter_already_beyond_cursor_cannot_mix_epochs(adapter, source):
+    source.status["startTime"] = "2026-10-25T00:00:00+03:00"
+    old = adapter.read_events(0, 0)
+    source.events = [
+        event(index, time="2026-10-25T00:00:00.987654321+03:00") for index in range(1, 7)
+    ]
+    # Same startTime, same/increasing uptime, and a new tail higher than the saved cursor.
+    with pytest.raises(AdapterError, match="session_changed"):
+        adapter.read_events(3, 0)
+    current = adapter.read_events(0, 0)
+    assert current.source_session_id != old.source_session_id
+    assert [item.id for item in current.events] == list(range(1, 7))
+    assert current.source_checkpoint.start_time_raw == old.source_checkpoint.start_time_raw
+    assert adapter.read_events(6, 0).events == ()
+
+
+def test_checkpoint_detects_changed_event_even_when_id_and_timestamp_are_reused(adapter, source):
+    old = adapter.read_events(0, 0)
+    source.events[-1]["data"]["to"] = "syncing"
+    # The fingerprint includes safe event contents as well as source id/time.
+    with pytest.raises(AdapterError, match="session_changed"):
+        adapter.read_events(3, 0)
+    assert adapter.read_events(0, 0).source_session_id != old.source_session_id
+
+
+def test_recreated_backend_resumes_persisted_checkpoint_when_original_first_event_is_gone(
+    adapter, source
+):
+    old = adapter.read_events(0, 0)
+    persisted = SourceCheckpoint.model_validate_json(old.source_checkpoint.model_dump_json())
+    source.events = [source.events[-1], event(4)]
+    recreated = HttpSyncthingAdapter(
+        connection(),
+        expected_device_id=DEVICE,
+        checkpoint=persisted,
+        clock=Clock(),
+        transport=source,
+    )
+    batch = recreated.read_events(3, 0)
+    assert batch.source_session_id == old.source_session_id
+    assert [item.id for item in batch.events] == [4]
+    assert batch.source_checkpoint.anchor.id == 4
+
+
+def test_lost_checkpoint_starts_new_epoch_without_claiming_a_proven_restart(adapter, source):
+    old = adapter.read_events(0, 0)
+    source.events = [
+        event(4),
+        event(5),
+    ]  # Normal buffer loss is also insufficient continuity proof.
+    recreated = HttpSyncthingAdapter(
+        connection(), expected_device_id=DEVICE, checkpoint=old.source_checkpoint, transport=source
+    )
+    observed = recreated.read_system()
+    assert observed.start_time_raw == old.source_checkpoint.start_time_raw
+    assert observed.source_session_id != old.source_session_id
+    with pytest.raises(AdapterError, match="session_changed"):
+        recreated.read_events(3, 0)
+    assert [item.id for item in recreated.read_events(0, 0).events] == [4, 5]
+
+
+def test_legacy_coarse_session_without_anchor_is_not_trusted(source):
+    legacy = SourceCheckpoint(
+        node_id=NODE, start_time_raw=source.status["startTime"], source_session_id="a" * 64
+    )
+    client = HttpSyncthingAdapter(connection(), checkpoint=legacy, transport=source)
+    with pytest.raises(AdapterError, match="session_changed"):
+        client.read_events(3, 0)
+    assert client.read_events(0, 0).source_session_id != legacy.source_session_id
+
+
+def test_checkpoint_for_another_internal_node_is_rejected_before_network(source):
+    checkpoint = SourceCheckpoint(
+        node_id=UUID(int=2), start_time_raw=source.status["startTime"], source_session_id="a" * 64
+    )
+    with pytest.raises(ValueError, match="requested node"):
+        HttpSyncthingAdapter(connection(), checkpoint=checkpoint, transport=source)
+    assert source.calls == []
+
+
+def test_empty_source_window_cannot_establish_a_session_and_is_retryable(adapter, source):
+    source.events = []
+    with pytest.raises(AdapterError, match="session_changed") as caught:
+        adapter.read_system()
+    assert caught.value.retryable
+    source.events = [event(1)]
+    assert adapter.read_system().stream_anchor.id == 1
+
+
+def test_same_second_restart_during_long_poll_discards_whole_batch(adapter, source, monkeypatch):
+    original_batch = adapter.read_events(0, 0)
+    request = source.request
+
+    def restart_on_poll(method, path, **kwargs):
+        if path == "/rest/events?since=3&timeout=1":
+            source.events = [
+                event(index, time="2026-10-25T00:00:00.987654321+03:00") for index in range(1, 7)
+            ]
+        return request(method, path, **kwargs)
+
+    monkeypatch.setattr(source, "request", restart_on_poll)
+    with pytest.raises(AdapterError, match="session_changed"):
+        adapter.read_events(3, 1)
+    batch = adapter.read_events(0, 0)
+    assert batch.source_session_id != original_batch.source_session_id and batch.events[0].id == 1

@@ -29,6 +29,17 @@ def assert_wire(name, value):
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(value)
 
 
+@pytest.mark.parametrize("event_type", ["SourceRestarted", "SourceContinuityLost"])
+def test_source_boundary_markers_keep_restart_and_unknown_continuity_distinct(event_type):
+    value = fixture_value("sequence_gap")
+    value.update(
+        kind="restart", event_type=event_type, payload_summary={"previous_session_id": "a" * 64}
+    )
+    event = TYPES["Event"].model_validate(value)
+    assert event.event_type == event_type and event.source_event_id is None
+    assert_wire("Event", event.model_dump(mode="json"))
+
+
 @pytest.mark.parametrize("case", EXAMPLES["positive"], ids=lambda case: case["name"])
 def test_examples_validate_and_serialize_to_the_published_contract(case):
     adapter = TypeAdapter(TYPES[case["schema"]])

@@ -234,11 +234,13 @@ SyncthingAdapter.read_events(since: int, timeout_seconds: int = 15) -> EventBatc
 | Тип | Поля |
 |---|---|
 | NodeConnection | node_id, base_url и API-ключ, полученный серверным resolver; секреты исключены из repr/log |
-| SystemObservation | device_id, start_time_raw, source_session_id, observed_at |
+| StreamAnchor | id фиксированного потока, точный time_raw, fingerprint безопасного SourceEvent |
+| SourceCheckpoint | node_id, start_time_raw, source_session_id, anchor; null anchor допустим только для legacy-входа |
+| SystemObservation | device_id, start_time_raw, source_session_id, observed_at, stream_anchor |
 | FolderConfig | syncthing_folder_id, label, paused, observed_at |
 | FolderRuntime | state, need_bytes, pull_errors, observed_at |
 | SourceEvent | id, global_id для диагностики, type, time_raw, безопасные выбранные данные |
-| EventBatch | source_session_id, events, observed_at; сессия проверена до и после чтения |
+| EventBatch | source_session_id, events, observed_at, source_checkpoint; совпадающая эпоха и непустой ориентир обязательны |
 | AdapterError | code, retryable, write_outcome; безопасное фиксированное сообщение, без URL/ключа/сырого ответа |
 
 AdapterError.code: `timeout`, `unreachable`, `auth_error`, `not_found`,
@@ -261,7 +263,14 @@ EventBatch с изменившейся сессией отклоняется, к
 
 A0.4: SourceEvent дополнительно имеет syncthing_folder_id и EventPayload;
 общий payload не принимает произвольный data. Factory.close закрывает клиентов.
-`SystemObservation.from_source` вычисляет сессию без нормализации startTime.
+Редакция 2 [D-01](design/a/d01-stream-continuity.md) заменяет hash одного startTime
+эпохой подтверждённой непрерывности. `SystemObservation.from_source` требует
+StreamAnchor; новая эпоха учитывает предыдущую. Raw startTime и время события
+не нормализуются. Resolver восстанавливает SourceCheckpoint из узла; A1 проверяет
+его по текущему окну событий. Потеря доказательства создаёт новую эпоху и требует
+since=0, даже если startTime совпал. Новый backend сохраняет эпоху при доказанном
+продолжении. A3 атомарно сохраняет события, checkpoint и курсор под блокировкой
+узла; это требование к будущему коллектору, а не готовая реализация A3.
 
 Точка запуска worker: `python -m app.main worker` из backend-окружения, добавлена в A0.4.
 В A0.4 это точка подключения, не реализованный scheduler B. Рабочий цикл B2
@@ -283,9 +292,12 @@ Singleton worker использует отдельное PostgreSQL-простр
 
 ## 8. Коллектор, наблюдения и аналитика
 
-D-01 определяет атомарную запись source-событий и курсора. Локальные маркеры
-`HistoryGap`/`SourceRestarted` имеют `kind=gap/restart`, пустой `source_event_id`,
-UUID приложения и сессию. Они не сдвигают source-курсор сами по себе.
+D-01 определяет атомарную запись source-событий, checkpoint и курсора.
+Локальные `HistoryGap` имеют kind=gap; `SourceRestarted` и `SourceContinuityLost`
+имеют kind=restart. Последние различают сменившийся startTime и утраченное
+доказательство при том же startTime. Маркеры имеют пустой `source_event_id`,
+UUID приложения и эпоху; сами по себе source-курсор не продвигают.
+Между недоказанными эпохами не создаётся выдуманный ограниченный HistoryGap.
 `payload_summary` ограничен from_id/to_id, state, previous_session_id;
 имена файлов, физические пути и произвольный payload отбрасываются.
 Потерянные ID фиксируются включительным диапазоном `[from_id,to_id]`.

@@ -1,6 +1,7 @@
 """Synchronous boundaries for A1/A2/A3 and B1/B2; no HTTP implementation here."""
 
 import hashlib
+import json
 import re
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -48,11 +49,32 @@ def _raw_timestamp(value: str) -> str:
 RawTimestamp = Annotated[NonEmpty, AfterValidator(_raw_timestamp)]
 
 
-def source_session_id(node_id: UUID, start_time_raw: str) -> str:
+def source_session_id(
+    node_id: UUID,
+    start_time_raw: str,
+    anchor: "StreamAnchor",
+    *,
+    previous_session_id: str | None = None,
+) -> str:
     if not isinstance(node_id, UUID):
         raise TypeError("Expected an internal node UUID")
     raw = _raw_timestamp(start_time_raw)
-    return hashlib.sha256(f"{node_id}\n{raw}".encode()).hexdigest()
+    if not isinstance(anchor, StreamAnchor):
+        raise TypeError("A verified source stream anchor is required")
+    if previous_session_id is not None and not re.fullmatch(r"[0-9a-f]{64}", previous_session_id):
+        raise ValueError("Invalid previous source epoch")
+    seed = json.dumps(
+        [
+            "scc:source-epoch:v2",
+            str(node_id),
+            raw,
+            previous_session_id,
+            anchor.model_dump(mode="json"),
+        ],
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(seed.encode()).hexdigest()
 
 
 class NodeConnection(DTO):
@@ -92,21 +114,63 @@ class NodeConnection(DTO):
         return value
 
 
+class StreamAnchor(DTO):
+    id: Annotated[Positive, Field(le=2**63 - 1)]
+    time_raw: RawTimestamp
+    fingerprint: SessionId
+
+    @classmethod
+    def from_event(cls, event: "SourceEvent") -> Self:
+        encoded = json.dumps(event.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+        return cls(
+            id=event.id,
+            time_raw=event.time_raw,
+            fingerprint=hashlib.sha256(encoded.encode()).hexdigest(),
+        )
+
+
+class SourceCheckpoint(DTO):
+    node_id: UUID
+    start_time_raw: RawTimestamp
+    source_session_id: SessionId
+    anchor: StreamAnchor | None = None  # Legacy A0 rows contain no continuity proof.
+
+    @classmethod
+    def from_observation(cls, node_id: UUID, observation: "SystemObservation") -> Self:
+        return cls(
+            node_id=node_id,
+            start_time_raw=observation.start_time_raw,
+            source_session_id=observation.source_session_id,
+            anchor=observation.stream_anchor,
+        )
+
+
 class SystemObservation(DTO):
     device_id: NonEmpty
     start_time_raw: RawTimestamp
     source_session_id: SessionId
     observed_at: UtcDateTime
+    stream_anchor: StreamAnchor
 
     @classmethod
     def from_source(
-        cls, *, node_id: UUID, device_id: str, start_time_raw: str, observed_at: datetime
+        cls,
+        *,
+        node_id: UUID,
+        device_id: str,
+        start_time_raw: str,
+        observed_at: datetime,
+        stream_anchor: StreamAnchor,
+        previous_session_id: str | None = None,
     ) -> Self:
         return cls(
             device_id=device_id,
             start_time_raw=start_time_raw,
-            source_session_id=source_session_id(node_id, start_time_raw),
+            source_session_id=source_session_id(
+                node_id, start_time_raw, stream_anchor, previous_session_id=previous_session_id
+            ),
             observed_at=observed_at,
+            stream_anchor=stream_anchor,
         )
 
 
@@ -137,9 +201,15 @@ class EventBatch(DTO):
     source_session_id: SessionId
     events: tuple[SourceEvent, ...]
     observed_at: UtcDateTime
+    source_checkpoint: SourceCheckpoint
 
     @model_validator(mode="after")
     def check_order(self) -> Self:
+        if (
+            self.source_checkpoint.source_session_id != self.source_session_id
+            or self.source_checkpoint.anchor is None
+        ):
+            raise ValueError("Event batch requires matching source continuity evidence")
         ids = tuple(event.id for event in self.events)
         if any(left >= right for left, right in zip(ids, ids[1:], strict=False)):
             raise ValueError("Source positions must be strictly increasing")

@@ -11,7 +11,9 @@ from app.contracts.interfaces import (
     EventBatch,
     FolderConfig,
     FolderRuntime,
+    SourceCheckpoint,
     SourceEvent,
+    StreamAnchor,
     SystemObservation,
 )
 
@@ -31,11 +33,23 @@ def test_captured_success_responses_fit_shared_observations(name):
         else "22222222-2222-4222-8222-222222222222"
     )
     status = read(f"{name}-system-status.json")
+    first_event = read(f"{name}-events.json")[0]
+    anchor = StreamAnchor.from_event(
+        SourceEvent(
+            id=first_event["id"],
+            global_id=first_event.get("globalID"),
+            type=first_event["type"],
+            time_raw=first_event["time"],
+            syncthing_folder_id=None,
+            payload_summary=EventPayload(),
+        )
+    )
     system = SystemObservation.from_source(
         node_id=node_id,
         device_id=status["myID"],
         start_time_raw=status["startTime"],
         observed_at=NOW,
+        stream_anchor=anchor,
     )
     assert system.start_time_raw == status["startTime"]
     assert read(f"{name}-system-version.json")["version"] == "v2.1.7"
@@ -73,7 +87,12 @@ def test_captured_success_responses_fit_shared_observations(name):
                 payload_summary=payload,
             )
         )
-    batch = EventBatch(source_session_id=system.source_session_id, events=events, observed_at=NOW)
+    batch = EventBatch(
+        source_session_id=system.source_session_id,
+        events=events,
+        observed_at=NOW,
+        source_checkpoint=SourceCheckpoint.from_observation(node_id, system),
+    )
     assert batch.events
     assert read(f"{name}-restart-required.json") == {"requiresRestart": False}
 

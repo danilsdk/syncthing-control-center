@@ -49,7 +49,23 @@ def server(action):
             thread.join(timeout=3)
 
 
-def respond(handler, status=200, body=SYSTEM, content_type="application/json", **headers):
+def respond(handler, status=200, body=None, content_type="application/json", **headers):
+    if body is None:
+        body = (
+            json.dumps(
+                [
+                    {
+                        "id": 1,
+                        "globalID": 1,
+                        "type": "Starting",
+                        "time": "2026-10-25T00:00:00.123456789Z",
+                        "data": {},
+                    }
+                ]
+            ).encode()
+            if handler.path.startswith("/rest/events")
+            else SYSTEM
+        )
     handler.send_response(status)
     handler.send_header("Content-Length", str(len(body)))
     handler.send_header("Content-Type", content_type)
@@ -205,7 +221,7 @@ def test_disconnected_patch_has_unknown_outcome_and_is_never_retried():
         with pytest.raises(AdapterError) as caught:
             client.set_paused("demo", True)
         assert caught.value.code == "unreachable" and caught.value.write_outcome == "unknown"
-        assert [call[0] for call in calls] == ["GET", "PATCH"]
+        assert [call[0] for call in calls] == ["GET", "GET", "GET", "PATCH"]
         assert json.loads(calls[-1][3]) == {"paused": True}
         client.close()
 
@@ -226,7 +242,7 @@ def test_identity_mismatch_after_patch_has_unknown_outcome():
             client.set_paused("demo", True)
         assert caught.value.code == "identity_mismatch"
         assert caught.value.write_outcome == "unknown"
-        assert [call[0] for call in calls] == ["GET", "PATCH"]
+        assert [call[0] for call in calls] == ["GET", "GET", "GET", "PATCH"]
         client.close()
 
 
