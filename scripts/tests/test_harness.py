@@ -4,8 +4,13 @@ from contextlib import redirect_stdout
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import shlex
+import shutil
+import subprocess
 import tempfile
+import textwrap
 from types import SimpleNamespace
 import unittest
 import sys
@@ -58,10 +63,63 @@ class HarnessTests(unittest.TestCase):
     def write(self, name, content):
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8")
 
     def write_json(self, name, value):
         self.write(name, json.dumps(value, ensure_ascii=False) + "\n")
+
+    def shell(self):
+        command = shutil.which("sh")
+        if command:
+            return command
+        # Git for Windows bundles sh even when only Git/cmd is on PATH.
+        command = Path(shutil.which("git")).resolve().parents[1] / "bin/sh.exe"
+        self.assertTrue(command.is_file(), "Git hooks require a POSIX shell")
+        return str(command)
+
+    def program_shim(self, name, program):
+        self.write(name, "#!/bin/sh\nexec " + shlex.quote(Path(program).as_posix()) + ' "$@"\n')
+        path = self.root / name
+        path.chmod(path.stat().st_mode | 0o111)
+        return path
+
+    def python_shim(self, name):
+        return self.program_shim(name, sys.executable)
+
+    def child_env(self, **options):
+        # Console encoding is independent of repository-file decoding.
+        return dict(os.environ, PYTHONUTF8="0", PYTHONIOENCODING="utf-8", **options)
+
+    def accept_validator(self):
+        self.write("scripts/harness.py", MODULE.read_text(encoding="utf-8"))
+        h.git(self.root, "add", "scripts/harness.py")
+        h.git(self.root, "commit", "-m", "accepted validator")
+        h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
+
+    def ci_scope(self, branch=None, base="origin/main"):
+        # Execute the actual workflow block, including its bootstrap branch.
+        workflow = MODULE.parent.parent / ".github/workflows/harness.yml"
+        lines = workflow.read_text(encoding="utf-8").splitlines()
+        step = lines.index("      - name: Check task scope against base policy")
+        start = lines.index("        run: |", step) + 1
+        end = start
+        while end < len(lines) and (not lines[end] or lines[end].startswith("          ")):
+            end += 1
+        script = self.root / ".harness/local/ci-scope.sh"
+        self.write(str(script.relative_to(self.root)), textwrap.dedent("\n".join(lines[start:end])) + "\n")
+        # This block targets Ubuntu, where setup-python supplies python3.
+        # A private shim lets Windows exercise exactly the same shell commands.
+        binary = self.python_shim(".harness/local/bin/python3").parent
+        runner = Path(self.temp.name) / "runner scratch"
+        runner.mkdir(exist_ok=True)
+        # GitHub provides an exact SHA, not a ref with a slash (which MSYS
+        # may rewrite as a filesystem path when passed to git cat-file).
+        base_sha = h.git(self.root, "rev-parse", "--verify", base).strip()
+        env = self.child_env(HARNESS_BRANCH=branch or self.task["branch"],
+                             HARNESS_BASE=base_sha, RUNNER_TEMP=runner.as_posix(),
+                             PATH=str(binary) + os.pathsep + os.environ.get("PATH", ""))
+        return subprocess.run([self.shell(), "-eu", script.as_posix()], cwd=self.root,
+                              env=env, text=True, encoding="utf-8", capture_output=True, timeout=30)
 
     def check(self, **options):
         with redirect_stdout(self.output):
@@ -133,6 +191,73 @@ class HarnessTests(unittest.TestCase):
         base_task = h.resolve_task(self.root, "B1", policy_ref="origin/main")
         self.assertFalse(h.allowed(base_task, "backend/app/models/shared.py"))
 
+    def test_ci_scope_allows_an_ordinary_task_change(self):
+        self.accept_validator()
+        self.commit_engine()
+        result = self.ci_scope()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_ci_scope_rejects_replaced_validator_and_foreign_file(self):
+        self.accept_validator()
+        self.write("scripts/harness.py", 'print("HEAD_VALIDATOR_RAN")\n')
+        self.write("ast.py", 'raise RuntimeError("HEAD_MODULE_RAN")\n')
+        self.write("frontend/outside-task.txt", "foreign change\n")
+        self.write_json(".harness/tasks/B1.json", dict(self.task, allow=["**"]))
+        h.git(self.root, "add", "scripts/harness.py", "ast.py", "frontend/outside-task.txt", ".harness/tasks/B1.json")
+        h.git(self.root, "commit", "-m", "replace validator and widen policy")
+        with patch.dict(os.environ, {"PYTHONPATH": str(self.root)}):
+            result = self.ci_scope()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("frontend/outside-task.txt", result.stderr)
+        self.assertIn("scripts/harness.py", result.stderr)
+        self.assertIn(".harness/tasks/B1.json", result.stderr)
+        self.assertIn("ast.py", result.stderr)
+        self.assertNotIn("HEAD_VALIDATOR_RAN", result.stdout)
+        self.assertNotIn("HEAD_MODULE_RAN", result.stdout + result.stderr)
+
+    def test_ci_scope_does_not_fall_back_to_head_when_base_validator_is_missing(self):
+        h.git(self.root, "rm", "scripts/harness.py")
+        h.git(self.root, "commit", "-m", "base has policy but no validator")
+        h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
+        self.write("scripts/harness.py", 'print("HEAD_VALIDATOR_RAN")\n')
+        h.git(self.root, "add", "scripts/harness.py")
+        h.git(self.root, "commit", "-m", "untrusted replacement")
+        result = self.ci_scope()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn("HEAD_VALIDATOR_RAN", result.stdout)
+
+    def test_ci_scope_bootstrap_allows_h0(self):
+        task = dict(self.task, id="H0", branch="codex/h00-harness", allow=["**"])
+        self.write_json(".harness/tasks/H0.json", task)
+        self.write("scripts/harness.py", MODULE.read_text(encoding="utf-8"))
+        h.git(self.root, "add", ".harness/tasks/H0.json", "scripts/harness.py")
+        h.git(self.root, "commit", "-m", "bootstrap H0")
+        result = self.ci_scope(branch=task["branch"], base=self.empty_base)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_ci_scope_bootstrap_rejects_other_tasks(self):
+        result = self.ci_scope(base=self.empty_base)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("merge H0 first", result.stderr)
+
+    def test_cli_reads_and_writes_utf8_without_utf8_mode(self):
+        self.write("scripts/harness.py", MODULE.read_text(encoding="utf-8"))
+        self.write_json(".harness/tasks/B1.json", dict(self.task, title="Интеграция и 雪"))
+        self.write("docs/spec.md", "# Интеграция\n\n[Наблюдения](наблюдения-雪.md)\n")
+        self.write("docs/наблюдения-雪.md", "# Наблюдения\n")
+        self.write("backend/app/models/shared.py", '# Интеграция\nLABEL = "雪"\n')
+        self.write("личный бриф-雪.docx", "untouched")
+        for command in (["check"], ["snapshot", "B1"], ["codeowners"]):
+            with self.subTest(command=command):
+                result = subprocess.run(
+                    [sys.executable, "-X", "utf8=0", "-X", "warn_default_encoding",
+                     "-W", "error::EncodingWarning", "scripts/harness.py", *command],
+                    cwd=self.root, env=self.child_env(), text=True, encoding="utf-8",
+                    capture_output=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        snapshot = json.loads((self.root / ".harness/local/B1.json").read_text(encoding="utf-8"))
+        self.assertIn("личный бриф-雪.docx", snapshot["preexisting_untracked"])
+
     def test_path_wildcards_do_not_cross_directories(self):
         self.assertTrue(h.path_matches("backend/app/models/node.py", "backend/app/models/**"))
         self.assertFalse(h.path_matches("backend/app/models/node.py", "backend/*.py"))
@@ -153,7 +278,7 @@ class HarnessTests(unittest.TestCase):
         with redirect_stdout(self.output):
             h.start(self.root, self.task, args)
         self.assertEqual(h.git(self.root, "branch", "--show-current").strip(), "main")
-        self.assertEqual((self.root / "existing-local-file.txt").read_text(), "keep me")
+        self.assertEqual((self.root / "existing-local-file.txt").read_text(encoding="utf-8"), "keep me")
         self.assertEqual(h.git(destination, "branch", "--show-current").strip(), self.task["branch"])
         self.assertTrue((destination / ".harness/local/B1.json").is_file())
 
@@ -199,9 +324,11 @@ class HarnessTests(unittest.TestCase):
             h.check_structure(self.root)
 
     def test_real_precommit_hook_blocks_foreign_commit(self):
-        self.write("scripts/harness.py", MODULE.read_text())
+        self.write("scripts/harness.py", MODULE.read_text(encoding="utf-8"))
         source_hook = MODULE.parent.parent / ".githooks/pre-commit"
-        self.write(".githooks/pre-commit", source_hook.read_text())
+        self.write(".githooks/pre-commit", source_hook.read_text(encoding="utf-8"))
+        self.write(".githooks/run-python.sh", (source_hook.parent / "run-python.sh").read_text(encoding="utf-8"))
+        self.python_shim(".venv/bin/python")
         with redirect_stdout(self.output):
             h.install_hooks(self.root)
         self.write("backend/app/scheduling/engine.py", "enabled = True\n")
@@ -212,6 +339,69 @@ class HarnessTests(unittest.TestCase):
         with self.assertRaises(h.HarnessError):
             h.git(self.root, "commit", "-m", "foreign change")
         self.assertEqual(h.git(self.root, "log", "-1", "--format=%s").strip(), "own change")
+
+    def prepare_launcher_probe(self):
+        for name in ("pre-commit", "pre-push", "run-python.sh"):
+            self.write(".githooks/" + name,
+                       (MODULE.parent.parent / ".githooks" / name).read_text(encoding="utf-8"))
+        self.write("scripts/validate.sh", (MODULE.parent / "validate.sh").read_text(encoding="utf-8"))
+        self.write("scripts/harness.py", "import json, sys\n"
+                   "print(json.dumps({'executable': sys.executable, 'args': sys.argv[1:], "
+                   "'input': sys.stdin.read() if sys.argv[1:] == ['pre-push'] else ''}))\n")
+        # No system Python, env or py launcher can be found through this PATH.
+        binary = self.program_shim(".harness/local/launch bin/sh", self.shell()).parent
+        dirname = subprocess.run([self.shell(), "-c", "command -v dirname"], text=True,
+                                 encoding="utf-8", capture_output=True, check=True).stdout.strip()
+        self.program_shim(str((binary / "dirname").relative_to(self.root)), dirname)
+        return self.child_env(PATH=str(binary)), binary
+
+    def assert_launchers(self, env, expected_python):
+        for script, arguments, expected in (
+                (".githooks/pre-commit", [], ["scope", "--staged"]),
+                (".githooks/pre-push", [], ["pre-push"]),
+                ("scripts/validate.sh", ["--task", "B1"], ["validate", "--task", "B1"])):
+            with self.subTest(script=script):
+                result = subprocess.run([self.shell(), script, *arguments], cwd=self.root,
+                                        env=env, input="refs reach the hook\n", text=True,
+                                        encoding="utf-8", capture_output=True, timeout=30)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                data = json.loads(result.stdout)
+                self.assertEqual(Path(data["executable"]), expected_python)
+                self.assertEqual(data["args"], expected)
+                if expected == ["pre-push"]:
+                    self.assertEqual(data["input"], "refs reach the hook\n")
+
+    def test_launchers_work_with_only_python_on_path(self):
+        env, binary = self.prepare_launcher_probe()
+        self.python_shim(str((binary / "python").relative_to(self.root)))
+        # An unusable python3 must not prevent fallback to a usable python.
+        self.write(str((binary / "python3").relative_to(self.root)), "#!/bin/sh\nexit 1\n")
+        (binary / "python3").chmod(0o755)
+        self.assert_launchers(env, Path(sys.executable))
+
+    def test_launchers_work_with_only_py_launcher_on_path(self):
+        env, binary = self.prepare_launcher_probe()
+        self.write(str((binary / "py").relative_to(self.root)),
+                   '#!/bin/sh\n[ "$1" = -3 ] || exit 98\nshift\nexec '
+                   + shlex.quote(Path(sys.executable).as_posix()) + ' "$@"\n')
+        (binary / "py").chmod(0o755)
+        self.assert_launchers(env, Path(sys.executable))
+
+    def test_launchers_prefer_real_worktree_venv_without_python_on_path(self):
+        env, binary = self.prepare_launcher_probe()
+        h.run([sys.executable, "-m", "venv", "--without-pip", str(self.root / ".venv")], self.root)
+        expected = self.root / (".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python")
+        # This candidate must never be selected over the project environment.
+        self.write(str((binary / "python3").relative_to(self.root)), "#!/bin/sh\nexit 99\n")
+        (binary / "python3").chmod(0o755)
+        self.assert_launchers(env, expected)
+
+    def test_launcher_reports_missing_python(self):
+        env, _ = self.prepare_launcher_probe()
+        result = subprocess.run([self.shell(), ".githooks/pre-commit"], cwd=self.root,
+                                env=env, text=True, encoding="utf-8", capture_output=True, timeout=30)
+        self.assertEqual(result.returncode, 127)
+        self.assertIn("requires Python 3.10+", result.stderr)
 
     def test_prepush_refuses_main_before_any_external_action(self):
         head = h.git(self.root, "rev-parse", "HEAD").strip()
@@ -290,7 +480,7 @@ class HarnessTests(unittest.TestCase):
         self.assertTrue(self.plan(base=self.empty_base, branch=task["branch"])["bootstrap"])
 
     def test_review_plan_does_not_fall_back_to_pr_policy(self):
-        original_policy = (self.root / ".harness/merge-policy.json").read_text()
+        original_policy = (self.root / ".harness/merge-policy.json").read_text(encoding="utf-8")
         h.git(self.root, "rm", ".harness/merge-policy.json")
         h.git(self.root, "commit", "-m", "no accepted merge policy")
         h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
@@ -317,7 +507,7 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(plan["reviewer"], "danilsdk")
 
     def test_empty_merge_checks_cannot_enable_peer_mode(self):
-        policy = json.loads((self.root / ".harness/merge-policy.json").read_text())
+        policy = json.loads((self.root / ".harness/merge-policy.json").read_text(encoding="utf-8"))
         self.write_json(".harness/merge-policy.json", dict(policy, required_checks=[]))
         with self.assertRaises(h.HarnessError):
             h.check_structure(self.root)

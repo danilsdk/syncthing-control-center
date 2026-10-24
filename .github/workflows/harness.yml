@@ -19,8 +19,6 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Validate structure
-        run: python3 scripts/harness.py check
       - name: Check task scope against base policy
         if: github.event_name == 'pull_request'
         env:
@@ -28,16 +26,39 @@ jobs:
           HARNESS_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           if git cat-file -e "$HARNESS_BASE:.harness/project.json" 2>/dev/null; then
-            python3 scripts/harness.py scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --policy-ref "$HARNESS_BASE" --committed-only
+            # Pin executable code as well as JSON policy to the accepted base.
+            git show "$HARNESS_BASE:scripts/harness.py" > "$RUNNER_TEMP/scc-base-harness.py"
+            python3 -I -X utf8 "$RUNNER_TEMP/scc-base-harness.py" scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --policy-ref "$HARNESS_BASE" --committed-only
           elif [ "$HARNESS_BRANCH" = "codex/h00-harness" ]; then
             python3 scripts/harness.py scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --committed-only
           else
             echo "Base branch has no harness policy; merge H0 first." >&2
             exit 1
           fi
+      - name: Validate structure
+        run: python3 scripts/harness.py check
       - name: Test harness
         run: python3 scripts/harness.py self-test
       - name: Prepare existing components
         run: python3 scripts/harness.py setup
       - name: Validate existing components
         run: python3 scripts/harness.py product-checks
+
+  windows-harness:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: '0'
+      PYTHONIOENCODING: utf-8
+      PYTHONWARNDEFAULTENCODING: '1'
+      PYTHONWARNINGS: error::EncodingWarning
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Validate structure without UTF-8 mode
+        run: python scripts/harness.py check
+      - name: Test harness on Windows
+        run: python scripts/harness.py self-test

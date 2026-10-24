@@ -44,7 +44,7 @@ def repository() -> Path:
 
 def load_json(root: Path, path: str, ref: str | None = None) -> dict:
     try:
-        raw = git(root, "show", f"{ref}:{path}") if ref else (root / path).read_text()
+        raw = git(root, "show", f"{ref}:{path}") if ref else (root / path).read_text(encoding="utf-8")
         value = json.loads(raw)
     except (OSError, ValueError) as exc:
         raise HarnessError(f"Невозможно прочитать {path}: {exc}") from exc
@@ -159,7 +159,7 @@ def snapshot(root: Path, task: dict) -> None:
             foreign[name] = fingerprint(root, name)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"task": task["id"], "head": git(root, "rev-parse", "HEAD").strip(),
-                                "preexisting_untracked": foreign}, ensure_ascii=False, indent=2) + "\n")
+                                "preexisting_untracked": foreign}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"Снимок начала {task['id']}: {len(foreign)} существующих чужих untracked-файлов")
 
 
@@ -314,17 +314,17 @@ def check_structure(root: Path) -> None:
         cwd = Path(check.get("cwd", "."))
         if cwd.is_absolute() or ".." in cwd.parts:
             errors.append(f"{path.name}: рабочая папка должна оставаться внутри проекта")
-    if (root / ".github/CODEOWNERS").read_text() != codeowners_text(project):
+    if (root / ".github/CODEOWNERS").read_text(encoding="utf-8") != codeowners_text(project):
         errors.append("CODEOWNERS отличается от карты владения; запусти команду codeowners")
     for path in files(root):
         if path.suffix == ".py":
             try:
-                ast.parse(path.read_text(), filename=str(path))
+                ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             except (SyntaxError, UnicodeError) as exc:
                 errors.append(f"{path.relative_to(root)}: {exc}")
         if path.suffix != ".md":
             continue
-        data = path.read_text()
+        data = path.read_text(encoding="utf-8")
         # Ignore fenced examples; templates can intentionally reference future artifacts.
         prose = re.sub(r"^```[^\n]*\n.*?^```\s*$", "", data, flags=re.M | re.S)
         for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", prose):
@@ -435,7 +435,7 @@ def start(root: Path, task: dict, args: argparse.Namespace) -> None:
 
 def install_hooks(root: Path) -> None:
     current = subprocess.run(["git", "config", "--get", "core.hooksPath"], cwd=root,
-                             text=True, capture_output=True, check=False).stdout.strip()
+                             text=True, encoding="utf-8", capture_output=True, check=False).stdout.strip()
     if current and current != ".githooks":
         raise HarnessError(f"Уже настроены hooks: {current}. Существующую настройку не заменяем.")
     for path in (root / ".githooks").iterdir():
@@ -520,7 +520,7 @@ def main() -> int:
         elif args.command == "codeowners":
             destination = root / ".github/CODEOWNERS"
             destination.parent.mkdir(parents=True, exist_ok=True)
-            destination.write_text(codeowners_text(load_json(root, ".harness/project.json")))
+            destination.write_text(codeowners_text(load_json(root, ".harness/project.json")), encoding="utf-8")
             print("CODEOWNERS обновлён")
         elif args.command == "install-hooks":
             install_hooks(root)
