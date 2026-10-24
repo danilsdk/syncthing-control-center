@@ -1,0 +1,799 @@
+{
+  "contract_version": "0.1.0-draft",
+  "positive": [
+    {
+      "schema": "NodeCreate",
+      "name": "registered_connection_only",
+      "value": {
+        "connection_ref": "node-a",
+        "display_name": "Demo A"
+      }
+    },
+    {
+      "schema": "RuleCreate",
+      "name": "overnight_friday",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      }
+    },
+    {
+      "schema": "RulePatch",
+      "name": "disable_without_resume",
+      "value": {
+        "expected_version": 1,
+        "enabled": false
+      }
+    },
+    {
+      "schema": "Rule",
+      "name": "rule_v1",
+      "value": {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true,
+        "version": 1,
+        "created_at": "2026-10-24T12:00:00Z",
+        "updated_at": "2026-10-24T12:00:00Z"
+      }
+    },
+    {
+      "schema": "Execution",
+      "name": "confirmed_configuration",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "source": "rule",
+        "rule_id": "33333333-3333-4333-8333-333333333333",
+        "rule_version": 1,
+        "rule_snapshot": {
+          "folder_id": "22222222-2222-4222-8222-222222222222",
+          "timezone": "Europe/Moscow",
+          "days_of_week": [
+            5
+          ],
+          "start_time": "23:00",
+          "end_time": "02:00",
+          "enabled": true,
+          "version": 1,
+          "rule_id": "33333333-3333-4333-8333-333333333333"
+        },
+        "desired_paused": true,
+        "status": "applied",
+        "observed_paused": true,
+        "restart_required": false,
+        "source_session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-10-24T12:00:00Z",
+        "sent_at": "2026-10-24T12:00:00Z",
+        "verified_at": "2026-10-24T12:00:01Z",
+        "completed_at": "2026-10-24T12:00:01Z",
+        "error_code": null
+      }
+    },
+    {
+      "schema": "Execution",
+      "name": "manual_pending",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "source": "manual",
+        "rule_id": null,
+        "rule_version": null,
+        "rule_snapshot": null,
+        "desired_paused": false,
+        "status": "pending",
+        "observed_paused": null,
+        "restart_required": null,
+        "source_session_id": null,
+        "created_at": "2026-10-24T12:00:00Z",
+        "sent_at": null,
+        "verified_at": null,
+        "completed_at": null,
+        "error_code": null
+      }
+    },
+    {
+      "schema": "Execution",
+      "name": "unknown_after_send",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "source": "rule",
+        "rule_id": "33333333-3333-4333-8333-333333333333",
+        "rule_version": 1,
+        "rule_snapshot": {
+          "folder_id": "22222222-2222-4222-8222-222222222222",
+          "timezone": "Europe/Moscow",
+          "days_of_week": [
+            5
+          ],
+          "start_time": "23:00",
+          "end_time": "02:00",
+          "enabled": true,
+          "version": 1,
+          "rule_id": "33333333-3333-4333-8333-333333333333"
+        },
+        "desired_paused": true,
+        "status": "unknown",
+        "observed_paused": null,
+        "restart_required": null,
+        "source_session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-10-24T12:00:00Z",
+        "sent_at": "2026-10-24T12:00:00Z",
+        "verified_at": null,
+        "completed_at": "2026-10-24T12:00:01Z",
+        "error_code": "verification_timeout"
+      }
+    },
+    {
+      "schema": "Execution",
+      "name": "cancelled_before_send",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "source": "rule",
+        "rule_id": "33333333-3333-4333-8333-333333333333",
+        "rule_version": 1,
+        "rule_snapshot": {
+          "folder_id": "22222222-2222-4222-8222-222222222222",
+          "timezone": "Europe/Moscow",
+          "days_of_week": [
+            5
+          ],
+          "start_time": "23:00",
+          "end_time": "02:00",
+          "enabled": true,
+          "version": 1,
+          "rule_id": "33333333-3333-4333-8333-333333333333"
+        },
+        "desired_paused": true,
+        "status": "cancelled",
+        "observed_paused": null,
+        "restart_required": null,
+        "source_session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-10-24T12:00:00Z",
+        "sent_at": null,
+        "verified_at": null,
+        "completed_at": "2026-10-24T12:00:01Z",
+        "error_code": "rule_changed_before_send"
+      }
+    },
+    {
+      "schema": "Execution",
+      "name": "history_after_rule_delete",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "source": "rule",
+        "rule_id": null,
+        "rule_version": 1,
+        "rule_snapshot": {
+          "folder_id": "22222222-2222-4222-8222-222222222222",
+          "timezone": "Europe/Moscow",
+          "days_of_week": [
+            5
+          ],
+          "start_time": "23:00",
+          "end_time": "02:00",
+          "enabled": true,
+          "version": 1,
+          "rule_id": "33333333-3333-4333-8333-333333333333"
+        },
+        "desired_paused": true,
+        "status": "applied",
+        "observed_paused": true,
+        "restart_required": false,
+        "source_session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-10-24T12:00:00Z",
+        "sent_at": "2026-10-24T12:00:00Z",
+        "verified_at": "2026-10-24T12:00:01Z",
+        "completed_at": "2026-10-24T12:00:01Z",
+        "error_code": null
+      }
+    },
+    {
+      "schema": "Resume",
+      "name": "manual_resume_intent",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "idempotency_key": "44444444-4444-4444-8444-444444444444"
+      }
+    },
+    {
+      "schema": "Session",
+      "name": "session_without_password",
+      "value": {
+        "user": {
+          "id": "55555555-5555-4555-8555-555555555555",
+          "login": "admin"
+        },
+        "csrf_token": "demo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "expires_at": "2026-10-24T20:00:00Z"
+      }
+    },
+    {
+      "schema": "Node",
+      "name": "never_observed",
+      "value": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "display_name": "Demo A",
+        "enabled": true,
+        "syncthing_device_id": null,
+        "api_status": "unknown",
+        "last_checked_at": null,
+        "last_seen_at": null,
+        "is_stale": true,
+        "created_at": "2026-10-24T12:00:00Z",
+        "updated_at": "2026-10-24T12:00:00Z"
+      }
+    },
+    {
+      "schema": "Folder",
+      "name": "unknown_folder_state",
+      "value": {
+        "id": "22222222-2222-4222-8222-222222222222",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "syncthing_folder_id": "coursework",
+        "label": "Demo folder",
+        "present": true,
+        "actual_paused": null,
+        "config_observed_at": null,
+        "runtime_state": null,
+        "runtime_observed_at": null,
+        "need_bytes": null,
+        "pull_errors": null,
+        "desired_paused": true,
+        "active_rule_id": "33333333-3333-4333-8333-333333333333",
+        "is_stale": true
+      }
+    },
+    {
+      "schema": "Snapshot",
+      "name": "failed_node_probe",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": null,
+        "scope": "node",
+        "observed_at": "2026-10-24T12:00:00Z",
+        "success": false,
+        "error_code": "auth_error",
+        "actual_paused": null,
+        "runtime_state": null,
+        "need_bytes": null,
+        "pull_errors": null
+      }
+    },
+    {
+      "schema": "Event",
+      "name": "sequence_gap",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": null,
+        "kind": "gap",
+        "source_session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_event_id": null,
+        "event_type": "HistoryGap",
+        "occurred_at": null,
+        "received_at": "2026-10-24T12:00:00Z",
+        "payload_summary": {
+          "from_id": 41,
+          "to_id": 44
+        }
+      }
+    },
+    {
+      "schema": "Error",
+      "name": "version_conflict",
+      "value": {
+        "error": {
+          "code": "version_conflict",
+          "message": "Rule has changed",
+          "details": [],
+          "request_id": "44444444-4444-4444-8444-444444444444"
+        }
+      }
+    },
+    {
+      "schema": "Analytics",
+      "name": "known_denominators",
+      "value": {
+        "from": "2026-10-24T00:00:00Z",
+        "to": "2026-10-25T00:00:00Z",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "source": null,
+        "commands": {
+          "applied": 3,
+          "failed": 1,
+          "unknown": 2,
+          "cancelled": 1,
+          "pending_created": 1,
+          "success_ratio": 0.75
+        },
+        "api_checks": {
+          "successful_checks": 2,
+          "total_checks": 3,
+          "success_ratio": 0.6666666666666666
+        },
+        "daily": [
+          {
+            "date": "2026-10-24",
+            "commands": {
+              "applied": 3,
+              "failed": 1,
+              "unknown": 2,
+              "cancelled": 1,
+              "pending_created": 1,
+              "success_ratio": 0.75
+            },
+            "api_checks": {
+              "successful_checks": 2,
+              "total_checks": 3,
+              "success_ratio": 0.6666666666666666
+            }
+          }
+        ]
+      }
+    },
+    {
+      "schema": "Analytics",
+      "name": "empty_period",
+      "value": {
+        "from": "2026-10-24T00:00:00Z",
+        "to": "2026-10-25T00:00:00Z",
+        "node_id": null,
+        "source": null,
+        "commands": {
+          "applied": 0,
+          "failed": 0,
+          "unknown": 0,
+          "cancelled": 0,
+          "pending_created": 0,
+          "success_ratio": null
+        },
+        "api_checks": {
+          "successful_checks": 0,
+          "total_checks": 0,
+          "success_ratio": null
+        },
+        "daily": [
+          {
+            "date": "2026-10-24",
+            "commands": {
+              "applied": 0,
+              "failed": 0,
+              "unknown": 0,
+              "cancelled": 0,
+              "pending_created": 0,
+              "success_ratio": null
+            },
+            "api_checks": {
+              "successful_checks": 0,
+              "total_checks": 0,
+              "success_ratio": null
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "negative_schema": [
+    {
+      "schema": "NodeCreate",
+      "name": "arbitrary_url",
+      "value": {
+        "connection_ref": "http://127.0.0.1:22",
+        "display_name": "Demo"
+      }
+    },
+    {
+      "schema": "RuleCreate",
+      "name": "duplicate_days",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5,
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      }
+    },
+    {
+      "schema": "RuleCreate",
+      "name": "invalid_day",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          0
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      }
+    },
+    {
+      "schema": "RuleCreate",
+      "name": "seconds_in_window",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00:00",
+        "end_time": "02:00",
+        "enabled": true
+      }
+    },
+    {
+      "schema": "RulePatch",
+      "name": "missing_version",
+      "value": {
+        "enabled": false
+      }
+    },
+    {
+      "schema": "RulePatch",
+      "name": "empty_change",
+      "value": {
+        "expected_version": 1
+      }
+    },
+    {
+      "schema": "RulePatch",
+      "name": "move_to_other_folder",
+      "value": {
+        "expected_version": 1,
+        "folder_id": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "schema": "Node",
+      "name": "secret_in_response",
+      "value": {
+        "id": "11111111-1111-4111-8111-111111111111",
+        "display_name": "Demo A",
+        "enabled": true,
+        "syncthing_device_id": null,
+        "api_status": "unknown",
+        "last_checked_at": null,
+        "last_seen_at": null,
+        "is_stale": true,
+        "created_at": "2026-10-24T12:00:00Z",
+        "updated_at": "2026-10-24T12:00:00Z",
+        "api_key": "example-must-not-be-returned"
+      }
+    },
+    {
+      "schema": "Error",
+      "name": "unstructured_error",
+      "value": {
+        "detail": "unauthorized"
+      }
+    },
+    {
+      "schema": "Execution",
+      "name": "invalid_status",
+      "value": {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "node_id": "11111111-1111-4111-8111-111111111111",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "source": "rule",
+        "rule_id": "33333333-3333-4333-8333-333333333333",
+        "rule_version": 1,
+        "rule_snapshot": {
+          "folder_id": "22222222-2222-4222-8222-222222222222",
+          "timezone": "Europe/Moscow",
+          "days_of_week": [
+            5
+          ],
+          "start_time": "23:00",
+          "end_time": "02:00",
+          "enabled": true,
+          "version": 1,
+          "rule_id": "33333333-3333-4333-8333-333333333333"
+        },
+        "desired_paused": true,
+        "status": "success",
+        "observed_paused": true,
+        "restart_required": false,
+        "source_session_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "created_at": "2026-10-24T12:00:00Z",
+        "sent_at": "2026-10-24T12:00:00Z",
+        "verified_at": "2026-10-24T12:00:01Z",
+        "completed_at": "2026-10-24T12:00:01Z",
+        "error_code": null
+      }
+    },
+    {
+      "schema": "Rule",
+      "name": "timestamp_without_utc",
+      "value": {
+        "id": "33333333-3333-4333-8333-333333333333",
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true,
+        "version": 1,
+        "created_at": "2026-10-24T15:00:00+03:00",
+        "updated_at": "2026-10-24T12:00:00Z"
+      }
+    }
+  ],
+  "schedule_cases": [
+    {
+      "name": "friday_2026-10-23T19:59:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T19:59:00Z",
+      "desired_paused": true
+    },
+    {
+      "name": "friday_2026-10-23T20:00:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T20:00:00Z",
+      "desired_paused": false
+    },
+    {
+      "name": "friday_2026-10-23T22:59:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T22:59:00Z",
+      "desired_paused": false
+    },
+    {
+      "name": "friday_2026-10-23T23:00:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T23:00:00Z",
+      "desired_paused": true
+    },
+    {
+      "name": "friday_2026-10-24T20:00:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "at": "2026-10-24T20:00:00Z",
+      "desired_paused": true
+    },
+    {
+      "name": "dst_repeated_2026-10-25T00:30:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Berlin",
+        "days_of_week": [
+          7
+        ],
+        "start_time": "02:00",
+        "end_time": "03:00",
+        "enabled": true
+      },
+      "at": "2026-10-25T00:30:00Z",
+      "desired_paused": false
+    },
+    {
+      "name": "dst_repeated_2026-10-25T01:30:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Berlin",
+        "days_of_week": [
+          7
+        ],
+        "start_time": "02:00",
+        "end_time": "03:00",
+        "enabled": true
+      },
+      "at": "2026-10-25T01:30:00Z",
+      "desired_paused": false
+    },
+    {
+      "name": "dst_missing_2026-03-29T00:59:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Berlin",
+        "days_of_week": [
+          7
+        ],
+        "start_time": "02:00",
+        "end_time": "03:00",
+        "enabled": true
+      },
+      "at": "2026-03-29T00:59:00Z",
+      "desired_paused": true
+    },
+    {
+      "name": "dst_missing_2026-03-29T01:00:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Berlin",
+        "days_of_week": [
+          7
+        ],
+        "start_time": "02:00",
+        "end_time": "03:00",
+        "enabled": true
+      },
+      "at": "2026-03-29T01:00:00Z",
+      "desired_paused": true
+    },
+    {
+      "name": "disabled_has_no_desired_state",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": false
+      },
+      "at": "2026-10-24T12:00:00Z",
+      "desired_paused": null
+    },
+    {
+      "name": "sunday_wraps_week",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          7
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "at": "2026-10-25T22:00:00Z",
+      "desired_paused": false
+    },
+    {
+      "name": "no_active_rule",
+      "rule": null,
+      "at": "2026-10-24T12:00:00Z",
+      "desired_paused": null
+    },
+    {
+      "name": "day_window_2026-10-23T05:59:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "09:00",
+        "end_time": "10:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T05:59:00Z",
+      "desired_paused": true
+    },
+    {
+      "name": "day_window_2026-10-23T06:00:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "09:00",
+        "end_time": "10:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T06:00:00Z",
+      "desired_paused": false
+    },
+    {
+      "name": "day_window_2026-10-23T07:00:00Z",
+      "rule": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "09:00",
+        "end_time": "10:00",
+        "enabled": true
+      },
+      "at": "2026-10-23T07:00:00Z",
+      "desired_paused": true
+    }
+  ],
+  "business_rejections": [
+    {
+      "name": "equal_window",
+      "schema": "RuleCreate",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Europe/Moscow",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "23:00",
+        "enabled": true
+      },
+      "error_code": "invalid_window"
+    },
+    {
+      "name": "unknown_timezone",
+      "schema": "RuleCreate",
+      "value": {
+        "folder_id": "22222222-2222-4222-8222-222222222222",
+        "timezone": "Not/AZone",
+        "days_of_week": [
+          5
+        ],
+        "start_time": "23:00",
+        "end_time": "02:00",
+        "enabled": true
+      },
+      "error_code": "invalid_timezone"
+    }
+  ]
+}
