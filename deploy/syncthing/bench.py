@@ -7,6 +7,7 @@ import ctypes
 import hashlib
 import json
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -202,8 +203,10 @@ def configure(binary: Path, previous: dict) -> dict:
         write_json(stamp, owner)
         if not (home / "config.xml").exists():
             native(binary, "generate", "--home", str(home), "--no-port-probing")
-        document = ET.parse(home / "config.xml")
-        device_id = document.getroot().find("device").attrib["id"]
+        # Syncthing sorts devices when saving config: the first is not necessarily self.
+        device_id = native(binary, "device-id", "--home", str(home)).strip()
+        if not re.fullmatch(r"[A-Z2-7]{7}(?:-[A-Z2-7]{7}){7}", device_id):
+            raise BenchError("CLI did not return a valid certificate Device ID")
         nodes.append(
             {
                 "name": name,
@@ -239,6 +242,8 @@ def configure(binary: Path, previous: dict) -> dict:
         for device in list(root.findall("device")):
             if device.attrib["id"] != node["device_id"]:
                 root.remove(device)
+        if not root.findall("device"):
+            ET.SubElement(root, "device", {"id": node["device_id"], "name": node["name"]})
         device = ET.SubElement(
             root,
             "device",

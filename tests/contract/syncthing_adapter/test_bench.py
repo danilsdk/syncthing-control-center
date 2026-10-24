@@ -5,6 +5,7 @@ import importlib.util
 import os
 import socket
 import sys
+import xml.etree.ElementTree as ET
 import zipfile
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -149,6 +150,35 @@ def test_even_matching_pid_outside_runtime_cannot_be_stopped(tmp_path, monkeypat
     node = {"process": bench.process_identity(os.getpid())}
     with pytest.raises(prepare.BenchError, match="outside its private runtime"):
         bench.owned(node)
+
+
+def test_configuration_uses_certificate_id_when_saved_xml_lists_the_peer_first(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    owner = {"bench": "scc-a1", "owner": "test-owner"}
+    bench.write_json(tmp_path / "owner.json", owner)
+    identities = {"node-a": "-".join(["AAAAAAA"] * 8), "node-b": "-".join(["BBBBBBB"] * 8)}
+    for name in identities:
+        home = tmp_path / "nodes" / name
+        bench.write_json(home / "scc-owned-home.json", owner)
+        config = ET.fromstring(
+            "<configuration><gui><apikey>demo-key</apikey></gui><options/>"
+            '<defaults><folder><minDiskFree unit="B">0</minDiskFree></folder></defaults>'
+            "</configuration>"
+        )
+        for identity in identities.values():
+            ET.SubElement(config, "device", id=identity)
+        ET.ElementTree(config).write(home / "config.xml", encoding="utf-8")
+
+    def native(_binary, command, flag, home):
+        assert command == "device-id" and flag == "--home"
+        return identities[Path(home).name] + "\n"
+
+    monkeypatch.setattr(bench, "native", native)
+    result = bench.configure(Path("not-executed"), {"nodes": []})
+    assert {node["name"]: node["device_id"] for node in result["nodes"]} == identities
 
 
 def test_occupied_port_refuses_start_without_touching_other_processes(tmp_path, monkeypatch):
