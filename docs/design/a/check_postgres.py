@@ -1,4 +1,4 @@
-"""Run A0.3 tests in a private PostgreSQL cluster, never an existing service/database."""
+"""Run schema/lock tests in a private PostgreSQL cluster, never an existing service/database."""
 
 import argparse
 import os
