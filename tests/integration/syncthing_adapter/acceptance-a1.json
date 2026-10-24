@@ -1,0 +1,74 @@
+{
+  "stage": "A1.5",
+  "date": "2026-10-25",
+  "timezone": "Europe/Moscow",
+  "status": "locally_verified_review_pending",
+  "source_commit": "45fd49641a74f079501d9768a476ea871dfba5a2",
+  "source_commit_note": "Executable code, migrations and tests unchanged since verified D01; A1.5 updates only documentation and evidence.",
+  "branch": "codex/a01-adapter",
+  "versions": {
+    "python": "3.12.14",
+    "syncthing": "v2.1.7",
+    "postgresql_private_runner": "18.6"
+  },
+  "contract": "0.1.0-draft, D-01 revision 2",
+  "checks": {
+    "unit_contract": {
+      "passed": 281,
+      "skipped": 85,
+      "origin": "D01 verification; unchanged code at source_commit; not rerun for documentation-only A1.5"
+    },
+    "postgres": {
+      "passed": 85,
+      "origin": "D01 private PostgreSQL runner; no model/migration changes in A1.5"
+    },
+    "live_adapter": {
+      "result": "passed",
+      "started_at": "2026-10-24T22:27:39.119894Z",
+      "completed_at": "2026-10-24T22:28:07.743987Z",
+      "origin": "A1.5 fresh full check_live.py --export-evidence"
+    },
+    "report_dto_compatibility": "Both nodes validated against current SystemObservation, FolderConfig and FolderRuntime",
+    "lint_format": "passed for A1 Python paths",
+    "full_harness_validate_ci": "not run: H0 not merged; combined A1/D01 scope not yet accepted in base policy"
+  },
+  "evidence": [
+    {
+      "path": "tests/integration/syncthing_adapter/evidence-v2.1.7.json",
+      "sha256_canonical_json": "ea5f705ab51dc9df1bccfae4a80d3f0667030eb26965ccef90ed2ee55b04f2b9"
+    },
+    {
+      "path": "tests/integration/syncthing_adapter/evidence-adapter-v2.1.7.json",
+      "sha256_canonical_json": "4b0564b5645a6b7180865051ed06f7078c38456c1abbfffe0cab16ad90859a09"
+    },
+    {
+      "path": "tests/integration/syncthing_adapter/evidence-d01-v2.1.7.json",
+      "sha256_canonical_json": "b179036f546df31c85784397a5c0ed2578c9ec08351dceb74df5b2b250476da1"
+    },
+    {
+      "path": "tests/contract/syncthing_adapter/fixtures/v2.1.7/manifest.json",
+      "sha256_canonical_json": "be81ffe8df54d4e89370da0148eed1f120aee4eed75b7b1b42769ded62d17db7"
+    }
+  ],
+  "same_second_restart": {
+    "native_claimed": false,
+    "tested": "Frozen startTime/uptime over real restarted source events; see D01 evidence"
+  },
+  "manual_configuration_review": "pending before merge",
+  "external_dependencies": {
+    "H0": {
+      "pr": 1,
+      "state": "open",
+      "head": "00c2bf63cd628e764af7f1c237514808eed5b576"
+    },
+    "A0": {
+      "pr": 2,
+      "state": "open",
+      "head": "15088e2c12088a9987944367a3bf358fdf4f06a4"
+    },
+    "D01_contract_review": "B0/danilsdk pending"
+  },
+  "merge_readiness": false,
+  "publication": "not requested; no new push or PR",
+  "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)"
+}
