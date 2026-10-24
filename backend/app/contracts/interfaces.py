@@ -189,7 +189,7 @@ class FolderRuntime(DTO):
 
 
 class SourceEvent(DTO):
-    id: Positive
+    id: Annotated[Positive, Field(le=2**63 - 1)]
     global_id: NonNegative | None
     type: NonEmpty
     time_raw: RawTimestamp

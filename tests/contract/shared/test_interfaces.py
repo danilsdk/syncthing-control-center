@@ -109,6 +109,20 @@ def test_source_event_position_is_distinct_from_global_id_and_payload_is_bounded
         )
 
 
+def test_source_position_and_anchor_share_the_database_bigint_boundary():
+    fields = dict(
+        global_id=None,
+        type="Starting",
+        time_raw=RAW,
+        syncthing_folder_id=None,
+        payload_summary=EventPayload(),
+    )
+    event = SourceEvent(id=2**63 - 1, **fields)
+    assert StreamAnchor.from_event(event).id == event.id
+    with pytest.raises(ValidationError):
+        SourceEvent(id=2**63, **fields)
+
+
 def test_connections_and_login_never_expose_secrets_in_repr_or_serialization():
     connection = NodeConnection(
         node_id=NODE, base_url="http://secret-host-canary:8384", api_key="adapter-key-canary"

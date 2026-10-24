@@ -2,6 +2,7 @@ import json
 
 import pytest
 from app.config import Settings
+from app.contracts.dto import Connection
 from pydantic import ValidationError
 
 
@@ -100,6 +101,35 @@ def test_rejects_connection_url_as_alias():
                 }
             }
         )
+
+
+@pytest.mark.parametrize("name", ["   ", "\t\n"])
+def test_connection_settings_reject_names_the_public_dto_cannot_display(name):
+    with pytest.raises(ValidationError):
+        Settings(
+            connections={
+                "node-a": {
+                    "display_name": name,
+                    "base_url": "http://127.0.0.1:18384",
+                    "api_key": "name-validation-secret-canary",
+                }
+            }
+        )
+
+
+def test_configured_connection_name_round_trips_through_the_public_dto():
+    name = "  Узел A  "
+    settings = Settings(
+        connections={
+            "node-a": {
+                "display_name": name,
+                "base_url": "http://127.0.0.1:18384",
+                "api_key": "name-validation-secret-canary",
+            }
+        }
+    )
+    connection = Connection(connection_ref="node-a", **settings.connections["node-a"].model_dump())
+    assert connection.display_name == name
 
 
 @pytest.mark.parametrize(

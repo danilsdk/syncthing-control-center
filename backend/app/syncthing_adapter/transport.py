@@ -6,7 +6,7 @@ import ssl
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from threading import Lock, Timer
+from threading import RLock, Timer
 from typing import Protocol
 from urllib.parse import urlsplit
 
@@ -39,7 +39,7 @@ class HttpTransport:
         if not self._tls.check_hostname or self._tls.verify_mode != ssl.CERT_REQUIRED:
             raise ValueError("Syncthing HTTPS requires certificate and hostname verification")
         self._closed = False
-        self._lock = Lock()
+        self._lock = RLock()
         self._active: dict[http.client.HTTPConnection, Callable[[], None]] = {}
 
     def close(self) -> None:
@@ -91,24 +91,34 @@ class HttpTransport:
         timer.start()
         try:
             connection.connect()
-            wire_socket = connection.sock
-            if time.monotonic() >= deadline:
-                raise TimeoutError
-            if wire_socket is None:
-                raise OSError
-            wire_socket.settimeout(max(0.001, deadline - time.monotonic()))
-            connection.request(
-                method,
-                path,
-                body=body,
-                headers={
-                    "X-API-Key": self._key,
-                    "Accept": "application/json",
-                    "Accept-Encoding": "identity",
-                    "Connection": "close",
-                    **({"Content-Type": "application/json"} if write else {}),
-                },
-            )
+            # A close during connect cannot abort a socket that does not exist yet.
+            # Publish it and linearize the start of sending with the owner's close.
+            # The watchdog can still abort a blocked send; response waits hold no lock.
+            with self._lock:
+                wire_socket = connection.sock
+                if self._closed:
+                    raise AdapterError(
+                        "unreachable",
+                        operation=operation,
+                        write_outcome="not_applied" if write else None,
+                    )
+                if time.monotonic() >= deadline:
+                    raise TimeoutError
+                if wire_socket is None:
+                    raise OSError
+                wire_socket.settimeout(max(0.001, deadline - time.monotonic()))
+                connection.request(
+                    method,
+                    path,
+                    body=body,
+                    headers={
+                        "X-API-Key": self._key,
+                        "Accept": "application/json",
+                        "Accept-Encoding": "identity",
+                        "Connection": "close",
+                        **({"Content-Type": "application/json"} if write else {}),
+                    },
+                )
             with connection.getresponse() as response:
                 if response.status in {401, 403, 404}:
                     raise AdapterError(
@@ -161,6 +171,8 @@ class HttpTransport:
             raise AdapterError(code, operation=operation) from None
         finally:
             timer.cancel()
-            abort()
-            with self._lock:
-                self._active.pop(connection, None)
+            try:
+                abort()
+            finally:
+                with self._lock:
+                    self._active.pop(connection, None)

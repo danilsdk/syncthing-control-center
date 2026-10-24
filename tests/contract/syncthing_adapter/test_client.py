@@ -317,6 +317,36 @@ def test_invalid_event_batches_are_rejected(adapter, source, changes):
         adapter.read_events(0, 0)
 
 
+@pytest.mark.parametrize("index", [0, -1])
+def test_oversized_stream_positions_are_safe_errors_without_poisoning_the_epoch(
+    adapter, source, index
+):
+    saved_id = source.events[index]["id"]
+    source.events[index]["id"] = 2**63
+    with pytest.raises(AdapterError, match="invalid_response"):
+        adapter.read_system()
+    source.events[index]["id"] = saved_id
+    assert adapter.read_events(0, 0).events[-1].id == 3
+
+
+def test_oversized_position_in_the_poll_is_rejected_without_a_checkpoint_advance(
+    adapter, source, monkeypatch
+):
+    initial = adapter.read_events(0, 0)
+    original = source.request
+
+    def bad_poll(method, path, **kwargs):
+        if path == "/rest/events?since=3&timeout=0":
+            return Response(json.dumps([event(2**63)]).encode(), "application/json", DEVICE)
+        return original(method, path, **kwargs)
+
+    monkeypatch.setattr(source, "request", bad_poll)
+    with pytest.raises(AdapterError, match="invalid_response"):
+        adapter.read_events(3, 0)
+    assert adapter.read_system().source_session_id == initial.source_session_id
+    assert adapter.read_system().stream_anchor == initial.source_checkpoint.anchor
+
+
 @pytest.mark.parametrize(
     "since,timeout", [(-1, 0), (True, 0), (2**63, 0), (0, -1), (0, 16), (0, True)]
 )

@@ -7,7 +7,7 @@ import ssl
 import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import Event, Thread
 from uuid import UUID
 
 import pytest
@@ -295,3 +295,89 @@ def test_owner_close_immediately_before_send_cannot_implicitly_reconnect(monkeyp
             transport.request("PATCH", "/rest/config/folders/demo", body=b'{"paused":true}')
         assert caught.value.write_outcome == "unknown"
         assert len(attempts) == 1 and calls == []
+
+
+@pytest.mark.parametrize("method", ["GET", "PATCH"])
+def test_owner_close_during_connect_prevents_a_later_request(monkeypatch, method):
+    entered, release = Event(), Event()
+    original_connect = http.client.HTTPConnection.connect
+    outcomes = []
+
+    def gated_connect(client):
+        entered.set()
+        assert release.wait(3)
+        return original_connect(client)
+
+    monkeypatch.setattr(http.client.HTTPConnection, "connect", gated_connect)
+    with server(lambda h: respond(h)) as (port, calls):
+        transport = HttpTransport(connection(port))
+
+        def request():
+            try:
+                transport.request(
+                    method,
+                    "/rest/config/folders/demo",
+                    body=b'{"paused":true}' if method == "PATCH" else None,
+                    timeout=2,
+                )
+                outcomes.append("unexpected_success")
+            except AdapterError as error:
+                outcomes.append((error.code, error.write_outcome))
+
+        thread = Thread(target=request, daemon=True)
+        thread.start()
+        try:
+            assert entered.wait(2)
+            transport.close()
+            release.set()
+            thread.join(3)
+            assert not thread.is_alive()
+            assert calls == []
+            assert outcomes == [("unreachable", "not_applied" if method == "PATCH" else None)]
+            assert transport._active == {}
+        finally:
+            release.set()
+            transport.close()
+            thread.join(3)
+
+
+def test_owner_close_cleans_up_a_pending_response_by_its_deadline():
+    reading, release = Event(), Event()
+    outcomes = []
+
+    def incomplete_response(handler):
+        handler.send_response(200)
+        handler.send_header("Content-Length", "200")
+        handler.end_headers()
+        handler.wfile.flush()
+        reading.set()
+        release.wait(3)
+        handler.close_connection = True
+
+    with server(incomplete_response) as (port, calls):
+        transport = HttpTransport(connection(port))
+
+        def request():
+            try:
+                transport.request("GET", "/rest/system/status", timeout=0.3)
+                outcomes.append("unexpected_success")
+            except AdapterError as error:
+                outcomes.append(error.code)
+
+        thread = Thread(target=request, daemon=True)
+        thread.start()
+        try:
+            assert reading.wait(2)
+            started = time.monotonic()
+            transport.close()
+            thread.join(1)
+            assert not thread.is_alive()
+            # Winsock may complete a blocked read at its socket deadline after shutdown.
+            assert outcomes[0] in {"invalid_response", "unreachable", "timeout"}
+            assert len(outcomes) == 1 and time.monotonic() - started < 1.5
+            assert len(calls) == 1
+            assert transport._active == {}
+        finally:
+            release.set()
+            transport.close()
+            thread.join(3)
