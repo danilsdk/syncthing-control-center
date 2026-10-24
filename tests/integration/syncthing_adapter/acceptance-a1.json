@@ -1,11 +1,11 @@
 {
-  "stage": "A1.5",
+  "stage": "A1.5 + A6 audit fixes",
   "date": "2026-10-25",
   "timezone": "Europe/Moscow",
-  "status": "locally_verified_review_pending",
-  "source_commit": "45fd49641a74f079501d9768a476ea871dfba5a2",
-  "source_commit_note": "Executable code, migrations and tests unchanged since verified D01; A1.5 updates only documentation and evidence.",
-  "branch": "codex/a01-adapter",
+  "status": "audit_fixes_verified_review_pending",
+  "source_commit": "796f3083fc22328459dd21ca263a6e164297169d",
+  "source_commit_note": "R1-R4 fixes and 19 regression cases at source_commit; only documentation/evidence updated afterward.",
+  "branch": "codex/a01-review-fixes",
   "versions": {
     "python": "3.12.14",
     "syncthing": "v2.1.7",
@@ -14,23 +14,61 @@
   "contract": "0.1.0-draft, D-01 revision 2",
   "checks": {
     "unit_contract": {
-      "passed": 281,
+      "passed": 300,
       "skipped": 85,
-      "origin": "D01 verification; unchanged code at source_commit; not rerun for documentation-only A1.5"
+      "origin": "A6 fresh full unit/contract suite; 19 new regression cases"
     },
     "postgres": {
       "passed": 85,
-      "origin": "D01 private PostgreSQL runner; no model/migration changes in A1.5"
+      "origin": "85 passed during D01 on the unchanged database schema, migrations and locking code; not rerun in A6"
     },
     "live_adapter": {
       "result": "passed",
-      "started_at": "2026-10-24T22:27:39.119894Z",
-      "completed_at": "2026-10-24T22:28:07.743987Z",
-      "origin": "A1.5 fresh full check_live.py --export-evidence"
+      "started_at": "2026-10-24T23:08:55.852411Z",
+      "completed_at": "2026-10-24T23:09:16.101558Z",
+      "source_commit": "796f3083fc22328459dd21ca263a6e164297169d",
+      "origin": "A6: full check_live.run(False) invoked by check_d01.py; exported through the original assert_public guard"
     },
     "report_dto_compatibility": "Both nodes validated against current SystemObservation, FolderConfig and FolderRuntime",
     "lint_format": "passed for A1 Python paths",
-    "full_harness_validate_ci": "not run: H0 not merged; combined A1/D01 scope not yet accepted in base policy"
+    "full_harness_validate_ci": "not run: H0 not merged; combined A1/D01 scope not yet accepted in base policy",
+    "audit_probes": {
+      "passed": 5,
+      "origin": "The five original review probes pass against the corrected source"
+    },
+    "fresh_d01_attempt": {
+      "result": "blocked",
+      "started_at": "2026-10-24T23:08:55.850410Z",
+      "completed_at": "2026-10-24T23:09:29.024774Z",
+      "phase": "Native restart before coarse-time collision; full adapter regression and backend recreation passed",
+      "reason": "Syncthing home lock could not be acquired during rapid restart",
+      "prior_evidence": "D01 evidence remains the previous successful run from source 45fd496; fresh full D01 success is not claimed",
+      "cleanup": {
+        "stopped": [
+          "node-a",
+          "node-b"
+        ],
+        "running": []
+      },
+      "completed_phases": [
+        "full_adapter_regression",
+        "backend_process_recreation"
+      ],
+      "backend_process_recreation": {
+        "epoch_preserved": true,
+        "native_processes_unchanged": true,
+        "checkpoint": {
+          "node_id": "00000000-0000-0000-0000-000000000001",
+          "start_time_raw": "2026-10-25T02:09:16+03:00",
+          "source_session_id": "9b1a06d3051daecf5e688d3ff1510cfacab75797ef04d8ebd4e8aad37e8c4102",
+          "anchor": {
+            "id": 15,
+            "time_raw": "2026-10-25T02:09:16.9506801+03:00",
+            "fingerprint": "27a89a4a09b0cbbf9ede83ac801e438a7d9e5b4b46ebdfb0575356bbc779c44b"
+          }
+        }
+      }
+    }
   },
   "evidence": [
     {
@@ -39,7 +77,7 @@
     },
     {
       "path": "tests/integration/syncthing_adapter/evidence-adapter-v2.1.7.json",
-      "sha256_canonical_json": "4b0564b5645a6b7180865051ed06f7078c38456c1abbfffe0cab16ad90859a09"
+      "sha256_canonical_json": "02ca94ef3030223fa8d5e35b6c710306661dd0265a6902837dddbf8287c3d48e"
     },
     {
       "path": "tests/integration/syncthing_adapter/evidence-d01-v2.1.7.json",
@@ -70,5 +108,12 @@
   },
   "merge_readiness": false,
   "publication": "not requested; no new push or PR",
-  "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)"
+  "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)",
+  "audit_fixes": {
+    "task": "A6",
+    "R1": "No request starts after owner close during connect; pending reads retain socket deadline",
+    "R2": "Resolver not_found maps to 404; other expected resolver errors map to safe 503",
+    "R3": "SourceEvent.id and StreamAnchor.id share the signed bigint bound",
+    "R4": "ConnectionSettings shares DisplayName with the public DTO"
+  }
 }
