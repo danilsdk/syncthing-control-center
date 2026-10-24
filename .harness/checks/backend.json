@@ -3,7 +3,7 @@
   "when_exists": ["backend/pyproject.toml", "backend/app/**/*.py"],
   "cwd": ".",
   "commands": [
-    ["{python}", "-m", "ruff", "check", "--config", "backend/pyproject.toml", "backend", "tests/unit/bootstrap"],
+    ["{python}", "-m", "ruff", "check", "--config", "backend/pyproject.toml", "backend", "tests/unit/bootstrap", "tests/contract/shared", "docs/design/a/check_postgres.py"],
     ["{python}", "-m", "pytest", "-c", "backend/pyproject.toml", "tests/unit", "tests/contract"],
     ["{python}", "docs/design/a/check_contract.py"]
   ],

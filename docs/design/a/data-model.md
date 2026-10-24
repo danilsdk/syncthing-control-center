@@ -1,6 +1,6 @@
 # Модель данных A0.1 — 0.1.0-draft
 
-Основа для A0.3, **не существующая миграция**. Семантика — в
+Реализована в A0.3: `app.models` и миграция `a003_initial_schema`. Семантика — в
 [контракте](../../contracts.md) и [D-01–D-05](mvp-decisions.md).
 Семь таблиц остаются достаточными; серверные подключения/секреты находятся в конфигурации.
 
@@ -9,7 +9,9 @@
 Все PK — UUID, созданные приложением. История — `timestamptz` (UTC на выводе).
 Счётчики — `bigint>=0`; версии — `integer>=1`. Перечисления — text + CHECK,
 чтобы миграции не зависели от изменения PostgreSQL enum-типа.
-Все поля NOT NULL, кроме явно отмеченных `?`. created_at/updated_at ставит сервер.
+Все поля NOT NULL, кроме явно отмеченных `?`. created_at/updated_at ставит сервер;
+updated_at обновляется триггером для app_users/managed_nodes/folders/sync_rules,
+включая raw SQL. UUID создаёт приложение через uuid4, серверного UUID-default нет.
 Объекты узлов и папок не удаляются через MVP API; выключение/отсутствие сохраняет историю.
 
 ```mermaid
@@ -30,7 +32,7 @@ erDiagram
 | Поле | Тип/ограничение |
 |---|---|
 | id | UUID PK |
-| login | varchar(64), unique; нормализованная ASCII запись для одного администратора |
+| login | varchar(64), unique; нормализованная ASCII запись `[a-z0-9_.-]{1,64}` |
 | password_hash | text; только поддерживаемый хеш, никогда не DTO |
 | is_active | boolean, default true |
 | created_at, updated_at | timestamptz |
@@ -97,6 +99,7 @@ desired_paused, active_rule_id и is_stale вычисляются для DTO, н
 | created_at, updated_at | timestamptz |
 
 CHECK(start_time <> end_time). Partial UNIQUE(folder_id) WHERE enabled IS TRUE.
+БД также отвергает секунды/доли и PostgreSQL-значение `24:00`, отсутствующее в HH:MM.
 Days DTO — массив уникальных ISO-дней; преобразование: сумма `1 << (day-1)`.
 Маска исключает неоднозначный порядок и дубликаты в БД. Пустой набор запрещён.
 IANA timezone проверяется приложением по zoneinfo, не нестабильным SQL CHECK.
@@ -162,6 +165,8 @@ UNIQUE(node_id,source_session_id,source_event_id) WHERE kind='source'.
 CHECK: source_event_id заполнен только для source; kind=source требует occurred_at.
 Локальные gap/restart имеют source_event_id=NULL и не занимают номера источника.
 Неизвестная папка события допускает folder_id=NULL; произвольные пути не сохраняются.
+JSONB CHECK требует object и только ключи from_id/to_id/state/previous_session_id;
+проверка значений и фильтрация содержимого выполняются DTO/коллектором.
 Индекс (node_id,received_at), (folder_id,received_at).
 Маркер gap содержит включительные from_id/to_id; from_id<=to_id проверяется сервисом.
 
@@ -189,7 +194,11 @@ runtime-поля могут отсутствовать (например, paused
 Индексы (node_id,scope,observed_at), (folder_id,observed_at).
 Аналитика доступности фильтрует строго scope=node.
 
-## Что проверить в A0.3
+## Проверки A0.3
+
+Сценарии ниже проверены на отдельной PostgreSQL 18.6; воспроизведение —
+[a03-runbook.md](a03-runbook.md). Коллектор/исполнитель ещё не реализованы:
+атомарность проверяется прямой транзакцией, переходы состояний остаются сервису.
 
 1. Применить/откатить/повторно применить миграцию на отдельной PostgreSQL.
 2. Две конкурентные вставки enabled-правила: остаётся одно.

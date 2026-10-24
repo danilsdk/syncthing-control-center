@@ -42,3 +42,4 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["../tests/unit", "../tests/contract"]
 addopts = "--import-mode=importlib --strict-markers -ra"
+markers = ["postgres: requires the private PostgreSQL runner; never uses a working database"]
