@@ -1,4 +1,4 @@
-"""Run A3 SQL tests in an owned temporary cluster; no working database URL is accepted."""
+"""Run A3 SQL tests or native live checks in an owned temporary PostgreSQL cluster."""
 
 import argparse
 import os
@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 HIDDEN = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
-def run(command, env):
+def run(command, env, *, timeout=150):
     with tempfile.TemporaryFile() as output:
         result = subprocess.run(
             [str(p) for p in command],
@@ -26,7 +26,7 @@ def run(command, env):
             stdout=output,
             stderr=subprocess.STDOUT,
             creationflags=HIDDEN,
-            timeout=150,
+            timeout=timeout,
         )
         output.seek(0)
         print(output.read().decode("utf-8", errors="replace"), end="", flush=True)
@@ -37,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", type=Path, required=True)
     parser.add_argument("--junitxml", type=Path)
+    parser.add_argument("--live-report", type=Path)
     args = parser.parse_args()
     suffix = ".exe" if os.name == "nt" else ""
     initdb, pg_ctl = (args.bin_dir / (name + suffix) for name in ("initdb", "pg_ctl"))
@@ -123,7 +124,19 @@ def main():
             ]
             if args.junitxml:
                 command.append(f"--junitxml={args.junitxml.resolve()}")
-            run(command, env)
+            if args.live_report:
+                run(
+                    [
+                        sys.executable,
+                        "tests/integration/collection/check_live.py",
+                        "--report",
+                        args.live_report.resolve(),
+                    ],
+                    env,
+                    timeout=600,
+                )
+            else:
+                run(command, env)
         finally:
             if (data / "postmaster.pid").exists():
                 run([pg_ctl, "-D", data, "-w", "-t", "30", "-m", "fast", "stop"], env)

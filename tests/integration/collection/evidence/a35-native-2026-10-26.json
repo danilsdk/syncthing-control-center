@@ -1,0 +1,63 @@
+{
+  "stage": "A3.5",
+  "started_at": "2026-10-25T23:42:41.041279Z",
+  "result": "passed",
+  "syncthing_version": "v2.1.7",
+  "checks": [
+    {
+      "name": "native_buffer_rollover",
+      "at": "2026-10-25T23:43:13.965299Z",
+      "files": 600,
+      "first": 276,
+      "last": 1275,
+      "retained": 1000
+    },
+    {
+      "name": "T07_native_batch_replay_and_T08_bounded_gap",
+      "at": "2026-10-25T23:43:19.169017Z",
+      "received": 1000,
+      "gap_from": 1,
+      "gap_to": 276
+    },
+    {
+      "name": "real_login_guard_config_runtime_and_one_node_probe_per_cycle",
+      "at": "2026-10-25T23:43:22.636614Z"
+    },
+    {
+      "name": "backend_restart_retains_session_cursor_anchor_and_due_semantics",
+      "at": "2026-10-25T23:43:27.972779Z"
+    },
+    {
+      "name": "T05_native_outage_stale_cache_and_available_history",
+      "at": "2026-10-25T23:43:34.132834Z"
+    },
+    {
+      "name": "T08_real_restart_boundary_and_T05_current_reconciliation",
+      "at": "2026-10-25T23:43:37.600804Z"
+    },
+    {
+      "name": "T08_legacy_missing_proof_same_native_start_time",
+      "at": "2026-10-25T23:43:39.129384Z"
+    },
+    {
+      "name": "guarded_history_pagination_filters_safe_payloads_and_source_uniqueness",
+      "at": "2026-10-25T23:43:39.185942Z"
+    },
+    {
+      "name": "full_demo_folder_configuration_restored",
+      "at": "2026-10-25T23:43:39.255286Z"
+    }
+  ],
+  "persisted": {
+    "events": 1146,
+    "snapshots": 46,
+    "node_probes": 10,
+    "duplicate_source_positions": 0
+  },
+  "cleanup": {
+    "api_running": false,
+    "syncthing_running": [],
+    "fixture_directories_present": false
+  },
+  "completed_at": "2026-10-25T23:43:40.552126Z"
+}
