@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -193,6 +194,43 @@ def test_occupied_port_refuses_start_without_touching_other_processes(tmp_path, 
         with pytest.raises(prepare.BenchError, match="occupied"):
             bench.start()
         assert listener.getsockname()[1] == port
+
+
+def test_start_owns_worker_directly_without_inheriting_user_syncthing_settings(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench, "NODES", (("node-a", 0, 0),))
+    home = tmp_path / "nodes/node-a"
+    home.mkdir(parents=True)
+    state = {"nodes": [{"name": "node-a", "home": str(home), "device_id": "demo"}]}
+    binary = tmp_path / "bin/syncthing.exe"
+    monkeypatch.setattr(bench, "prepare", lambda: binary)
+    monkeypatch.setattr(bench, "native", lambda *_: bench.release()["version"])
+    monkeypatch.setattr(bench, "configure", lambda *_: state)
+    monkeypatch.setattr(bench, "process_identity", lambda pid: {"pid": pid})
+    monkeypatch.setattr(bench, "owned", lambda node: bool(node.get("process")))
+    monkeypatch.setattr(
+        bench, "BenchClient", lambda _: SimpleNamespace(get=lambda _: {"myID": "demo"})
+    )
+    launches = []
+
+    def launch(args, **kwargs):
+        launches.append((args, kwargs["env"]))
+        return SimpleNamespace(pid=1234)
+
+    monkeypatch.setattr(bench.subprocess, "Popen", launch)
+    monkeypatch.setenv("STMONITORED", "no")
+    monkeypatch.setenv("STHOMEDIR", "foreign-home")
+    monkeypatch.setenv("STGUIAPIKEY", "foreign-key")
+    assert "STMONITORED" not in bench.clean_environment()  # CLI probes stay ordinary.
+    assert bench.start() is state
+    args, env = launches[0]
+    assert args[:4] == [str(binary), "serve", "--home", str(home)]
+    assert env["STMONITORED"] == "yes"
+    assert not {"STHOMEDIR", "STGUIAPIKEY"} & env.keys()
+    assert os.environ["STMONITORED"] == "no"
 
 
 def test_endpoint_in_state_cannot_redirect_credentials_elsewhere(tmp_path, monkeypatch):

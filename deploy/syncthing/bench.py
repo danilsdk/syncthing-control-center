@@ -153,10 +153,14 @@ def owned(node: dict) -> bool:
     return True
 
 
-def clean_environment() -> dict:
+def clean_environment(*, inner_process: bool = False) -> dict:
     # Existing user Syncthing settings cannot override this disposable instance.
     env = {key: value for key, value in os.environ.items() if not key.upper().startswith("ST")}
     env["GOMAXPROCS"] = "2"
+    if inner_process:
+        # Pinned v2.1.7 normally spawns a monitor + worker even with --no-restart.
+        # Own the worker directly so forced stop cannot leave an untracked child.
+        env["STMONITORED"] = "yes"
     return env
 
 
@@ -434,7 +438,7 @@ def start() -> dict:
                         "--no-restart",
                         "--log-file=-",
                     ],
-                    env=clean_environment(),
+                    env=clean_environment(inner_process=True),
                     stdout=log,
                     stderr=subprocess.STDOUT,
                     stdin=subprocess.DEVNULL,
