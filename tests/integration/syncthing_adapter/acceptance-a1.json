@@ -2,7 +2,7 @@
   "stage": "A1.5 + A6 audit fixes + A7 final D01 verification",
   "date": "2026-10-25",
   "timezone": "Europe/Moscow",
-  "status": "verification_complete_review_ready",
+  "status": "verification_complete_review_requested",
   "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
   "source_commit_note": "R1-R4 at 796f308; direct bench worker ownership and regression at source_commit; later changes only documentation/evidence.",
   "branch": "codex/a01-review-ready",
@@ -160,7 +160,17 @@
     "D01_contract_review": "B0/danilsdk pending"
   },
   "merge_readiness": false,
-  "publication": "authorized by user; preparing stacked A1/D01/A6/A7 PR against codex/a00-foundation; no approval or merge",
+  "publication": {
+    "url": "https://github.com/danilsdk/syncthing-control-center/pull/4",
+    "state": "open",
+    "draft": false,
+    "base_branch": "codex/a00-foundation",
+    "base_sha": "15088e2c12088a9987944367a3bf358fdf4f06a4",
+    "review_requested": [
+      "danilsdk"
+    ],
+    "approval_merge_performed": false
+  },
   "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)",
   "audit_fixes": {
     "task": "A6",
