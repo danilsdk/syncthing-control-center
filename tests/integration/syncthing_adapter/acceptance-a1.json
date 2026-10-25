@@ -1,11 +1,11 @@
 {
-  "stage": "A1.5 + A6 audit fixes",
+  "stage": "A1.5 + A6 audit fixes + A7 final D01 verification",
   "date": "2026-10-25",
   "timezone": "Europe/Moscow",
-  "status": "audit_fixes_verified_review_pending",
-  "source_commit": "796f3083fc22328459dd21ca263a6e164297169d",
-  "source_commit_note": "R1-R4 fixes and 19 regression cases at source_commit; only documentation/evidence updated afterward.",
-  "branch": "codex/a01-review-fixes",
+  "status": "verification_complete_review_ready",
+  "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
+  "source_commit_note": "R1-R4 at 796f308; direct bench worker ownership and regression at source_commit; later changes only documentation/evidence.",
+  "branch": "codex/a01-review-ready",
   "versions": {
     "python": "3.12.14",
     "syncthing": "v2.1.7",
@@ -14,29 +14,29 @@
   "contract": "0.1.0-draft, D-01 revision 2",
   "checks": {
     "unit_contract": {
-      "passed": 300,
+      "passed": 301,
       "skipped": 85,
-      "origin": "A6 fresh full unit/contract suite; 19 new regression cases"
+      "origin": "A7 full unit/contract suite; 19 A6 regressions and one worker-ownership regression"
     },
     "postgres": {
       "passed": 85,
-      "origin": "85 passed during D01 on the unchanged database schema, migrations and locking code; not rerun in A6"
+      "origin": "85 passed during D01 on unchanged schema/migrations/locking; not rerun for A6/A7"
     },
     "live_adapter": {
       "result": "passed",
-      "started_at": "2026-10-24T23:08:55.852411Z",
-      "completed_at": "2026-10-24T23:09:16.101558Z",
-      "source_commit": "796f3083fc22328459dd21ca263a6e164297169d",
-      "origin": "A6: full check_live.run(False) invoked by check_d01.py; exported through the original assert_public guard"
+      "started_at": "2026-10-25T13:47:01.129001Z",
+      "completed_at": "2026-10-25T13:47:20.996929Z",
+      "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
+      "origin": "A7 full check_live.run(False) invoked by check_d01.py; exported through original assert_public guard"
     },
     "report_dto_compatibility": "Both nodes validated against current SystemObservation, FolderConfig and FolderRuntime",
-    "lint_format": "passed for A1 Python paths",
+    "lint_format": "passed for changed bench Python files; full applicable backend/adapter lint checked before publication",
     "full_harness_validate_ci": "not run: H0 not merged; combined A1/D01 scope not yet accepted in base policy",
     "audit_probes": {
       "passed": 5,
       "origin": "The five original review probes pass against the corrected source"
     },
-    "fresh_d01_attempt": {
+    "previous_incomplete_d01_attempt": {
       "result": "blocked",
       "started_at": "2026-10-24T23:08:55.850410Z",
       "completed_at": "2026-10-24T23:09:29.024774Z",
@@ -68,6 +68,59 @@
           }
         }
       }
+    },
+    "fresh_d01_attempt": {
+      "result": "passed",
+      "started_at": "2026-10-25T13:47:01.127998Z",
+      "completed_at": "2026-10-25T13:47:34.063158Z",
+      "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
+      "completed_phases": [
+        "full_adapter_regression",
+        "backend_process_recreation",
+        "coarse_time_collision"
+      ],
+      "backend_process_recreation": {
+        "epoch_preserved": true,
+        "native_processes_unchanged": true,
+        "checkpoint": {
+          "node_id": "00000000-0000-0000-0000-000000000001",
+          "start_time_raw": "2026-10-25T16:47:21+03:00",
+          "source_session_id": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
+          "anchor": {
+            "id": 14,
+            "time_raw": "2026-10-25T16:47:21.6352297+03:00",
+            "fingerprint": "2ebf043b20d0bdebe790279d98c692bdaa04de2ed4494bb04771a7503c28bb3e"
+          }
+        }
+      },
+      "coarse_time_collision": {
+        "mode": "test transport freezes startTime and uptime; real source events and restart",
+        "native_same_second_restart_claimed": false,
+        "actual_native_start_times": [
+          "2026-10-25T16:47:21+03:00",
+          "2026-10-25T16:47:24+03:00"
+        ],
+        "status_start_time_before_after": "2026-10-25T16:47:21+03:00",
+        "old_anchor_id": 15,
+        "new_tail_before_read": 17,
+        "old_cursor_rejected": true,
+        "old_epoch": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
+        "new_epoch": "42a2c4d4477099232d2abbf1cda05fb19b36e8fece102d379abf405551180264",
+        "first_rebased_event_id": 1
+      },
+      "cleanup": {
+        "stopped": [
+          "node-a",
+          "node-b"
+        ],
+        "running": []
+      }
+    },
+    "bench_lifecycle": {
+      "result": "passed",
+      "before_fix": "With simulated unavailable shutdown, stop reported running=[] but two real child workers remained",
+      "after_fix": "One directly owned worker per node; the same fallback leaves no child/worker processes",
+      "mode": "Pinned Syncthing v2.1.7 STMONITORED=yes only for serve; recheck on version upgrades"
     }
   },
   "evidence": [
@@ -77,11 +130,11 @@
     },
     {
       "path": "tests/integration/syncthing_adapter/evidence-adapter-v2.1.7.json",
-      "sha256_canonical_json": "02ca94ef3030223fa8d5e35b6c710306661dd0265a6902837dddbf8287c3d48e"
+      "sha256_canonical_json": "bca1f8e01b469217cd895f29cbf272e468b66ce9db048dd9ceb203b95a506d93"
     },
     {
       "path": "tests/integration/syncthing_adapter/evidence-d01-v2.1.7.json",
-      "sha256_canonical_json": "b179036f546df31c85784397a5c0ed2578c9ec08351dceb74df5b2b250476da1"
+      "sha256_canonical_json": "1c0bd59eb0b4fb6ee15b661d69f2583d091b19c10a7e3da4fef899840339f744"
     },
     {
       "path": "tests/contract/syncthing_adapter/fixtures/v2.1.7/manifest.json",
@@ -107,7 +160,7 @@
     "D01_contract_review": "B0/danilsdk pending"
   },
   "merge_readiness": false,
-  "publication": "not requested; no new push or PR",
+  "publication": "authorized by user; preparing stacked A1/D01/A6/A7 PR against codex/a00-foundation; no approval or merge",
   "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)",
   "audit_fixes": {
     "task": "A6",

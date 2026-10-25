@@ -1,6 +1,6 @@
 {
   "stage": "A1.2-A1.4",
-  "started_at": "2026-10-24T23:08:55.852411Z",
+  "started_at": "2026-10-25T13:47:01.129001Z",
   "version": "v2.1.7",
   "result": "passed",
   "automatic_restart_during_paused": false,
@@ -10,13 +10,13 @@
     {
       "system": {
         "device_id": "QRWMT3K-NXGE3OF-HF7ZFPH-6DXPV4O-MSQSIV4-N5SBT3M-L5PXTS3-SBYQOAG",
-        "start_time_raw": "2026-10-25T02:08:56+03:00",
-        "source_session_id": "2abfe20f0761edcf854fecc99e64e70de1d58fe4a838e46c937dd75ee59574b8",
-        "observed_at": "2026-10-24T23:08:57.093493Z",
+        "start_time_raw": "2026-10-25T16:47:01+03:00",
+        "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+        "observed_at": "2026-10-25T13:47:02.328256Z",
         "stream_anchor": {
           "id": 14,
-          "time_raw": "2026-10-25T02:08:56.7630321+03:00",
-          "fingerprint": "122e293575c21685788c4c4c2f8a460f3bbf1079f81cccaceb1037bada159ec3"
+          "time_raw": "2026-10-25T16:47:01.6206455+03:00",
+          "fingerprint": "868b8e530aa30ab119ddca95e35e1e47d5e822ab1140803f3749e9ed208268a6"
         }
       },
       "folders": [
@@ -24,33 +24,33 @@
           "syncthing_folder_id": "scc-a1-control",
           "label": "scc-a1-control",
           "paused": false,
-          "observed_at": "2026-10-24T23:08:57.089490Z"
+          "observed_at": "2026-10-25T13:47:02.324688Z"
         },
         {
           "syncthing_folder_id": "scc-a1-shared",
           "label": "scc-a1-shared",
           "paused": false,
-          "observed_at": "2026-10-24T23:08:57.089490Z"
+          "observed_at": "2026-10-25T13:47:02.324688Z"
         }
       ],
       "runtime": {
         "state": "idle",
         "need_bytes": 0,
         "pull_errors": 0,
-        "observed_at": "2026-10-24T23:08:57.099519Z"
+        "observed_at": "2026-10-25T13:47:02.333780Z"
       },
       "restart_required": false
     },
     {
       "system": {
         "device_id": "NXI35NA-WYYWTSJ-IDSKEFA-AOIHWN7-ENJ6UE2-VKIHQVE-3K6HHJU-QOXUHAY",
-        "start_time_raw": "2026-10-25T02:08:56+03:00",
-        "source_session_id": "de3e77df9862c131c73194472cd060e37eeeeb7f67f586c300dddeb44a31ebe1",
-        "observed_at": "2026-10-24T23:08:57.121441Z",
+        "start_time_raw": "2026-10-25T16:47:01+03:00",
+        "source_session_id": "484fa8747816eef8d2c7906de58ae5c03c7b11e90314739ad45a2d0691d8338d",
+        "observed_at": "2026-10-25T13:47:02.352043Z",
         "stream_anchor": {
           "id": 14,
-          "time_raw": "2026-10-25T02:08:56.7661202+03:00",
-          "fingerprint": "88a8193ac8da3a050f85cb7682fd7e276045f32624de0b8d2090c790417cab75"
+          "time_raw": "2026-10-25T16:47:01.6206455+03:00",
+          "fingerprint": "868b8e530aa30ab119ddca95e35e1e47d5e822ab1140803f3749e9ed208268a6"
         }
       },
       "folders": [
@@ -58,33 +58,33 @@
           "syncthing_folder_id": "scc-a1-control",
           "label": "scc-a1-control",
           "paused": false,
-          "observed_at": "2026-10-24T23:08:57.117413Z"
+          "observed_at": "2026-10-25T13:47:02.348534Z"
         },
         {
           "syncthing_folder_id": "scc-a1-shared",
           "label": "scc-a1-shared",
           "paused": false,
-          "observed_at": "2026-10-24T23:08:57.117413Z"
+          "observed_at": "2026-10-25T13:47:02.348534Z"
         }
       ],
       "runtime": {
         "state": "idle",
         "need_bytes": 0,
         "pull_errors": 0,
-        "observed_at": "2026-10-24T23:08:57.127458Z"
+        "observed_at": "2026-10-25T13:47:02.357374Z"
       },
       "restart_required": false
     }
   ],
   "events": {
     "initial_batch": {
-      "source_session_id": "2abfe20f0761edcf854fecc99e64e70de1d58fe4a838e46c937dd75ee59574b8",
+      "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
       "events": [
         {
           "id": 1,
           "global_id": 1,
           "type": "Starting",
-          "time_raw": "2026-10-25T02:08:56.660206+03:00",
+          "time_raw": "2026-10-25T16:47:01.5973541+03:00",
           "syncthing_folder_id": null,
           "payload_summary": {}
         },
@@ -92,8 +92,8 @@
           "id": 2,
           "global_id": 2,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6653462+03:00",
-          "syncthing_folder_id": "scc-a1-control",
+          "time_raw": "2026-10-25T16:47:01.6019554+03:00",
+          "syncthing_folder_id": "scc-a1-shared",
           "payload_summary": {
             "state": "starting"
           }
@@ -102,8 +102,8 @@
           "id": 3,
           "global_id": 3,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6658603+03:00",
-          "syncthing_folder_id": "scc-a1-control",
+          "time_raw": "2026-10-25T16:47:01.6019554+03:00",
+          "syncthing_folder_id": "scc-a1-shared",
           "payload_summary": {
             "state": "idle"
           }
@@ -112,8 +112,8 @@
           "id": 4,
           "global_id": 4,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6658603+03:00",
-          "syncthing_folder_id": "scc-a1-control",
+          "time_raw": "2026-10-25T16:47:01.6026169+03:00",
+          "syncthing_folder_id": "scc-a1-shared",
           "payload_summary": {
             "state": "scan-waiting"
           }
@@ -122,8 +122,8 @@
           "id": 5,
           "global_id": 5,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6658603+03:00",
-          "syncthing_folder_id": "scc-a1-control",
+          "time_raw": "2026-10-25T16:47:01.6026169+03:00",
+          "syncthing_folder_id": "scc-a1-shared",
           "payload_summary": {
             "state": "scanning"
           }
@@ -131,48 +131,44 @@
         {
           "id": 6,
           "global_id": 6,
-          "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6658603+03:00",
-          "syncthing_folder_id": "scc-a1-shared",
-          "payload_summary": {
-            "state": "starting"
-          }
+          "type": "ListenAddressesChanged",
+          "time_raw": "2026-10-25T16:47:01.603655+03:00",
+          "syncthing_folder_id": null,
+          "payload_summary": {}
         },
         {
           "id": 7,
           "global_id": 7,
+          "type": "StartupComplete",
+          "time_raw": "2026-10-25T16:47:01.6052074+03:00",
+          "syncthing_folder_id": null,
+          "payload_summary": {}
+        },
+        {
+          "id": 8,
+          "global_id": 8,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6663737+03:00",
+          "time_raw": "2026-10-25T16:47:01.6057235+03:00",
           "syncthing_folder_id": "scc-a1-shared",
           "payload_summary": {
             "state": "idle"
           }
         },
         {
-          "id": 8,
-          "global_id": 8,
-          "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6663737+03:00",
-          "syncthing_folder_id": "scc-a1-shared",
-          "payload_summary": {
-            "state": "scan-waiting"
-          }
-        },
-        {
           "id": 9,
           "global_id": 9,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6663737+03:00",
-          "syncthing_folder_id": "scc-a1-shared",
+          "time_raw": "2026-10-25T16:47:01.6067553+03:00",
+          "syncthing_folder_id": "scc-a1-control",
           "payload_summary": {
-            "state": "scanning"
+            "state": "starting"
           }
         },
         {
           "id": 10,
           "global_id": 10,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6689392+03:00",
+          "time_raw": "2026-10-25T16:47:01.6072723+03:00",
           "syncthing_folder_id": "scc-a1-control",
           "payload_summary": {
             "state": "idle"
@@ -182,46 +178,50 @@
           "id": 11,
           "global_id": 11,
           "type": "StateChanged",
-          "time_raw": "2026-10-25T02:08:56.6725289+03:00",
-          "syncthing_folder_id": "scc-a1-shared",
+          "time_raw": "2026-10-25T16:47:01.6072723+03:00",
+          "syncthing_folder_id": "scc-a1-control",
           "payload_summary": {
-            "state": "idle"
+            "state": "scan-waiting"
           }
         },
         {
           "id": 12,
           "global_id": 12,
-          "type": "ListenAddressesChanged",
-          "time_raw": "2026-10-25T02:08:56.6730415+03:00",
-          "syncthing_folder_id": null,
-          "payload_summary": {}
+          "type": "StateChanged",
+          "time_raw": "2026-10-25T16:47:01.6072723+03:00",
+          "syncthing_folder_id": "scc-a1-control",
+          "payload_summary": {
+            "state": "scanning"
+          }
         },
         {
           "id": 13,
           "global_id": 13,
-          "type": "StartupComplete",
-          "time_raw": "2026-10-25T02:08:56.673553+03:00",
-          "syncthing_folder_id": null,
-          "payload_summary": {}
+          "type": "StateChanged",
+          "time_raw": "2026-10-25T16:47:01.6077824+03:00",
+          "syncthing_folder_id": "scc-a1-control",
+          "payload_summary": {
+            "state": "idle"
+          }
         },
         {
           "id": 14,
           "global_id": 14,
           "type": "DeviceConnected",
-          "time_raw": "2026-10-25T02:08:56.7630321+03:00",
+          "time_raw": "2026-10-25T16:47:01.6206455+03:00",
           "syncthing_folder_id": null,
           "payload_summary": {}
         }
       ],
-      "observed_at": "2026-10-24T23:08:57.142264Z",
+      "observed_at": "2026-10-25T13:47:02.370352Z",
       "source_checkpoint": {
         "node_id": "00000000-0000-0000-0000-000000000001",
-        "start_time_raw": "2026-10-25T02:08:56+03:00",
-        "source_session_id": "2abfe20f0761edcf854fecc99e64e70de1d58fe4a838e46c937dd75ee59574b8",
+        "start_time_raw": "2026-10-25T16:47:01+03:00",
+        "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
         "anchor": {
           "id": 14,
-          "time_raw": "2026-10-25T02:08:56.7630321+03:00",
-          "fingerprint": "122e293575c21685788c4c4c2f8a460f3bbf1079f81cccaceb1037bada159ec3"
+          "time_raw": "2026-10-25T16:47:01.6206455+03:00",
+          "fingerprint": "868b8e530aa30ab119ddca95e35e1e47d5e822ab1140803f3749e9ed208268a6"
         }
       }
     },
@@ -231,8 +231,8 @@
   "pause": {
     "config_paused": true,
     "requires_restart": false,
-    "source_session_id": "2abfe20f0761edcf854fecc99e64e70de1d58fe4a838e46c937dd75ee59574b8",
-    "observed_at": "2026-10-24T23:08:59.786631Z",
+    "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+    "observed_at": "2026-10-25T13:47:04.707344Z",
     "runtime": {
       "available": false,
       "error_code": "invalid_response"
@@ -255,19 +255,19 @@
   "resume": {
     "config_paused": false,
     "requires_restart": false,
-    "source_session_id": "2abfe20f0761edcf854fecc99e64e70de1d58fe4a838e46c937dd75ee59574b8",
-    "observed_at": "2026-10-24T23:09:01.898119Z",
+    "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+    "observed_at": "2026-10-25T13:47:06.820490Z",
     "runtime": {
       "state": "syncing",
       "need_bytes": 63,
       "pull_errors": 0,
-      "observed_at": "2026-10-24T23:09:01.898119Z"
+      "observed_at": "2026-10-25T13:47:06.820490Z"
     },
     "changed_config_fields": []
   },
   "transfer_after_resume": {
     "bytes": 63,
-    "sha256": "9663257e99edd96f84535328a6414225bc21671961cfa1d7b5f3b9daecfb2bcc",
+    "sha256": "6922717f051697d5e487d9572da29438dfa728215b4e4d88030ba9fd6240a60f",
     "exact_content_matched": true
   },
   "non_target_folders_unchanged": true,
@@ -282,8 +282,8 @@
     "write_outcome": "not_applied"
   },
   "explicit_restart_test": {
-    "old_session": "2abfe20f0761edcf854fecc99e64e70de1d58fe4a838e46c937dd75ee59574b8",
-    "new_session": "8f8689080be4d2fa4fb04bc745c6739d97140c086aecb52478497e60747997ff",
+    "old_session": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+    "new_session": "48710e41dceda2c75935483a91f91b7f4ca0ea864564b275247e6b192fa75db6",
     "identity_preserved": true,
     "first_source_event_id": 1
   },
@@ -295,5 +295,5 @@
     ],
     "running": []
   },
-  "completed_at": "2026-10-24T23:09:16.101558Z"
+  "completed_at": "2026-10-25T13:47:20.996929Z"
 }

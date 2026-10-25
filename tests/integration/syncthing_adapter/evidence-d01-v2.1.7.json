@@ -1,6 +1,6 @@
 {
   "stage": "D-01-r2",
-  "started_at": "2026-10-24T22:08:06.889647Z",
+  "started_at": "2026-10-25T13:47:01.127998Z",
   "result": "passed",
   "scheme": "scc:source-epoch:v2",
   "adapter_regression": {
@@ -8,8 +8,8 @@
     "pause": {
       "config_paused": true,
       "requires_restart": false,
-      "source_session_id": "e4f734b5abe1b73da439425677caccaa3582e47901ec17ae466c590ef43375ea",
-      "observed_at": "2026-10-24T22:08:10.828209Z",
+      "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+      "observed_at": "2026-10-25T13:47:04.707344Z",
       "runtime": {
         "available": false,
         "error_code": "invalid_response"
@@ -32,25 +32,25 @@
     "resume": {
       "config_paused": false,
       "requires_restart": false,
-      "source_session_id": "e4f734b5abe1b73da439425677caccaa3582e47901ec17ae466c590ef43375ea",
-      "observed_at": "2026-10-24T22:08:12.960756Z",
+      "source_session_id": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+      "observed_at": "2026-10-25T13:47:06.820490Z",
       "runtime": {
         "state": "syncing",
         "need_bytes": 63,
         "pull_errors": 0,
-        "observed_at": "2026-10-24T22:08:12.960756Z"
+        "observed_at": "2026-10-25T13:47:06.820490Z"
       },
       "changed_config_fields": []
     },
     "transfer_after_resume": {
       "bytes": 63,
-      "sha256": "a4b250c0e0074b11bd00e2793891071245e4cf4dd033abde28373dc7f2c6a0c0",
+      "sha256": "6922717f051697d5e487d9572da29438dfa728215b4e4d88030ba9fd6240a60f",
       "exact_content_matched": true
     },
     "non_target_folders_unchanged": true,
     "explicit_restart_test": {
-      "old_session": "e4f734b5abe1b73da439425677caccaa3582e47901ec17ae466c590ef43375ea",
-      "new_session": "42de3ca9c3ddd1e4714b98a74e84e7d9afce1b91be0f5f1815adab0d5e1a20e0",
+      "old_session": "5d8548c86f4393d3da41f7354410e9bf961da9e2cd6e8fdfce3fb48c86a3030a",
+      "new_session": "48710e41dceda2c75935483a91f91b7f4ca0ea864564b275247e6b192fa75db6",
       "identity_preserved": true,
       "first_source_event_id": 1
     }
@@ -60,12 +60,12 @@
     "native_processes_unchanged": true,
     "checkpoint": {
       "node_id": "00000000-0000-0000-0000-000000000001",
-      "start_time_raw": "2026-10-25T01:08:27+03:00",
-      "source_session_id": "589b2fffefd4687b4784bcaf0431a46777926002310ff13c920814bae171849c",
+      "start_time_raw": "2026-10-25T16:47:21+03:00",
+      "source_session_id": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
       "anchor": {
-        "id": 15,
-        "time_raw": "2026-10-25T01:08:28.0143788+03:00",
-        "fingerprint": "5e160f225a369e88b72f425738d8f46761ee7829282dbc62ead8463ce7d38e35"
+        "id": 14,
+        "time_raw": "2026-10-25T16:47:21.6352297+03:00",
+        "fingerprint": "2ebf043b20d0bdebe790279d98c692bdaa04de2ed4494bb04771a7503c28bb3e"
       }
     }
   },
@@ -73,15 +73,15 @@
     "mode": "test transport freezes startTime and uptime; real source events and restart",
     "native_same_second_restart_claimed": false,
     "actual_native_start_times": [
-      "2026-10-25T01:08:27+03:00",
-      "2026-10-25T01:08:39+03:00"
+      "2026-10-25T16:47:21+03:00",
+      "2026-10-25T16:47:24+03:00"
     ],
-    "status_start_time_before_after": "2026-10-25T01:08:27+03:00",
+    "status_start_time_before_after": "2026-10-25T16:47:21+03:00",
     "old_anchor_id": 15,
-    "new_tail_before_read": 18,
+    "new_tail_before_read": 17,
     "old_cursor_rejected": true,
-    "old_epoch": "589b2fffefd4687b4784bcaf0431a46777926002310ff13c920814bae171849c",
-    "new_epoch": "50bfc4d9b3c79584336f0493db246d27c6af28d1fd72975ddec0195dca76d3d1",
+    "old_epoch": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
+    "new_epoch": "42a2c4d4477099232d2abbf1cda05fb19b36e8fece102d379abf405551180264",
     "first_rebased_event_id": 1
   },
   "cleanup": {
@@ -91,5 +91,5 @@
     ],
     "running": []
   },
-  "completed_at": "2026-10-24T22:08:49.017166Z"
+  "completed_at": "2026-10-25T13:47:34.063158Z"
 }
