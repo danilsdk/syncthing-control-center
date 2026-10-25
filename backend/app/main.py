@@ -15,7 +15,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app import __version__
-from app.api.auth import require_admin
+from app.api.auth import PrivateApiHeadersMiddleware, protected_router, public_router, require_admin
 from app.config import Settings
 from app.contracts.dto import Error
 from app.contracts.errors import AppError
@@ -23,6 +23,8 @@ from app.contracts.interfaces import AdapterFactory, Clock, SystemClock
 from app.contracts.locks import AdvisoryLocks, LockBusy, LockLost
 from app.contracts.worker import WorkerContext, WorkerRuntime
 from app.db import Database, DatabaseNotReady
+from app.registry.admin import AdminStore
+from app.registry.authentication import AdministratorAuth
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +106,7 @@ def create_app(
     *,
     clock: Clock | None = None,
     adapters: AdapterFactory | None = None,
+    auth: AdministratorAuth | None = None,
 ) -> FastAPI:
     configuration = settings if settings is not None else Settings()
     db = database if database is not None else Database(configuration)
@@ -121,7 +124,13 @@ def create_app(
     app.state.database = db
     app.state.clock = clock if clock is not None else SystemClock()
     app.state.adapters = adapters
+    app.state.auth = (
+        auth
+        if auth is not None
+        else AdministratorAuth(configuration, AdminStore(db), app.state.clock)
+    )
     app.add_middleware(RequestContextMiddleware)
+    app.add_middleware(PrivateApiHeadersMiddleware)
 
     @app.exception_handler(AppError)
     async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
@@ -200,9 +209,11 @@ def create_app(
         return {"status": "ok"}
 
     protected = APIRouter(prefix="/api", dependencies=[Depends(require_admin)])
+    protected.include_router(protected_router)
     for router in routers:
         protected.include_router(router)
     app.include_router(protected)
+    app.include_router(public_router)
     return app
 
 
