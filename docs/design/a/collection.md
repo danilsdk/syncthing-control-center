@@ -21,7 +21,7 @@ A2 db6d2fea1e574e8432f198aa7b62c27442ae1383, [PR #5](https://github.com/danilsdk
 | A3.1 — подготовка | Этот план, карточка и журнал | Согласованность D-01/D-05, SQL, адаптера и двух операций OpenAPI |
 | A3.2 — события и курсор, выполнен | Планирование пакета и атомарная запись событий/маркеров/checkpoint | 21 новый unit + 41 на частной PG; общий набор 408 без PG прошёл |
 | A3.3 — наблюдения, выполнен | ObservationCollector и последовательный CollectionService | 63 PG-сценария всего; config/runtime отдельно, поздние ответы и отказы проверены |
-| A3.4 — API истории | GET events/snapshots под общей защитой | Фильтры, интервалы, сортировка/пагинация, OpenAPI и отсутствие секретов |
+| A3.4 — API истории, выполнен | HistoryService и защищённый router events/snapshots | 14 API-компонентов и 69 PG-сценариев всего; count/page согласованы |
 | A3.5 — реальная проверка и передача | Частная PG + два Syncthing + HTTP API | T-05/T-07/T-08, backend/source restart, восстановление checkpoint и передача B4/A4 |
 
 A3 пишет только collection, api/events.py, собственные unit/integration-тесты,
