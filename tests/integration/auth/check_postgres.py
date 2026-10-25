@@ -37,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", type=Path, required=True)
     parser.add_argument("--junitxml", type=Path)
+    parser.add_argument("--suite", choices=("auth", "registry", "all"), default="auth")
     args = parser.parse_args()
     suffix = ".exe" if os.name == "nt" else ""
     initdb, pg_ctl = (args.bin_dir / (name + suffix) for name in ["initdb", "pg_ctl"])
@@ -108,7 +109,12 @@ def main():
                 "pytest",
                 "-c",
                 "backend/pyproject.toml",
-                "tests/integration/auth",
+            ]
+            if args.suite in {"auth", "all"}:
+                command.append("tests/integration/auth")
+            if args.suite in {"registry", "all"}:
+                command.append("tests/integration/registry")
+            command += [
                 "-m",
                 "postgres",
                 "-q",

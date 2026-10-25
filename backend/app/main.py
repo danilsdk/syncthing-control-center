@@ -16,6 +16,8 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app import __version__
 from app.api.auth import PrivateApiHeadersMiddleware, protected_router, public_router, require_admin
+from app.api.folders import router as folders_router
+from app.api.nodes import router as nodes_router
 from app.config import Settings
 from app.contracts.dto import Error
 from app.contracts.errors import AppError
@@ -25,6 +27,9 @@ from app.contracts.worker import WorkerContext, WorkerRuntime
 from app.db import Database, DatabaseNotReady
 from app.registry.admin import AdminStore
 from app.registry.authentication import AdministratorAuth
+from app.registry.resolver import NodeResolver
+from app.registry.service import RegistryService
+from app.syncthing_adapter import HttpAdapterFactory
 
 logger = logging.getLogger(__name__)
 
@@ -107,23 +112,38 @@ def create_app(
     clock: Clock | None = None,
     adapters: AdapterFactory | None = None,
     auth: AdministratorAuth | None = None,
+    registry: RegistryService | None = None,
 ) -> FastAPI:
     configuration = settings if settings is not None else Settings()
     db = database if database is not None else Database(configuration)
+    current_clock = clock if clock is not None else SystemClock()
+    factory = adapters
+    if factory is None and configuration.connections:
+        factory = HttpAdapterFactory(NodeResolver(configuration, db), clock=current_clock)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         try:
             yield
         finally:
-            if _close_resources(db, adapters):
+            if _close_resources(db, factory):
                 raise RuntimeError("Application resources could not be closed") from None
 
     app = FastAPI(title="Syncthing Control Center", version=__version__, lifespan=lifespan)
     app.state.settings = configuration
     app.state.database = db
-    app.state.clock = clock if clock is not None else SystemClock()
-    app.state.adapters = adapters
+    app.state.clock = current_clock
+    app.state.adapters = factory
+    app.state.registry = (
+        registry
+        if registry is not None
+        else RegistryService(
+            configuration,
+            db,
+            current_clock,
+            factory,
+        )
+    )
     app.state.auth = (
         auth
         if auth is not None
@@ -210,6 +230,8 @@ def create_app(
 
     protected = APIRouter(prefix="/api", dependencies=[Depends(require_admin)])
     protected.include_router(protected_router)
+    protected.include_router(nodes_router)
+    protected.include_router(folders_router)
     for router in routers:
         protected.include_router(router)
     app.include_router(protected)
