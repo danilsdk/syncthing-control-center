@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 HIDDEN = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
-def run(command, env):
+def run(command, env, *, timeout=150):
     with tempfile.TemporaryFile() as output:
         result = subprocess.run(
             [str(p) for p in command],
@@ -26,7 +26,7 @@ def run(command, env):
             stdout=output,
             stderr=subprocess.STDOUT,
             creationflags=HIDDEN,
-            timeout=150,
+            timeout=timeout,
         )
         output.seek(0)
         print(output.read().decode("utf-8", errors="replace"), end="", flush=True)
@@ -37,8 +37,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bin-dir", type=Path, required=True)
     parser.add_argument("--junitxml", type=Path)
-    parser.add_argument("--suite", choices=("auth", "registry", "all"), default="auth")
+    parser.add_argument(
+        "--suite", choices=("auth", "registry", "all", "registry-live"), default="auth"
+    )
+    parser.add_argument("--live-report", type=Path)
     args = parser.parse_args()
+    if args.live_report and args.suite != "registry-live":
+        parser.error("--live-report requires --suite registry-live")
     suffix = ".exe" if os.name == "nt" else ""
     initdb, pg_ctl = (args.bin_dir / (name + suffix) for name in ["initdb", "pg_ctl"])
     if not initdb.is_file() or not pg_ctl.is_file():
@@ -103,6 +108,12 @@ def main():
             )
             for action in [("upgrade", "head"), ("check",)]:
                 run([sys.executable, "-m", "alembic", "-c", "backend/alembic.ini", *action], env)
+            if args.suite == "registry-live":
+                command = [sys.executable, "tests/integration/registry/check_live.py"]
+                if args.live_report:
+                    command.extend(["--report", str(args.live_report.resolve())])
+                run(command, env, timeout=420)
+                return
             command = [
                 sys.executable,
                 "-m",
