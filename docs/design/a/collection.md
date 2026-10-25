@@ -1,7 +1,8 @@
 # A3 — сбор событий и наблюдений
 
-A3.1, подготовка от 2026-10-25, A / playerboom. Это план реализации;
-коллектор и маршруты истории пока не реализованы. База — опубликованный
+A3.1–A3.2 от 2026-10-25, A / playerboom. Сохранение событий/checkpoint реализовано
+и проверено локально; наблюдения, API истории и полный цикл ещё предстоят.
+База — опубликованный
 A2 db6d2fea1e574e8432f198aa7b62c27442ae1383, [PR #5](https://github.com/danilsdk/syncthing-control-center/pull/5)
 на review danilsdk. H0/A0/A1 и общий контракт ещё требуют принятия.
 
@@ -18,7 +19,7 @@ A2 db6d2fea1e574e8432f198aa7b62c27442ae1383, [PR #5](https://github.com/danilsdk
 | Подэтап | Результат | Существенная проверка |
 |---|---|---|
 | A3.1 — подготовка | Этот план, карточка и журнал | Согласованность D-01/D-05, SQL, адаптера и двух операций OpenAPI |
-| A3.2 — события и курсор | Планирование пакета и атомарная запись событий/маркеров/checkpoint | Дубли, ограниченные gaps, смена эпохи, rollback и конкуренция |
+| A3.2 — события и курсор, выполнен | Планирование пакета и атомарная запись событий/маркеров/checkpoint | 21 новый unit + 41 на частной PG; общий набор 408 без PG прошёл |
 | A3.3 — наблюдения | Один node probe и отдельные folder config/runtime наблюдения | Частичные отказы, null, восстановление, неизменность знаменателя при разном числе папок |
 | A3.4 — API истории | GET events/snapshots под общей защитой | Фильтры, интервалы, сортировка/пагинация, OpenAPI и отсутствие секретов |
 | A3.5 — реальная проверка и передача | Частная PG + два Syncthing + HTTP API | T-05/T-07/T-08, backend/source restart, восстановление checkpoint и передача B4/A4 |
@@ -183,8 +184,73 @@ Error/request_id/no-store и adminSession унаследованы от A2. Но
 | Отказ и восстановление | Event poll не меняет успешность system probe; runtime-ошибка отдельная; старый пакет/кеш не заменяет новые данные; после rollback новая фабрика читает DB proof |
 | Секреты | Реальные ключи/пароли/закрытые пути отсутствуют в payload, API, логах и Git |
 
-В A3.1 выполняются только сверка документов/типов/схемы/OpenAPI, scope и ссылки.
-Новые unit/integration/T-05/T-07/T-08 будут выполнены с реализацией A3.2–A3.5;
-результаты A2 не выдаются за готовность коллектора. Полный H0 validate/CI требует
-принятой базы. Review B0 по D-01 r2 и формулам B4 ещё ожидается; при замечаниях
-план/реализация корректируются до общей интеграции.
+Подготовка A3.1 проверила документы/типы/схему/OpenAPI и границы. В A3.2 прошли
+21 новый unit и 41 сценарий настоящих PG-транзакций с подставным источником;
+общий набор без PG — 408. Реальные T-05/T-07/T-08 с двумя Syncthing относятся к
+A3.5, результаты A2 не заменяют их. Полный H0 validate/CI требует принятой базы.
+Review B0 по D-01 r2 и формулам B4 ещё ожидается; при замечаниях план/реализация
+корректируются до общей интеграции.
+
+## Использование результата A3.2
+
+Реализованы collection/planning.py (чистый план пакета), store.py (SQL) и
+service.py (одна ограниченная попытка с принадлежащей ей фабрикой A1/A2).
+EventCollector/ EventStore/ CollectionResult экспортированы из app.collection.
+Обычный вызов из будущего worker или проверочного драйвера:
+
+```python
+from uuid import UUID
+from app.collection import EventCollector
+from app.config import Settings
+from app.contracts.interfaces import SystemClock
+from app.db import Database
+
+settings = Settings()
+database = Database(settings)
+try:
+    collector = EventCollector(settings, database, SystemClock())
+    result = collector.collect(UUID("00000000-0000-0000-0000-000000000001"))
+finally:
+    database.close()
+```
+
+Нужен UUID уже зарегистрированного узла, мигрированная PostgreSQL и серверные
+connections; пример UUID — публичный placeholder. Вызов не запускает scheduler,
+не создаёт snapshot и не меняет paused/правила/кеш состояния. Clock/фабрика
+внедряются в проверках, SQL-соединения не удерживаются во время сетевых операций.
+
+CollectionResult содержит node_id, outcome, events_inserted, markers_inserted,
+cursor, reconcile и безопасный error_code:
+
+- stored — транзакция подтверждена; reconcile=true при boundary/gap, который
+  должен вызвать фазу наблюдений A3.3.
+- conflict — исходные identity/alias/target/checkpoint/cursor уже изменились;
+  пакет не применён. Изменение только display_name/api_status не является CAS
+  канонической истории.
+- deferred — новая эпоха без событий; прежний checkpoint/cursor сохранён.
+- skipped — узла нет или он disabled; фабрика не создавалась.
+- error — фиксированный код адаптера, database_unavailable, internal_error или
+  resource_close_failed. Для database_unavailable commit мог фактически пройти;
+  следующий вызов перечитывает БД и не создаёт дубль. При ошибке закрытия после
+  подтверждённого commit результат сохраняет реальные счётчики/cursor.
+
+Source event names принимаются только как ASCII-имена [A-Za-z][A-Za-z0-9_]{0,79};
+пути, control chars и слишком длинные типы отвергают пакет. В source payload
+остаётся только безопасный state для StateChanged. Поля bounded gap и предыдущей
+эпохи создаёт сам планировщик локальных маркеров, источник не может их подделать.
+Неизвестный внешний Folder ID не сохраняется как путь и не создаёт mapping:
+event остаётся с folder_id=null; известный present=false mapping сохраняется.
+
+Повтор проверки из backend-окружения (PowerShell):
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path backend).Path
+python -m pytest -c backend/pyproject.toml tests/unit tests/contract tests/integration/auth tests/integration/registry tests/integration/collection -m "not postgres" -q -W error
+python tests/integration/collection/check_postgres.py --bin-dir "C:\Program Files\PostgreSQL\18\bin"
+```
+
+Отдельный runner создаёт только собственный кластер scc-a32-pg-* на loopback
+со случайным портом/паролем и SCRAM; мигрирует, выполняет тесты и удаляет его.
+Рабочий DB URL не принимается, fixtures требуют точный private marker/name/user.
+Есть опциональный --junitxml для внешнего файла результата. Fixtures используют
+подставной Syncthing; это доказательство SQL/логики, не реальной A3.5-интеграции.
