@@ -11,6 +11,8 @@ from app.contracts.dto import EventPayload
 from app.contracts.interfaces import (
     AdapterError,
     EventBatch,
+    FolderConfig,
+    FolderRuntime,
     SourceCheckpoint,
     SourceEvent,
     StreamAnchor,
@@ -26,8 +28,10 @@ RAW = "2026-10-25T12:00:00.123456789Z"
 
 
 class Clock:
+    current = None
+
     def now_utc(self):
-        return datetime.now(UTC)
+        return self.current if self.current is not None else datetime.now(UTC)
 
 
 def source(position, *, folder="shared", raw=RAW, state="idle"):
@@ -95,13 +99,44 @@ class Factory:
             def read_system(self):
                 assert outer.realm.leases.get(get_ident(), 0) == 0
                 outer.realm.system_calls += 1
+                if outer.realm.system_failure:
+                    raise AdapterError(outer.realm.system_failure)
                 cp = outer.realm.batch.source_checkpoint
                 return SystemObservation(
                     device_id=outer.realm.system_device,
                     start_time_raw=cp.start_time_raw,
                     source_session_id=cp.source_session_id,
                     stream_anchor=cp.anchor,
-                    observed_at=datetime.now(UTC),
+                    observed_at=outer.realm.clock.now_utc(),
+                )
+
+            def list_folders(self):
+                assert outer.realm.leases.get(get_ident(), 0) == 0
+                outer.realm.config_calls += 1
+                if outer.realm.on_config:
+                    outer.realm.on_config()
+                if outer.realm.config_failure:
+                    raise AdapterError(outer.realm.config_failure)
+                return [
+                    FolderConfig(
+                        syncthing_folder_id=key,
+                        label=label,
+                        paused=paused,
+                        observed_at=outer.realm.clock.now_utc(),
+                    )
+                    for key, label, paused in outer.realm.configs
+                ]
+
+            def read_runtime(self, folder):
+                assert outer.realm.leases.get(get_ident(), 0) == 0
+                outer.realm.runtime_calls += 1
+                if folder in outer.realm.runtime_failures:
+                    raise AdapterError(outer.realm.runtime_failures[folder])
+                return FolderRuntime(
+                    state="idle",
+                    need_bytes=7,
+                    pull_errors=0,
+                    observed_at=outer.realm.clock.now_utc(),
                 )
 
         return Client()
@@ -187,6 +222,13 @@ def realm():
         factories=[],
         calls=[],
         leases={},
+        system_failure=None,
+        config_failure=None,
+        runtime_failures={},
+        configs=[("shared", "Shared", False), ("control", "Control", False)],
+        on_config=None,
+        config_calls=0,
+        runtime_calls=0,
     )
 
     def checkout(*_):
