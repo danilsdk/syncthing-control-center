@@ -88,8 +88,9 @@ python tests/integration/system/check_core.py --report "$env:TEMP\a4-core.json"
 ```
 
 Offline: 16 проверок повторной подготовки, формата LF, чужих путей/owner/resources
-и размеров secret files. Они не запускают Docker. Полный набор без PG —
+и размеров secret files. Они не запускают Docker. На снимке A4.2 набор без PG —
 443 passed / 190 deselected; 427 прежних и 16 новых.
+Актуальный общий запуск с проверками CI — в [инструкции A4.4a](../ci/README.md).
 
 Check-core подготовлен для нового уникального scc-a4-test-* проекта: настоящие
 build/migrate, CLI/scrypt/login/CSRF, два узла/четыре mapping, A3 вручную/история,

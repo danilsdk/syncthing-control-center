@@ -108,11 +108,15 @@ class Api:
 
 
 def run(args, report):
-    project = "scc-a4-test-" + uuid4().hex[:12]
+    project = args.project or "scc-a4-test-" + uuid4().hex[:12]
+    require(project.startswith("scc-a4-test-"), "Core check requires a test project")
     report["project"] = project
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        port = probe.getsockname()[1]
+    if args.project:
+        port = tools.load_state(project)["port"]
+    else:
+        with socket.socket() as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = probe.getsockname()[1]
     tools.prepare(project, port)
     stack = tools.Stack(project, docker=args.docker, context=args.context)
     private = stack.directory / "private"
@@ -370,6 +374,7 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--docker")
     parser.add_argument("--context")
+    parser.add_argument("--project", help="Existing owned test runtime prepared by the CI runner")
     args = parser.parse_args()
     report = {"stage": "A4.2", "started_at": utc(), "result": "failed", "checks": []}
     try:
