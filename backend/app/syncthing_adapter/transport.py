@@ -70,12 +70,12 @@ class HttpTransport:
 
         def abort():
             # HTTPConnection may detach a Connection: close socket into HTTPResponse.
+            # Interrupt I/O only: HTTPResponse.fp belongs to the request thread.
             if wire_socket is not None:
                 try:
                     wire_socket.shutdown(socket.SHUT_RDWR)
                 except OSError:
                     pass
-            connection.close()
 
         with self._lock:
             if self._closed:
@@ -174,5 +174,8 @@ class HttpTransport:
             try:
                 abort()
             finally:
-                with self._lock:
-                    self._active.pop(connection, None)
+                try:
+                    connection.close()
+                finally:
+                    with self._lock:
+                        self._active.pop(connection, None)

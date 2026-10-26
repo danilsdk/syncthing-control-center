@@ -1,0 +1,21 @@
+{
+  "id": "A8",
+  "role": "A",
+  "title": "Исправление гонки закрытия HTTP-ответа A1 после реального CI A4",
+  "branch": "codex/a08-transport-deadline",
+  "depends_on": ["A1"],
+  "allow": [
+    ".harness/tasks/A8.json",
+    "backend/app/syncthing_adapter/transport.py",
+    "tests/contract/syncthing_adapter/test_transport.py",
+    "docs/agent-log/a/A8.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-log/a/A8.md",
+  "acceptance": [
+    "Гонка воспроизводится управляемой синхронизацией в настоящем локальном HTTP без ослабления старого deadline-теста.",
+    "Watchdog и owner close прерывают socket, а состояние HTTPConnection/HTTPResponse закрывает только поток запроса.",
+    "Тесты адаптера и проверка A4 сохраняют ошибки, сроки, отсутствие повторной отправки и неопределённость записи.",
+    "Исправление включено в A4 по прямому поручению пользователя; исходная карточка A4 и код B не меняются."
+  ]
+}
