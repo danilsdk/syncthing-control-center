@@ -33,6 +33,16 @@ def test_prepare_reuses_settings_and_refuses_a_different_port(stack_tools):
         stack_tools.prepare(first["project"], 18001)
 
 
+def test_private_settings_have_portable_lf_bytes(stack_tools):
+    state = stack_tools.prepare("scc-a4-test-12345678", 18000)
+    private = stack_tools.project_directory(state["project"]) / "private"
+    for path in private.iterdir():
+        value = path.read_bytes()
+        assert value.endswith(b"\n") and b"\r" not in value
+        # Simulate Bash command substitution used by the PostgreSQL entrypoint.
+        assert value.rstrip(b"\n").decode() == path.read_text(encoding="utf-8").strip()
+
+
 @pytest.mark.parametrize("name", ["../scc-a4-dev", "scc-a4-../dev", "other", "", "scc-a4-test-x"])
 def test_invalid_project_cannot_create_or_clean_a_directory(stack_tools, name):
     with pytest.raises(stack_tools.StackError):

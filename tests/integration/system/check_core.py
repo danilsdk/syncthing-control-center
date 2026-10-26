@@ -109,6 +109,7 @@ class Api:
 
 def run(args, report):
     project = "scc-a4-test-" + uuid4().hex[:12]
+    report["project"] = project
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]
@@ -128,6 +129,7 @@ def run(args, report):
     started = False
 
     def passed(name, **facts):
+        report["phase"] = name
         report["checks"].append({"name": name, "at": utc(), **facts})
         print("PASS: " + name, flush=True)
 
@@ -154,12 +156,21 @@ def run(args, report):
         )
         report["compose"] = stack.run("compose", "version", "--short").stdout.decode().strip()
         passed("linux_engine_and_empty_owned_project")
+        report["phase"] = "build"
         stack.build()
+        report["backend_image_id"] = (
+            stack.run("image", "inspect", f"scc-a4-backend:{project}", "--format", "{{.Id}}")
+            .stdout.decode()
+            .strip()
+        )
+        passed("pinned_backend_image_built")
         started = True
+        report["phase"] = "core_startup"
         stack.up(build=False)
         api.ready()
-        api.request("GET", "/api/nodes", expected=401)
-        api.request("GET", "/api/events", expected=401)
+        for path in ("/api/nodes", "/api/events"):
+            error = api.request("GET", path, expected=503)
+            require(error["error"]["code"] == "auth_not_configured", "Unexpected bootstrap state")
         api.request(
             "POST",
             "/api/auth/login",
@@ -185,6 +196,8 @@ def run(args, report):
             not any(value.encode() in bootstrap.stdout + bootstrap.stderr for value in forbidden),
             "Bootstrap printed a private value",
         )
+        api.request("GET", "/api/nodes", expected=401)
+        api.request("GET", "/api/events", expected=401)
         headers = api.login(password)
         api.request(
             "POST",
@@ -289,9 +302,12 @@ def run(args, report):
 
         inventory = stack.assert_owned()
         for container in inventory["container"]:
-            for binding in (container["HostConfig"].get("PortBindings") or {}).values():
+            configured = container["HostConfig"].get("PortBindings") or {}
+            effective = container["NetworkSettings"].get("Ports") or {}
+            for binding in [*configured.values(), *effective.values()]:
                 require(
-                    all(item["HostIp"] == "127.0.0.1" for item in binding), "Non-loopback host port"
+                    all(item["HostIp"] == "127.0.0.1" for item in (binding or [])),
+                    "Non-loopback host port",
                 )
             require(
                 not any(value in "\n".join(container["Config"]["Env"]) for value in forbidden),
@@ -299,9 +315,11 @@ def run(args, report):
             )
             if container["Config"]["Labels"]["com.docker.compose.service"] != "api":
                 require(
-                    not container["HostConfig"].get("PortBindings"),
+                    not configured and not any(effective.values()),
                     "Private service has a host port",
                 )
+            else:
+                require(bool(effective.get("8000/tcp")), "API host port was not published")
         logs = stack.compose("logs", "--no-color", timeout=30).stdout
         require(
             not any(value.encode() in logs for value in [*forbidden, *api.tokens]),
@@ -310,6 +328,25 @@ def run(args, report):
         passed("file_secrets_private_ports_and_container_logs")
         report["result"] = "passed"
     finally:
+        if report["result"] != "passed":
+            diagnostic = stack.directory / "last-command.log"
+            content = diagnostic.read_bytes() if diagnostic.is_file() else b""
+            if started:
+                try:
+                    logs = stack.compose(
+                        "logs", "--no-color", "--tail", "100", check=False, timeout=20
+                    )
+                    content += b"\nContainer logs:\n" + logs.stdout + logs.stderr
+                except tools.StackError:
+                    content += b"\nContainer diagnostics unavailable\n"
+            if content:
+                content = content[-128 * 1024 :]
+                for value in [*forbidden, *api.tokens]:
+                    content = content.replace(value.encode(), b"[REDACTED]")
+                args.report.parent.mkdir(parents=True, exist_ok=True)
+                path = args.report.with_suffix(".diagnostics.log")
+                path.write_bytes(content)
+                report["diagnostics"] = str(path)
         if started:
             stack.down(delete_data=True)
         remaining = stack.inventory()

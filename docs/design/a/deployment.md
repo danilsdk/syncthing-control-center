@@ -75,8 +75,10 @@ requirements и явные разные команды. Runtime под непр�
 Внутренняя bridge-сеть изолирует PG и REST Syncthing; их порты по умолчанию не
 публикуются на хост. GUI demo-узлов — только при явном debug-профиле и bind
 127.0.0.1. Отключены discovery, relay, NAT, автообновление и отправка диагностики;
-узлы знают только статический адрес своего peer внутри стенда. Иные сети/папки
-не добавляются. Центральное приложение хранит служебные данные, не содержимое файлов.
+узлы знают только статический адрес своего peer внутри стенда. Демонстрационным
+узлам иные сети/папки не добавляются. Центральное приложение хранит служебные
+данные, не содержимое файлов. API использует private и отдельную api_access для
+публикации loopback-порта; PG/Syncthing подключены только к private.
 
 На раннем стенде API доступен на 127.0.0.1:8000. После B3 UI на 127.0.0.1:8080
 проксирует /api к api:8000, создавая одну browser origin; allowed_origins задаётся
@@ -182,30 +184,34 @@ create_app(routers=...), без изменений main/config и предмет
 
 В registry проверены Python 3.12.14-slim-bookworm, PostgreSQL 18.6-bookworm и
 Syncthing 2.1.7; точные index/amd64 digests сохранены в
-[images.json](../../../deploy/compose/images.json). Образы ещё не запускались.
-Пройдены 15 новых offline guards, весь набор без PG — 442 passed / 190 deselected.
+[images.json](../../../deploy/compose/images.json). Образы собраны/запущены в core-check.
+Пройдены 16 offline guards, весь набор без PG — 443 passed / 190 deselected.
 Compose config --quiet и разбор config JSON подтвердили внутреннюю сеть, loopback
 API, отдельный volume узла B и правильную точку PG 18 /var/lib/postgresql.
+API дополнительно использует api_access: Docker 29.9.2 не создал эффективную
+публикацию порта при единственной internal-сети. PG/Syncthing остаются только
+в private, API доступен с host только на 127.0.0.1. Проверяются как заданные,
+так и фактические port bindings; up проверяет host readiness.
 
-Docker CLI 29.9.2 / Compose 5.6.1 установлены; Linux Engine не запустился:
-VHDX provider not found. Ошибка воспроизведена отдельным DiskPart вне Docker.
-Диагностика выявила отключённый штатный Microsoft Virtual Drive Enumerator
-(код 22). Службы vmcompute/vds запущены; команда включения перечислителя пока
-не подтвердила восстановление, код 22 сохранился. WSL/VMP включены и загрузка
-гипервизора Auto; Windows сообщает firmware virtualization=false.
-Локальные диагностические файлы находятся вне Git, registry/boot настройки
-не менялись, пользовательские WSL-дистрибутивы/данные не удалялись.
+Исходная блокировка VHDX provider not found снята. Пользователь включил AMD SVM;
+Windows подтвердила firmware virtualization и работающий гипервизор. Дополнительно
+ROOT\VDRVROOT\0000 был отключён в текущем hardware profile (CSConfigFlags=1).
+Включение через штатный SetupAPI DICS_ENABLE / DICS_FLAG_CONFIGSPECIFIC сняло
+этот флаг: статус OK / Code 0, отдельный VHDX успешно создан и удалён.
+Прямые правки registry/boot, factory reset и удаление WSL-данных не потребовались.
 
-Следующий шаг — перезагрузка Windows, повторная проверка перечислителя/VHDX и
-виртуализации, затем Engine и tests/integration/system/check_core.py. Docker build/up,
-новая контейнерная PostgreSQL/миграция, login/restart и cleanup пока **не пройдены**.
-A4.2 не считается завершённым до настоящего запуска. Старые нативные A3 и
-offline-результаты не заменяют эту проверку.
+Docker Engine 29.9.2 / Compose 5.6.1: 2026-10-26 контейнерный core-check полностью
+прошёл 9 проверок. Проверены build, настоящие PG/migrate/API/два узла, явный
+admin-create, login/CSRF, 4 folder mapping, ручной A3 pass (50 событий, 2 node
+probes, 8 folder snapshots), restart API и down/up с сохранением сессии/UUID/history.
+После повторного сбора — 4 node probes; повтор bootstrap запрещён. Секреты
+проверены в ответах/config Env/logs; фактические порты только loopback.
+Cleanup и независимая inventory проверяются отдельно; image/cache сохраняются.
 
-Ближайший шаг — A4.2 после готовности Docker Engine + Compose. Docker Desktop
-не найден в PATH и стандартных местах установки на момент подготовки;
-наличие wsl.exe не доказывает установленный WSL 2 backend. Проверить docker version,
-docker compose version и linux OSType перед сборкой; сам Desktop не устанавливался.
+Реальный запуск выявил и устранил CRLF в password file и импорт установленного
+пакета без соседнего каталога миграций. Private файлы теперь имеют LF на Windows,
+runtime image явно использует PYTHONPATH=/opt/scc. Предметный код A0–A3 не менялся.
+A4.2 завершён; ограничения всего A4 и независимое review сохраняются.
 
 Перед A4.3 нужны B1 evaluator и конечный шаг/hook B2; перед A4.4 — сборка B3,
 Origin/base URL и переменные UI без ключей. Точные image tags/digests выбираются
@@ -218,3 +224,5 @@ Origin/base URL и переменные UI без ключей. Точные ima
 - [Установка Compose и состав Desktop](https://docs.docker.com/compose/install/).
 - [Readiness и порядок зависимостей Compose](https://docs.docker.com/compose/how-tos/startup-order/).
 - [Файлы и доступ к Compose secrets](https://docs.docker.com/compose/how-tos/use-secrets/).
+- [Internal и обычные сети Compose](https://docs.docker.com/compose/how-tos/networking/).
+- [Включение устройства в текущем профиле Windows](https://learn.microsoft.com/en-us/windows/win32/api/setupapi/ns-setupapi-sp_propchange_params).

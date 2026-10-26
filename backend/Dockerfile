@@ -13,6 +13,7 @@ RUN python -m pip install --no-cache-dir --no-deps . \
 # The extra build context contains only image scripts, never runtime/private files.
 COPY --from=deployment / /opt/deploy/
 COPY --from=syncthing /bin/syncthing /usr/local/bin/syncthing
+ENV PYTHONPATH=/opt/scc
 USER 10001:10001
 ENTRYPOINT ["python", "/opt/deploy/entrypoint.py"]
 CMD ["api"]

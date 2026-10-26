@@ -83,6 +83,7 @@ services:
   api:
     <<: *backend
     command: [api]
+    networks: [private, api_access]
     ports:
       - '127.0.0.1:${SCC_API_PORT:-8000}:8000'
     depends_on:
@@ -99,6 +100,8 @@ services:
 networks:
   private:
     internal: true
+    labels: *owner-labels
+  api_access:
     labels: *owner-labels
 
 volumes:

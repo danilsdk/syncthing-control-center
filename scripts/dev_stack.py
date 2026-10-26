@@ -8,6 +8,8 @@ import secrets
 import shutil
 import subprocess
 import sys
+import time
+import urllib.request
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -77,7 +79,8 @@ def prepare(project, port):
     }
     for name, value in values.items():
         path = private / name
-        path.write_text(value + "\n", encoding="utf-8")
+        # Bash file readers strip LF, while CRLF would add CR to the database password.
+        path.write_text(value + "\n", encoding="utf-8", newline="\n")
         # Parent is private (0700); mounted files must be readable by nonroot container UIDs.
         path.chmod(0o444)
     state = {**owner, "root": str(ROOT.resolve()), "port": port}
@@ -148,7 +151,12 @@ class Stack:
                 timeout=timeout,
                 creationflags=HIDDEN,
             )
-        except (OSError, subprocess.TimeoutExpired):
+        except subprocess.TimeoutExpired as error:
+            (self.directory / "last-command.log").write_bytes(
+                (error.stdout or b"") + (error.stderr or b"")
+            )
+            raise StackError("Docker operation could not finish within its deadline") from None
+        except OSError:
             raise StackError("Docker operation could not finish within its deadline") from None
         if check and result.returncode:
             (self.directory / "last-command.log").write_bytes(result.stdout + result.stderr)
@@ -212,6 +220,22 @@ class Stack:
         self.assert_owned()
         self.compose("run", "--rm", "--no-deps", "-T", "init-demo", timeout=90)
         self.compose("up", "-d", "--wait", "--wait-timeout", "150", "api", timeout=180)
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        deadline = time.monotonic() + 20
+        while True:
+            try:
+                with opener.open(
+                    f"http://127.0.0.1:{self.state['port']}/health/ready", timeout=2
+                ) as response:
+                    if response.status == 200 and json.loads(response.read(4097)) == {
+                        "status": "ok"
+                    }:
+                        break
+            except (OSError, ValueError):
+                pass
+            if time.monotonic() >= deadline:
+                raise StackError("Published loopback API did not become ready")
+            time.sleep(0.2)
         print(f"Owned core is ready at http://127.0.0.1:{self.state['port']}", flush=True)
 
     def down(self, *, delete_data=False):
