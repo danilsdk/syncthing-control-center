@@ -7,12 +7,14 @@ import ssl
 import time
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Event, Thread
+from threading import Event, Thread, get_ident
+from types import SimpleNamespace
 from uuid import UUID
 
 import pytest
 from app.contracts.interfaces import AdapterError, NodeConnection
 from app.syncthing_adapter import HttpSyncthingAdapter
+from app.syncthing_adapter import transport as transport_module
 from app.syncthing_adapter.transport import HttpTransport
 
 KEY = "transport-unit-secret"
@@ -206,6 +208,75 @@ def test_deadline_covers_slow_headers_and_a_slow_body(phase):
             transport.request("GET", "/rest/events?since=0&timeout=0", timeout=0.12)
         assert time.monotonic() - started < 1.5
         transport.close()
+
+
+@pytest.mark.parametrize("interrupt", ["deadline", "owner"])
+def test_interrupt_at_body_eof_keeps_http_state_owned_by_request_thread(monkeypatch, interrupt):
+    at_eof, release = Event(), Event()
+    now, callbacks, outcomes, http_closers = [0.0], [], [], []
+    original_close = http.client.HTTPResponse._close_conn
+
+    class Watchdog:
+        def __init__(self, interval, callback):
+            assert interval == 5
+            callbacks.append(callback)
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            pass
+
+    def gated_close(response):
+        http_closers.append(get_ident())
+        if get_ident() == thread.ident and not at_eof.is_set():
+            # read1 has observed EOF but has not changed response.fp yet.
+            at_eof.set()
+            assert release.wait(3)
+        return original_close(response)
+
+    def truncated(handler):
+        handler.send_response(200)
+        handler.send_header("Content-Length", "200")
+        handler.end_headers()
+        handler.close_connection = True
+
+    monkeypatch.setattr(transport_module, "Timer", Watchdog)
+    monkeypatch.setattr(transport_module, "time", SimpleNamespace(monotonic=lambda: now[0]))
+    monkeypatch.setattr(http.client.HTTPResponse, "_close_conn", gated_close)
+
+    with server(truncated) as (port, calls):
+        transport = HttpTransport(connection(port))
+
+        def request():
+            try:
+                transport.request("GET", "/rest/system/status", timeout=5)
+                outcomes.append("unexpected_success")
+            except Exception as error:
+                outcomes.append(error)
+
+        thread = Thread(target=request, daemon=True)
+        thread.start()
+        try:
+            assert at_eof.wait(2)
+            if interrupt == "deadline":
+                now[0] = 5.01
+                assert len(callbacks) == 1
+                callbacks[0]()
+            else:
+                transport.close()
+            release.set()
+            thread.join(3)
+            assert not thread.is_alive()
+            assert len(outcomes) == 1 and isinstance(outcomes[0], AdapterError)
+            expected = "timeout" if interrupt == "deadline" else "invalid_response"
+            assert outcomes[0].code == expected
+            assert set(http_closers) == {thread.ident}
+            assert len(calls) == 1 and transport._active == {}
+        finally:
+            release.set()
+            thread.join(3)
+            transport.close()
 
 
 def test_disconnected_patch_has_unknown_outcome_and_is_never_retried():
