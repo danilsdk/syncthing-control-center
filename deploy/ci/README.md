@@ -5,6 +5,13 @@ A0–A3/A4.2 на GitHub-hosted ubuntu-24.04 с Python 3.12.14. События �
 push в main и workflow_dispatch. Никаких действующих repository secrets не нужно.
 Это отдельная проверка приложения, она не заменяет H0 validate и не меняет защиту main.
 
+Фактический [GitHub run 40375603158](https://github.com/danilsdk/syncthing-control-center/actions/runs/40375603158)
+на head 6ca38d6 прошёл: 458 offline, 190 настоящих SQL и 9 core; cleanup прошёл.
+Сводка с точными SHA, окружением, artifact digest и прежними failed-запусками —
+[github-core-2026-10-26.json](evidence/github-core-2026-10-26.json).
+Отдельное разрешённое исправление A1/A8 устранило конкурентное закрытие HTTPResponse;
+прежние тесты срока не ослаблены. A4 #7 остаётся draft до следующих подэтапов.
+
 Один вход [scripts/check_application.py](../../scripts/check_application.py)
 выполняет последовательно:
 

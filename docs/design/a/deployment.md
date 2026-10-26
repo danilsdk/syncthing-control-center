@@ -247,13 +247,22 @@ persist-credentials, pull_request без privileged target и только 5 я�
 или изменения branch protection. Успешный cleanup не меняет failed-результат прогона.
 Source hashes и реальные результаты сохранены отдельно от заявлений о GitHub CI.
 
-Публикация A4 не выполнялась. GitHub workflow и Linux-hosted Python runner ещё
-не запускались; локально Python работал на Windows, настоящие сервисы — в Linux
-Docker. Полный H0 validate отсутствует в текущей базе. Результаты A4.4a не заменяют
+Опубликован [draft A4 #7](https://github.com/danilsdk/syncthing-control-center/pull/7)
+поверх A3. [GitHub run 40375603158](https://github.com/danilsdk/syncthing-control-center/actions/runs/40375603158)
+на 6ca38d6 / merge ref 3884db5 прошёл в Ubuntu 24.04 / Python 3.12.14:
+458 offline / 190 SQL / 9 core, без failures/errors/skips, cleanup passed.
+Docker 28.0.4 / Compose 2.38.2; runtime Dockerfile/Compose не пришлось менять.
+[Постоянная сводка](../../../deploy/ci/evidence/github-core-2026-10-26.json)
+содержит точные SHA, artifact digest и предыдущие failed-запуски.
+Полный H0 validate отсутствует в текущей базе. Результаты A4.4a не заменяют
 приёмку A4, интеграцию B1/B2/B3, системные проверки передачи файлов или VPS.
 В одном промежуточном Windows-прогоне наблюдался нерегулярный сбой прежнего
 теста A1 slow-body deadline; пять отдельных повторов прошли. Он не исключён
-из CI, автоматические повторы не добавлялись; диагностика A1 остаётся отдельной работой.
+из CI, автоматические повторы не добавлялись. Первый полный Linux-прогон нашёл
+гонку HTTPResponse.close/read1 в том же body-тесте. По отдельному поручению
+пользователя выполнена [A8](../../agent-log/a/A8.md): socket прерывается из watchdog,
+HTTP-объекты закрывает только поток запроса. Два управляемых real-socket guards
+воспроизвели AttributeError до исправления, после — passed; старые сроки сохранены.
 
 Проверены официальные источники 2026-10-26:
 
