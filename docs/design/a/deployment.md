@@ -1,7 +1,8 @@
 # A4 — окружение и общая интеграция
 
-2026-10-26, A / playerboom. **A4.1 — подготовка завершена; реализация A4 ещё
-не начата.** База — опубликованный A3 ee7748ac73884fcba50faf08644c9f8f347cc96d,
+2026-10-26, A / playerboom. **A4.1 завершён; реализация A4.2 подготовлена,
+реальный контейнерный запуск пока блокирует локальный Docker Engine.** База —
+опубликованный A3 ee7748ac73884fcba50faf08644c9f8f347cc96d,
 [PR #6](https://github.com/danilsdk/syncthing-control-center/pull/6), review danilsdk
 ожидается. Контракт и зависимости не считаются принятыми по отметке автора.
 
@@ -170,6 +171,36 @@ Linux, system T-02–T-04/T-11, VPS и новый CI не проверялись
 не выдаются за результаты Docker A4.
 
 ## Условия продолжения и внешние источники
+
+### Текущее состояние A4.2
+
+Реализованы compose.yaml, backend/Dockerfile с отдельным build context только
+для image scripts, server-file entrypoint, явная подготовка собственных demo
+volumes и scripts/dev_stack.py. В core API A3 router подключается через существующий
+create_app(routers=...), без изменений main/config и предметных модулей.
+Подробности и команды — [deploy/compose](../../../deploy/compose/README.md).
+
+В registry проверены Python 3.12.14-slim-bookworm, PostgreSQL 18.6-bookworm и
+Syncthing 2.1.7; точные index/amd64 digests сохранены в
+[images.json](../../../deploy/compose/images.json). Образы ещё не запускались.
+Пройдены 15 новых offline guards, весь набор без PG — 442 passed / 190 deselected.
+Compose config --quiet и разбор config JSON подтвердили внутреннюю сеть, loopback
+API, отдельный volume узла B и правильную точку PG 18 /var/lib/postgresql.
+
+Docker CLI 29.9.2 / Compose 5.6.1 установлены; Linux Engine не запустился:
+VHDX provider not found. Ошибка воспроизведена отдельным DiskPart вне Docker.
+Диагностика выявила отключённый штатный Microsoft Virtual Drive Enumerator
+(код 22). Службы vmcompute/vds запущены; команда включения перечислителя пока
+не подтвердила восстановление, код 22 сохранился. WSL/VMP включены и загрузка
+гипервизора Auto; Windows сообщает firmware virtualization=false.
+Локальные диагностические файлы находятся вне Git, registry/boot настройки
+не менялись, пользовательские WSL-дистрибутивы/данные не удалялись.
+
+Следующий шаг — перезагрузка Windows, повторная проверка перечислителя/VHDX и
+виртуализации, затем Engine и tests/integration/system/check_core.py. Docker build/up,
+новая контейнерная PostgreSQL/миграция, login/restart и cleanup пока **не пройдены**.
+A4.2 не считается завершённым до настоящего запуска. Старые нативные A3 и
+offline-результаты не заменяют эту проверку.
 
 Ближайший шаг — A4.2 после готовности Docker Engine + Compose. Docker Desktop
 не найден в PATH и стандартных местах установки на момент подготовки;
