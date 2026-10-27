@@ -1,0 +1,114 @@
+{
+  "schema": 1,
+  "stage": "A4.4a with A8",
+  "result": "passed",
+  "verified_on": "2026-10-26",
+  "pull_request": "https://github.com/danilsdk/syncthing-control-center/pull/7",
+  "workflow": {
+    "name": "Application core",
+    "run_id": 40375603158,
+    "url": "https://github.com/danilsdk/syncthing-control-center/actions/runs/40375603158",
+    "event": "pull_request",
+    "attempt": 1,
+    "conclusion": "success",
+    "head_sha": "6ca38d673a8dba9bfadac682a1902de531c160a5",
+    "base_sha": "ee7748ac73884fcba50faf08644c9f8f347cc96d",
+    "checkout_merge_sha": "3884db5b461ac1a51ce42f73289b41935443d5c8",
+    "tree_sha": "5c1b29b000ddda65452c296df1b0dfb61693381c"
+  },
+  "environment": {
+    "runner": "ubuntu-24.04",
+    "python": "3.12.14",
+    "docker": "28.0.4",
+    "compose": "2.38.2",
+    "postgres_server_version": 180006
+  },
+  "checks": {
+    "ruff": "passed",
+    "format": "passed",
+    "contract": "passed",
+    "offline": {
+      "tests": 458,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "postgres": {
+      "tests": 190,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "groups": {
+        "shared": 85,
+        "auth": 7,
+        "registry": 29,
+        "collection": 69
+      }
+    },
+    "core": {
+      "checks": 9,
+      "result": "passed",
+      "backend_image_id": "sha256:ab26e3009af1286e2952a9597c6417eccfd1aed4438fa1545ae0f414f19e2be2",
+      "events_observed": 52,
+      "node_probes": 2
+    }
+  },
+  "cleanup": {
+    "result": "passed",
+    "containers": 0,
+    "volumes": 0,
+    "networks": 0,
+    "postgres_containers": 0,
+    "private_removed": true,
+    "build_cache_and_images_retained": true
+  },
+  "reports": {
+    "started_at": "2026-10-26T18:12:27.725452Z",
+    "completed_at": "2026-10-26T18:14:00.122150Z",
+    "source_digest": "3903ee62ad64c16dc62d56021ab5c5cac8cc3bccea145c5c7955a67465f2e0c4",
+    "artifact_id": 12675176213,
+    "archive_sha256": "3e76a511ce4fbd2bbfa947e0bf6d62eab971e47753eeb9943e288ebc4cec4dc5",
+    "retention_days": 7,
+    "files": [
+      "cleanup.json",
+      "core.json",
+      "offline.xml",
+      "postgres.xml",
+      "summary.json"
+    ]
+  },
+  "previous_failed_runs": [
+    {
+      "run_id": 40373857120,
+      "result": "failure",
+      "phase": "workflow_tool_download",
+      "reason": "HTTP 504 before Python setup or tests"
+    },
+    {
+      "run_id": 40374092794,
+      "result": "failure",
+      "phase": "workflow_tool_download",
+      "reason": "HTTP 504 on all four bounded download attempts"
+    },
+    {
+      "run_id": 40374446691,
+      "result": "failure",
+      "phase": "offline",
+      "tests": 456,
+      "passed": 455,
+      "failed": 1,
+      "reason": "A1 HTTPResponse close race, AttributeError in slow body deadline test; SQL/core not run"
+    }
+  ],
+  "fixes": {
+    "download": "Same official actionlint 1.7.12 archive, release-assets API ID 384924896; SHA256 required; bounded network retries only",
+    "A8": "Socket shutdown interrupts I/O; only request thread closes HTTPConnection/HTTPResponse; two controlled real-socket regressions failed before fix and passed after; old deadline expectations unchanged"
+  },
+  "limits": [
+    "This is core CI; A4 remains draft and depends on B1/B2/B3.",
+    "Full H0 validate on accepted policy not run.",
+    "Actual GitHub cancellation/OS signal not tested.",
+    "Independent scan of five actual transient values was local; CI reports are not claimed to have that separate external observer.",
+    "Worker/UI, rule-driven commands, full T-11 and VPS not tested."
+  ]
+}

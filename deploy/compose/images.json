@@ -1,0 +1,24 @@
+{
+  "verified_on": "2026-10-26",
+  "verification": "Docker buildx imagetools inspect against registry; image execution not implied",
+  "images": [
+    {
+      "tag": "python:3.12.14-slim-bookworm",
+      "digest": "sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e",
+      "platform": "linux/amd64",
+      "platform_digest": "sha256:1aaa65a85fda306ffb8b910824d4e93bdce61e212c7e87168123ea3073b41a1a"
+    },
+    {
+      "tag": "postgres:18.6-bookworm",
+      "digest": "sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc",
+      "platform": "linux/amd64",
+      "platform_digest": "sha256:6b38fe68f2c02cafffbbce7496f76d110d8a947c039bd22c067e9a43c2250240"
+    },
+    {
+      "tag": "syncthing/syncthing:2.1.7",
+      "digest": "sha256:2b71da7c0d0a91a6ae5285ad079226fecc0a365d08b27720e1f7037b018f7546",
+      "platform": "linux/amd64",
+      "platform_digest": "sha256:c28e86f5173bacc429aef92af915b5c4fac56e1a9dcd3875855fd51f664d0414"
+    }
+  ]
+}

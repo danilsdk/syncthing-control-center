@@ -1,0 +1,120 @@
+name: ${SCC_PROJECT:?Use scripts/dev_stack.py prepare/up}
+
+x-owner-labels: &owner-labels
+  io.scc.owner: ${SCC_OWNER:?Use scripts/dev_stack.py}
+  io.scc.stage: a4-core
+
+x-backend: &backend
+  image: scc-a4-backend:${SCC_PROJECT}
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+    additional_contexts:
+      deployment: ./deploy/compose/image
+  platform: linux/amd64
+  init: true
+  labels: *owner-labels
+  networks: [private]
+  security_opt: [no-new-privileges:true]
+  environment:
+    SCC_PROJECT: ${SCC_PROJECT}
+    SCC_ALLOWED_ORIGINS: '["http://localhost:${SCC_API_PORT:-8000}","http://127.0.0.1:${SCC_API_PORT:-8000}"]'
+  secrets: [database_password, session_secret, connections, owner]
+
+services:
+  postgres:
+    image: postgres:18.6-bookworm@sha256:bbf83594798e144bff365a9c191c5d779f181fb3135902064ab8ff11918020fc
+    platform: linux/amd64
+    labels: *owner-labels
+    networks: [private]
+    environment:
+      POSTGRES_USER: scc
+      POSTGRES_DB: scc
+      POSTGRES_PASSWORD_FILE: /run/secrets/database_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256 --auth-local=scram-sha-256
+    secrets: [database_password]
+    volumes: [postgres_data:/var/lib/postgresql]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U scc -d scc']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 30s
+
+  init-demo:
+    <<: *backend
+    profiles: [tools]
+    user: '0:0'
+    command: [init-demo]
+    volumes:
+      - syncthing_a:/node-a
+      - syncthing_b:/node-b
+
+  syncthing-a:
+    image: syncthing/syncthing:2.1.7@sha256:2b71da7c0d0a91a6ae5285ad079226fecc0a365d08b27720e1f7037b018f7546
+    platform: linux/amd64
+    labels: *owner-labels
+    networks: [private]
+    user: '1000:1000'
+    environment:
+      STGUIADDRESS: 0.0.0.0:8384
+      STHOMEDIR: /var/syncthing/config
+      STNOUPGRADE: '1'
+    command: [serve, --no-browser, --no-upgrade, --no-port-probing]
+    volumes: [syncthing_a:/var/syncthing]
+    healthcheck:
+      test: [CMD-SHELL, 'curl -fsS -m 2 http://127.0.0.1:8384/rest/noauth/health | grep -q OK']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    stop_grace_period: 15s
+
+  syncthing-b:
+    extends: syncthing-a
+    volumes: [syncthing_b:/var/syncthing]
+
+  migrate:
+    <<: *backend
+    command: [migrate]
+    depends_on:
+      postgres: {condition: service_healthy}
+    restart: 'no'
+
+  api:
+    <<: *backend
+    command: [api]
+    networks: [private, api_access]
+    ports:
+      - '127.0.0.1:${SCC_API_PORT:-8000}:8000'
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      syncthing-a: {condition: service_healthy}
+      syncthing-b: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, /opt/deploy/entrypoint.py, probe]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    stop_grace_period: 15s
+
+networks:
+  private:
+    internal: true
+    labels: *owner-labels
+  api_access:
+    labels: *owner-labels
+
+volumes:
+  postgres_data: {labels: *owner-labels}
+  syncthing_a: {labels: *owner-labels}
+  syncthing_b: {labels: *owner-labels}
+
+secrets:
+  database_password:
+    file: ${SCC_PRIVATE_DIR:?Use scripts/dev_stack.py}/database-password
+  session_secret:
+    file: ${SCC_PRIVATE_DIR}/session-secret
+  connections:
+    file: ${SCC_PRIVATE_DIR}/connections.json
+  owner:
+    file: ${SCC_PRIVATE_DIR}/owner.json

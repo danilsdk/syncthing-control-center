@@ -1,0 +1,148 @@
+{
+  "stage": "A4.2b",
+  "tested_worktree_base": "6f9c06c8e9e90e911dcc96f55be0fca65e731351",
+  "source_sha256": {
+    "scripts/check_application.py": "1bc3549c8b309877fc13f2a54b42134a4484d43cdeba0f91dac95c0024ab2fbc",
+    "tests/integration/system/check_core.py": "5f9c2a96b36c47571c8f1954d220634e32d2c419e8d7fb31fe1a6d6f345922d7",
+    "tests/integration/system/check_transfer.py": "441cbf6d8580b9c2629650561130e3c76b9d575ae239b712858819cd5bb6dd5d",
+    "tests/integration/system/source_probe.py": "baf8efbdf4c42e830b006c5738ea6a282b7fe627162406596ffae3c1dba24365",
+    "tests/integration/system/test_transfer_guards.py": "19de2d923a883b8f7cf4f12c70f24c5157a06e7ce319c90f9eb038ddb91df308"
+  },
+  "offline": {
+    "tests": 469,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "postgres_deselected": 190
+  },
+  "core": {
+    "stage": "A4.2b",
+    "started_at": "2026-10-27T06:27:38.700213Z",
+    "result": "passed",
+    "checks": [
+      {
+        "name": "linux_engine_and_empty_owned_project",
+        "at": "2026-10-27T06:27:41.141531Z"
+      },
+      {
+        "name": "pinned_backend_image_built",
+        "at": "2026-10-27T06:27:56.244596Z"
+      },
+      {
+        "name": "clean_core_migration_readiness_and_no_automatic_administrator",
+        "at": "2026-10-27T06:28:13.913921Z"
+      },
+      {
+        "name": "real_cli_scrypt_login_csrf_and_two_sources_four_folder_mappings",
+        "at": "2026-10-27T06:28:18.316090Z"
+      },
+      {
+        "name": "real_A3_manual_pass_and_guarded_history_without_scheduler",
+        "at": "2026-10-27T06:28:21.109834Z",
+        "events": 51,
+        "node_probes": 2
+      },
+      {
+        "name": "api_restart_preserves_session_registry_and_history",
+        "at": "2026-10-27T06:28:24.711300Z"
+      },
+      {
+        "name": "down_up_preserves_database_demo_identity_and_source_reconciliation",
+        "at": "2026-10-27T06:28:50.170064Z"
+      },
+      {
+        "name": "T02_real_file_transfer_sha256",
+        "at": "2026-10-27T06:29:01.686125Z",
+        "file_name": "a4-transfer-c00458aa7df9488facb9efa33dde24c8.bin",
+        "bytes": 81920,
+        "sha256": "0e4072c48632f825893fc0bdc811f9b6c48bd32b39b6eced7698e939afb802ea",
+        "elapsed_seconds": 1.453
+      },
+      {
+        "name": "T03_target_paused_new_file_absent_control_transfers",
+        "at": "2026-10-27T06:29:27.150438Z",
+        "absent_seconds": 9.5,
+        "absence_checks": 3,
+        "sentinel": {
+          "file_name": "a4-transfer-653489531ee54dd9bb96477540ac2e44.bin",
+          "bytes": 81920,
+          "sha256": "351d66d4f6630e8f2df97c550e223aacb28fc9aad5a10d40729096b3c067a3dd"
+        },
+        "control": {
+          "file_name": "a4-transfer-90c964b4f43a4a5bb236b4e88a1d896c.bin",
+          "bytes": 81920,
+          "sha256": "1bc5459f3ad8bcd5664a7ce320914d3590627ccfafda021ee2adb71ca82d5129"
+        },
+        "config_paused": true,
+        "runtime": {
+          "available": false,
+          "error_code": "invalid_response"
+        },
+        "three_other_configs_unchanged": true
+      },
+      {
+        "name": "T04_adapter_resume_file_sha256_and_configuration_restored",
+        "at": "2026-10-27T06:29:39.032328Z",
+        "file_name": "a4-transfer-653489531ee54dd9bb96477540ac2e44.bin",
+        "bytes": 81920,
+        "sha256": "351d66d4f6630e8f2df97c550e223aacb28fc9aad5a10d40729096b3c067a3dd",
+        "elapsed_seconds": 4.875,
+        "four_original_configs_restored": true
+      },
+      {
+        "name": "explicit_bootstrap_cannot_overwrite_administrator",
+        "at": "2026-10-27T06:29:42.823830Z"
+      },
+      {
+        "name": "file_secrets_private_ports_and_container_logs",
+        "at": "2026-10-27T06:29:44.395197Z"
+      }
+    ],
+    "project": "scc-a4-test-7e6e93159225",
+    "docker": "29.9.2",
+    "compose": "5.6.1",
+    "phase": "file_secrets_private_ports_and_container_logs",
+    "backend_image_id": "sha256:294302b93c590328dd3e78e27b39b9c41d875551eeb043fb58c91da50a78a18d",
+    "transfer": {
+      "resume": {
+        "file_name": "a4-transfer-653489531ee54dd9bb96477540ac2e44.bin",
+        "bytes": 81920,
+        "sha256": "351d66d4f6630e8f2df97c550e223aacb28fc9aad5a10d40729096b3c067a3dd",
+        "elapsed_seconds": 4.875
+      },
+      "restoration": {
+        "attempted": true,
+        "result": "passed"
+      }
+    },
+    "cleanup": {
+      "containers": 0,
+      "volumes": 0,
+      "networks": 0,
+      "private_runtime_exists": false,
+      "build_cache_and_image_retained": true
+    },
+    "completed_at": "2026-10-27T06:29:50.047302Z"
+  },
+  "previous_attempt": {
+    "result": "failed",
+    "error_type": "TypeError",
+    "cause": "File name collided with the check reporter name parameter; renamed to file_name.",
+    "restoration": {
+      "attempted": true,
+      "result": "passed"
+    },
+    "cleanup": {
+      "containers": 0,
+      "volumes": 0,
+      "networks": 0,
+      "private_runtime_exists": false,
+      "build_cache_and_image_retained": true
+    }
+  },
+  "limits": [
+    "Direct A1 adapter commands, not B1/B2 rule execution.",
+    "Bounded pause observation, not a guarantee for arbitrary future time.",
+    "Full H0 validate, full T-11, UI, worker and VPS not tested here."
+  ]
+}
