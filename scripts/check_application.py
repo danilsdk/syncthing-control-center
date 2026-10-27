@@ -83,6 +83,24 @@ def junit(source, destination, private_values=()):
     return counts
 
 
+def validate_core(value):
+    required = {
+        "T02_real_file_transfer_sha256",
+        "T03_target_paused_new_file_absent_control_transfers",
+        "T04_adapter_resume_file_sha256_and_configuration_restored",
+    }
+    names = [check["name"] for check in value["checks"]]
+    if (
+        value["result"] != "passed"
+        or len(names) < 12
+        or len(set(names)) != len(names)
+        or not required.issubset(names)
+        or value.get("transfer", {}).get("restoration", {}).get("result") != "passed"
+    ):
+        raise CheckFailed("Container core scenario did not pass")
+    return {"checks": len(names), "backend_image_id": value["backend_image_id"]}
+
+
 def prepare(work, reports, docker=None, context=None):
     work, reports = work.resolve(), reports.resolve()
     if (
@@ -355,9 +373,7 @@ class Runner:
             args += ["--context", self.state["context"]]
         self.command(args, timeout=900)
         value = json.loads((self.reports / "core.json").read_text())
-        if value["result"] != "passed" or len(value["checks"]) < 9:
-            raise CheckFailed("Container core scenario did not pass")
-        return {"checks": len(value["checks"]), "backend_image_id": value["backend_image_id"]}
+        return validate_core(value)
 
     def cleanup(self, *, remove_private):
         # Revalidate the marker before any mutation or recursive removal.

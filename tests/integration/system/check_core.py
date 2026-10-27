@@ -14,6 +14,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from check_transfer import Fixture, TransferError, verify
+
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "backend"))
 from app.contracts import dto  # noqa: E402
@@ -288,6 +290,10 @@ def run(args, report):
         )
         passed("down_up_preserves_database_demo_identity_and_source_reconciliation")
 
+        report["phase"] = "T02_T04_transfer"
+        report["transfer"] = {}
+        verify(Fixture(stack, ids), passed, report["transfer"])
+
         duplicate = stack.compose(
             "exec",
             "-T",
@@ -376,13 +382,13 @@ def main():
     parser.add_argument("--context")
     parser.add_argument("--project", help="Existing owned test runtime prepared by the CI runner")
     args = parser.parse_args()
-    report = {"stage": "A4.2", "started_at": utc(), "result": "failed", "checks": []}
+    report = {"stage": "A4.2b", "started_at": utc(), "result": "failed", "checks": []}
     try:
         run(args, report)
     except Exception as error:
         report["result"] = "failed"
         report["error_type"] = type(error).__name__
-        if isinstance(error, tools.StackError):
+        if isinstance(error, (tools.StackError, TransferError)):
             report["error"] = str(error)
         print("Core check failed; no private diagnostics were printed", flush=True)
     finally:

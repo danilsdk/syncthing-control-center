@@ -12,6 +12,15 @@ push в main и workflow_dispatch. Никаких действующих reposit
 Отдельное разрешённое исправление A1/A8 устранило конкурентное закрытие HTTPResponse;
 прежние тесты срока не ослаблены. A4 #7 остаётся draft до следующих подэтапов.
 
+Расширение A4.2b добавило настоящие T-02–T-04 в этот же core-check. Локально
+27.10.2026 прошли 469 offline и 12 core; 190 SQL в отдельном offline запуске
+были deselected. [Отчёт](../compose/evidence/transfer-2026-10-27.json) содержит
+файловые SHA256, наблюдение паузы с передачей по контрольной папке, восстановление
+четырёх конфигураций и cleanup. validate_core отвергает отсутствие любого из трёх
+сценариев, дубли названий и неуспешное восстановление даже при результате passed.
+Новый GitHub прогон и точный head публикуются в [PR #7](https://github.com/danilsdk/syncthing-control-center/pull/7);
+исторические 458/190/9 выше относятся к прежнему head, а не к этому расширению.
+
 Один вход [scripts/check_application.py](../../scripts/check_application.py)
 выполняет последовательно:
 
@@ -22,7 +31,8 @@ push в main и workflow_dispatch. Никаких действующих reposit
    закреплённого [образа](../compose/images.json). Четыре отдельные pytest-процесса
    исключают конфликт одноимённых фикстур A2/A3; ни один набор не исключается.
 5. Настоящий [core-check](../../tests/integration/system/check_core.py): build,
-   новая PG, миграции, API, два Syncthing, bootstrap/login/CSRF, история и restart/down/up.
+   новая PG, миграции, API, два Syncthing, bootstrap/login/CSRF, история и restart/down/up,
+   передача/пауза/resume по SHA256 и восстановление всех demo folder configs.
 
 PostgreSQL для SQL-тестов получает случайный пароль через file mount, отдельные
 три БД, tmpfs для данных и случайный host-порт только на 127.0.0.1. Рабочие SCC/PG/
