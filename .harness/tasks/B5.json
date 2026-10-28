@@ -1,0 +1,22 @@
+{
+  "id": "B5",
+  "role": "B",
+  "title": "Автоматизация и сценарий защиты",
+  "branch": "codex/b05-report",
+  "depends_on": [
+    "A4",
+    "B4"
+  ],
+  "allow": [
+    "docs/report/parts/b/**",
+    ".harness/tasks/B5.json",
+    "docs/agent-log/b/B5.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b5",
+  "acceptance": [
+    "Материалы автоматизации, интерфейса и аналитики совпадают с кодом.",
+    "Есть фактические результаты и пример agentic development.",
+    "Сценарий демонстрации воспроизводим обоими участниками."
+  ]
+}

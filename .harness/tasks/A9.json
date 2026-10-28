@@ -3,7 +3,13 @@
   "role": "A",
   "title": "Перенос A8 в A1 и подготовка базовых PR и документации к приёмке",
   "branch": "codex/a09-review-readiness",
-  "depends_on": ["A0", "A1", "A2", "A3", "A8"],
+  "depends_on": ["A0", "A1", "A2", "A3"],
+  "scope_authorization": {
+    "confirmed_by": "A / playerboom",
+    "confirmed_on": "2026-10-28",
+    "basis": "Прямое поручение пользователя выполнить A9 и обновить цепочку A0–A4; повторно подтверждено сохранение результата A9 и оформление границ PR.",
+    "policy_status": "Изменение разрешений A0 должно пройти отдельный review и быть принято в main; эта запись сама не меняет принятую политику."
+  },
   "allow": [
     ".harness/tasks/A9.json",
     "README.md",
