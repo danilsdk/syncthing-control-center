@@ -19,25 +19,48 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - name: Select trusted harness
+        env:
+          HARNESS_BASE: ${{ github.event.pull_request.base.sha }}
+          HARNESS_BRANCH: ${{ github.head_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            if git cat-file -e "$HARNESS_BASE:.harness/project.json" 2>/dev/null; then
+              git cat-file -e "$HARNESS_BASE:scripts/harness.py"
+              git show "$HARNESS_BASE:scripts/harness.py" > "$RUNNER_TEMP/harness.py"
+              echo "HARNESS_SCRIPT=$RUNNER_TEMP/harness.py" >> "$GITHUB_ENV"
+              echo "HARNESS_POLICY_REF=$HARNESS_BASE" >> "$GITHUB_ENV"
+              echo "HARNESS_BOOTSTRAP=false" >> "$GITHUB_ENV"
+            elif [ "$HARNESS_BRANCH" = "codex/h00-harness" ]; then
+              echo "HARNESS_SCRIPT=scripts/harness.py" >> "$GITHUB_ENV"
+              echo "HARNESS_POLICY_REF=" >> "$GITHUB_ENV"
+              echo "HARNESS_BOOTSTRAP=true" >> "$GITHUB_ENV"
+            else
+              echo "Base branch has no harness policy; merge H0 first." >&2
+              exit 1
+            fi
+          else
+            echo "HARNESS_SCRIPT=scripts/harness.py" >> "$GITHUB_ENV"
+            echo "HARNESS_POLICY_REF=" >> "$GITHUB_ENV"
+            echo "HARNESS_BOOTSTRAP=false" >> "$GITHUB_ENV"
+          fi
       - name: Validate structure
-        run: python3 scripts/harness.py check
+        run: python3 "$HARNESS_SCRIPT" check
       - name: Check task scope against base policy
         if: github.event_name == 'pull_request'
         env:
           HARNESS_BRANCH: ${{ github.head_ref }}
           HARNESS_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          if git cat-file -e "$HARNESS_BASE:.harness/project.json" 2>/dev/null; then
-            python3 scripts/harness.py scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --policy-ref "$HARNESS_BASE" --committed-only
-          elif [ "$HARNESS_BRANCH" = "codex/h00-harness" ]; then
-            python3 scripts/harness.py scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --committed-only
+          if [ "$HARNESS_BOOTSTRAP" = true ]; then
+            python3 "$HARNESS_SCRIPT" scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --committed-only
           else
-            echo "Base branch has no harness policy; merge H0 first." >&2
-            exit 1
+            python3 "$HARNESS_SCRIPT" scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --policy-ref "$HARNESS_POLICY_REF" --committed-only
           fi
       - name: Test harness
-        run: python3 scripts/harness.py self-test
+        run: python3 "$HARNESS_SCRIPT" self-test
       - name: Prepare existing components
-        run: python3 scripts/harness.py setup
+        run: python3 "$HARNESS_SCRIPT" setup
       - name: Validate existing components
-        run: python3 scripts/harness.py product-checks
+        run: python3 "$HARNESS_SCRIPT" product-checks
