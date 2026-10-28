@@ -1,0 +1,30 @@
+{
+  "name": "frontend: lint, CI-тесты и сборка",
+  "when_exists": [
+    "frontend/package.json"
+  ],
+  "cwd": "frontend",
+  "commands": [
+    [
+      "npm",
+      "run",
+      "lint"
+    ],
+    [
+      "npm",
+      "run",
+      "test:ci"
+    ],
+    [
+      "npm",
+      "run",
+      "build"
+    ]
+  ],
+  "setup_commands": [
+    [
+      "npm",
+      "ci"
+    ]
+  ]
+}
