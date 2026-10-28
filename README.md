@@ -9,9 +9,6 @@
 **Harness H0 принят 28.10.2026:** [PR #1](https://github.com/danilsdk/syncthing-control-center/pull/1).
 Участники: A / playerboom — интеграция и данные; B / danilsdk — автоматизация,
 интерфейс и harness. Порядок работы — [docs/harness.md](docs/harness.md).
-Подготовка A9 и обновление цепочки A0–A4 явно поручены пользователем;
-[оформление согласованных границ](docs/design/a/a9-scope-authorization.md)
-проходит отдельный review принятой политики, результат A9 сохраняется.
 
 ## Запуск каркаса A0.2
 
