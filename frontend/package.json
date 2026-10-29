@@ -1,0 +1,26 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "Syncthing Control Center administrator UI",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "lint": "tsc --noEmit",
+    "test:ci": "vitest run",
+    "build": "tsc --noEmit && vite build"
+  },
+  "keywords": [],
+  "type": "module",
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  }
+}
