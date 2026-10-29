@@ -60,7 +60,9 @@ def test_not_applied_write_never_becomes_applied() -> None:
         restart_required=False,
         expected_source_session=SESSION,
         observed_source_session=SESSION,
-        write_error=AdapterError("unreachable", operation="write", write_outcome="not_applied"),
+        write_error=AdapterError(
+            "unreachable", operation="write", write_outcome="not_applied"
+        ),
     )
     assert result.status is ExecutionStatus.FAILED
     assert result.error_code == "unreachable"

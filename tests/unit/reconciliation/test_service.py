@@ -7,6 +7,8 @@ from uuid import uuid4
 
 from app.contracts.interfaces import AdapterError
 from app.contracts.types import ExecutionStatus
+from app.models import CommandExecution, SyncRule
+from app.reconciliation.decisions import Confirmation
 from app.reconciliation.service import ReconciliationService, _Target
 
 SESSION = "a" * 64
@@ -18,7 +20,9 @@ class FixedClock:
 
 
 class FakeAdapter:
-    def __init__(self, *, paused: bool, write_error: AdapterError | None = None) -> None:
+    def __init__(
+        self, *, paused: bool, write_error: AdapterError | None = None
+    ) -> None:
         self.paused = paused
         self.write_error = write_error
         self.writes: list[tuple[str, bool]] = []
@@ -99,6 +103,78 @@ class FakeDatabase:
     @contextmanager
     def session(self):
         yield self._session
+
+
+class FakeLease:
+    def __init__(self, session) -> None:
+        self._session = session
+
+    @contextmanager
+    def session(self):
+        yield self._session
+
+
+class FakeFolderLocks:
+    def __init__(self, session) -> None:
+        self._lease = FakeLease(session)
+
+    @contextmanager
+    def folder(self, _folder_id):
+        yield self._lease
+
+
+class FinishSession:
+    def __init__(self, target, *, changed: bool) -> None:
+        self.execution = SimpleNamespace(
+            status=ExecutionStatus.PENDING,
+            error_code=None,
+            observed_paused=None,
+            restart_required=None,
+            source_session_id=None,
+            verified_at=None,
+            completed_at=None,
+        )
+        self.rule = SimpleNamespace(
+            version=target.rule_version + (1 if changed else 0),
+            enabled=not changed,
+        )
+        self.commits = 0
+
+    def get(self, model, _id):
+        return (
+            self.execution
+            if model is CommandExecution
+            else self.rule
+            if model is SyncRule
+            else None
+        )
+
+    def commit(self) -> None:
+        self.commits += 1
+
+
+def test_rule_change_after_send_invalidates_confirmation() -> None:
+    adapter = FakeAdapter(paused=True)
+    target_row = target(adapter)
+    session = FinishSession(target_row, changed=True)
+    service = ReconciliationService(
+        None,
+        None,
+        FixedClock(),
+        FakeFolderLocks(session),  # type: ignore[arg-type]
+    )
+
+    service._finish(
+        target_row,
+        Confirmation(ExecutionStatus.APPLIED, None, True),
+        observed_paused=True,
+        restart_required=False,
+        source_session_id=SESSION,
+    )
+
+    assert session.execution.status is ExecutionStatus.UNKNOWN
+    assert session.execution.error_code == "rule_changed_after_send"
+    assert session.execution.verified_at is None
 
 
 def test_sent_pending_execution_is_not_replayed_after_restart() -> None:

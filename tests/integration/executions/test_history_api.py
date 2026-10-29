@@ -50,7 +50,9 @@ def test_resume_is_idempotent_and_history_is_readable(
                 error_code="verification_timeout",
             )
         )
-    assert client.get("/api/executions", params={"status": "unknown"}).json()["total"] == 1
+    assert (
+        client.get("/api/executions", params={"status": "unknown"}).json()["total"] == 1
+    )
 
 
 def test_resume_is_rejected_when_an_active_rule_controls_the_folder(

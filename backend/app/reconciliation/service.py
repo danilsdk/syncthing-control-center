@@ -176,7 +176,13 @@ class ReconciliationService:
                 node = session.get(ManagedNode, folder.node_id)
                 if node is None or not node.enabled:
                     return False
-                adapter = self.adapters.for_node(node.id)
+                try:
+                    adapter = self.adapters.for_node(node.id)
+                except AdapterError:
+                    # A resolver failure is an unavailable observation, not a
+                    # worker-fatal exception. A3 records the probe failure and
+                    # the next pass retries after recalculating the rule.
+                    return False
                 try:
                     system = adapter.read_system()
                     observed = adapter.read_folder(folder.syncthing_folder_id)
@@ -251,7 +257,14 @@ class ReconciliationService:
                     row.completed_at = self.clock.now_utc()
                     session.commit()
                     return True
-                adapter = self.adapters.for_node(node.id)
+                try:
+                    adapter = self.adapters.for_node(node.id)
+                except AdapterError as error:
+                    row.status = ExecutionStatus.UNKNOWN
+                    row.error_code = error.code.value
+                    row.completed_at = self.clock.now_utc()
+                    session.commit()
+                    return True
                 try:
                     system = adapter.read_system()
                     observed = adapter.read_folder(folder.syncthing_folder_id)
@@ -313,7 +326,7 @@ class ReconciliationService:
             write_error=write_error,
         )
         self._finish(
-            target.execution_id,
+            target,
             outcome,
             observed_paused=observed_paused,
             restart_required=restart_required,
@@ -322,25 +335,37 @@ class ReconciliationService:
 
     def _finish(
         self,
-        execution_id: UUID,
+        target: _Target,
         outcome: Confirmation,
         *,
         observed_paused: bool | None,
         restart_required: bool | None,
         source_session_id: str | None,
     ) -> None:
-        with self.database.session() as session:
-            row = session.get(CommandExecution, execution_id)
-            if row is None or row.status != ExecutionStatus.PENDING:
-                return
-            row.status = outcome.status
-            row.error_code = outcome.error_code
-            row.observed_paused = observed_paused
-            row.restart_required = restart_required
-            row.source_session_id = source_session_id
-            row.verified_at = self.clock.now_utc() if outcome.verified else None
-            row.completed_at = self.clock.now_utc()
-            session.commit()
+        # Serialize the final evidence with rule updates. A version change that
+        # happened while the external call was in flight invalidates the old
+        # confirmation and must be retried from a fresh rule calculation.
+        with self.folder_locks.folder(target.folder_id) as lease:
+            with lease.session() as session:
+                row = session.get(CommandExecution, target.execution_id)
+                if row is None or row.status != ExecutionStatus.PENDING:
+                    return
+                if target.rule_id is not None:
+                    rule = session.get(SyncRule, target.rule_id)
+                    if rule is None or rule.version != target.rule_version or not rule.enabled:
+                        outcome = Confirmation(
+                            ExecutionStatus.UNKNOWN,
+                            "rule_changed_after_send",
+                            False,
+                        )
+                row.status = outcome.status
+                row.error_code = outcome.error_code
+                row.observed_paused = observed_paused
+                row.restart_required = restart_required
+                row.source_session_id = source_session_id
+                row.verified_at = self.clock.now_utc() if outcome.verified else None
+                row.completed_at = self.clock.now_utc()
+                session.commit()
 
 
 class ReconciliationRuntime:
