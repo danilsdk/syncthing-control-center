@@ -1,6 +1,6 @@
 {
   "stage": "D-01-r2",
-  "started_at": "2026-10-27T04:48:07.900731Z",
+  "started_at": "2026-10-29T05:28:42.937251Z",
   "result": "passed",
   "scheme": "scc:source-epoch:v2",
   "adapter_regression": {
@@ -8,8 +8,8 @@
     "pause": {
       "config_paused": true,
       "requires_restart": false,
-      "source_session_id": "a434cb619391196754ccc75e599215e24e5c68a0a47fa44854eb25acdd30dcec",
-      "observed_at": "2026-10-27T04:48:12.657153Z",
+      "source_session_id": "a25f79de61ddfe13d8935218b32bf91232b2df462683b75a6853856ccd5f0159",
+      "observed_at": "2026-10-29T05:28:47.534857Z",
       "runtime": {
         "available": false,
         "error_code": "invalid_response"
@@ -27,30 +27,30 @@
         "paused"
       ],
       "file_absent_during_observation": true,
-      "absence_checks": 11
+      "absence_checks": 10
     },
     "resume": {
       "config_paused": false,
       "requires_restart": false,
-      "source_session_id": "a434cb619391196754ccc75e599215e24e5c68a0a47fa44854eb25acdd30dcec",
-      "observed_at": "2026-10-27T04:48:14.829934Z",
+      "source_session_id": "a25f79de61ddfe13d8935218b32bf91232b2df462683b75a6853856ccd5f0159",
+      "observed_at": "2026-10-29T05:28:49.861453Z",
       "runtime": {
-        "state": "sync-waiting",
+        "state": "syncing",
         "need_bytes": 63,
         "pull_errors": 0,
-        "observed_at": "2026-10-27T04:48:14.829934Z"
+        "observed_at": "2026-10-29T05:28:49.861453Z"
       },
       "changed_config_fields": []
     },
     "transfer_after_resume": {
       "bytes": 63,
-      "sha256": "b5a46a12bc9b88f9261752c56264113d154ea5dd903e34c688f459855dc36888",
+      "sha256": "653b896d430405eb125f2278069258a1f48fe0f96647dee7d5a54fdb6b68ce68",
       "exact_content_matched": true
     },
     "non_target_folders_unchanged": true,
     "explicit_restart_test": {
-      "old_session": "a434cb619391196754ccc75e599215e24e5c68a0a47fa44854eb25acdd30dcec",
-      "new_session": "1f225fe972e63e429e343567591feba45b3a42d124b9e2b094c47230f810ed6d",
+      "old_session": "a25f79de61ddfe13d8935218b32bf91232b2df462683b75a6853856ccd5f0159",
+      "new_session": "1cb0250da4583cb31205ca6de815a10f2c826c764bbea56c07bcb720cda6a7fe",
       "identity_preserved": true,
       "first_source_event_id": 1
     }
@@ -60,12 +60,12 @@
     "native_processes_unchanged": true,
     "checkpoint": {
       "node_id": "00000000-0000-0000-0000-000000000001",
-      "start_time_raw": "2026-10-27T07:48:30+03:00",
-      "source_session_id": "eea234592a8ae847daa012befc974f0668a7bd006d7f5fadb6d407e8aabf8941",
+      "start_time_raw": "2026-10-29T08:29:03+03:00",
+      "source_session_id": "2830072555801fa3fa316f683edcb4c32d1e456c235472b6f922d5caed22d416",
       "anchor": {
         "id": 15,
-        "time_raw": "2026-10-27T07:48:31.352555+03:00",
-        "fingerprint": "fbd3d0f55a0b3f746faad926b57a86f8c1225c0a2684ca6e0bb847f10f0fa766"
+        "time_raw": "2026-10-29T08:29:04.7743304+03:00",
+        "fingerprint": "4d7687909406bbb2d296fd98881e0735fb0bc6ae0e1af05ca0dddd3af0ccd10b"
       }
     }
   },
@@ -73,15 +73,15 @@
     "mode": "test transport freezes startTime and uptime; real source events and restart",
     "native_same_second_restart_claimed": false,
     "actual_native_start_times": [
-      "2026-10-27T07:48:30+03:00",
-      "2026-10-27T07:48:32+03:00"
+      "2026-10-29T08:29:03+03:00",
+      "2026-10-29T08:29:06+03:00"
     ],
-    "status_start_time_before_after": "2026-10-27T07:48:30+03:00",
+    "status_start_time_before_after": "2026-10-29T08:29:03+03:00",
     "old_anchor_id": 15,
-    "new_tail_before_read": 17,
+    "new_tail_before_read": 18,
     "old_cursor_rejected": true,
-    "old_epoch": "eea234592a8ae847daa012befc974f0668a7bd006d7f5fadb6d407e8aabf8941",
-    "new_epoch": "52134fad06a4f3c5028f5380e581c1b8f2d087ef0feb2657d4f203306aeceaf6",
+    "old_epoch": "2830072555801fa3fa316f683edcb4c32d1e456c235472b6f922d5caed22d416",
+    "new_epoch": "ecacb4186d4db750cd6b1f9ab840c5a1c3f21aa8a453f4bdb36a64d2d067af0f",
     "first_rebased_event_id": 1
   },
   "cleanup": {
@@ -91,5 +91,5 @@
     ],
     "running": []
   },
-  "completed_at": "2026-10-27T04:48:42.548852Z"
+  "completed_at": "2026-10-29T05:29:15.997201Z"
 }

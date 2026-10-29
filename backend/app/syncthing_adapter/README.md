@@ -1,12 +1,22 @@
 # Адаптер A1: передача A2 / A3 / B2
 
+
+Актуально на 29.10.2026: адаптер подготовлен в `codex/a01-adapter` поверх
+[общего продолжения A0/D-01 #9](https://github.com/danilsdk/syncthing-control-center/pull/9).
+Исходный A0 #2 принят. Свежие validate и настоящий A1/D-01 passed; сведения
+об исходниках, результатах и сохранённых предыдущих отчётах находятся в
+[acceptance-a1.json](../../../tests/integration/syncthing_adapter/acceptance-a1.json).
+Для merge A1 нужны принятие #9 и review danilsdk. Исторические сведения ниже
+относятся к своим датам.
+
+
 Состояние на 2026-10-25: A1.1–A1.5 подготовлены и проверены локально на Windows
 amd64 / Syncthing **2.1.7** / Python **3.12.14**. Общий контракт остаётся
 0.1.0-draft; [D-01 r2](../../../docs/design/a/d01-stream-continuity.md) требует
 review B0. Локальная готовность не означает принятие A0/A1 или готовность к merge.
 После аудита A0–A1 исправлены R1–R4; код и регрессии сохранены в 796f308.
-Результаты и команды — в [журнале исправлений A6](../../../docs/agent-log/a/A6.md).
-Завершающая [проверка A7](../../../docs/agent-log/a/A7.md) прошла полностью:
+Результаты и команды — в [журнале исправлений A6](https://github.com/danilsdk/syncthing-control-center/blob/19583c0b9e743deac82582272957d5c7208231cb/docs/agent-log/a/A6.md).
+Завершающая [проверка A7](https://github.com/danilsdk/syncthing-control-center/blob/19583c0b9e743deac82582272957d5c7208231cb/docs/agent-log/a/A7.md) прошла полностью:
 301 unit/contract-тест, реальный A1 и D-01. Блокировка стенда устранена прямым
 владением worker; код проверенного запуска — 9bfdedc. Ветка передачи:
 codex/a01-review-ready. Согласование контракта, H0/A0 и ручная приёмка остаются.
@@ -174,7 +184,7 @@ python tests/integration/syncthing_adapter/check_d01.py
 процессов может потребоваться обычный пользовательский контекст вне sandbox.
 Инструкция подготовки/портов — [стенд](../../../deploy/syncthing/README.md).
 Реальную PostgreSQL-проверку запускают отдельно по
-[D01](../../../docs/agent-log/a/D01.md); обычный pytest честно пропускает 85 тестов БД.
+[D01](https://github.com/danilsdk/syncthing-control-center/blob/19583c0b9e743deac82582272957d5c7208231cb/docs/agent-log/a/D01.md); обычный pytest честно пропускает 85 тестов БД.
 
 До merge человек просматривает changed_config_fields, сохранность трёх
 нецелевых папок, requiresRestart, эпохи pause/resume и transfer_after_resume
