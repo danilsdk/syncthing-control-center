@@ -20,7 +20,9 @@ def payload(folder_id: str, **changes) -> dict:
     }
 
 
-def test_crud_and_optimistic_versioning(client: TestClient, graph, postgres_engine) -> None:
+def test_crud_and_optimistic_versioning(
+    client: TestClient, graph, postgres_engine
+) -> None:
     _node_id, folder_id = graph
     created = client.post("/api/rules", json=payload(str(folder_id)))
     assert created.status_code == 201, created.text
@@ -57,11 +59,15 @@ def test_crud_and_optimistic_versioning(client: TestClient, graph, postgres_engi
     assert stale.json()["error"]["code"] == "version_conflict"
 
     assert (
-        client.delete(f"/api/rules/{rule['id']}", params={"expected_version": 1}).status_code
+        client.delete(
+            f"/api/rules/{rule['id']}", params={"expected_version": 1}
+        ).status_code
         == 409
     )
     assert (
-        client.delete(f"/api/rules/{rule['id']}", params={"expected_version": 2}).status_code
+        client.delete(
+            f"/api/rules/{rule['id']}", params={"expected_version": 2}
+        ).status_code
         == 204
     )
     assert client.get(f"/api/rules/{rule['id']}").status_code == 404
@@ -69,7 +75,9 @@ def test_crud_and_optimistic_versioning(client: TestClient, graph, postgres_engi
         assert connection.scalar(select(SyncRule.id)) is None
 
 
-def test_only_one_active_rule_and_invalid_business_states(client: TestClient, graph) -> None:
+def test_only_one_active_rule_and_invalid_business_states(
+    client: TestClient, graph
+) -> None:
     _node_id, folder_id = graph
     first = client.post("/api/rules", json=payload(str(folder_id)))
     assert first.status_code == 201
@@ -89,6 +97,35 @@ def test_only_one_active_rule_and_invalid_business_states(client: TestClient, gr
     )
     assert invalid_timezone.status_code == 422
     assert invalid_timezone.json()["error"]["code"] == "invalid_timezone"
+
+
+def test_patch_rejects_equal_merged_window_boundaries(
+    client: TestClient, graph
+) -> None:
+    _node_id, folder_id = graph
+    created = client.post("/api/rules", json=payload(str(folder_id)))
+    assert created.status_code == 201
+    rule = created.json()
+
+    equal_end = client.patch(
+        f"/api/rules/{rule['id']}",
+        json={"expected_version": 1, "end_time": "23:00"},
+    )
+    assert equal_end.status_code == 422
+    assert equal_end.json()["error"]["code"] == "invalid_window"
+
+    equal_start = client.patch(
+        f"/api/rules/{rule['id']}",
+        json={"expected_version": 1, "start_time": "02:00"},
+    )
+    assert equal_start.status_code == 422
+    assert equal_start.json()["error"]["code"] == "invalid_window"
+
+    unchanged = client.get(f"/api/rules/{rule['id']}")
+    assert unchanged.status_code == 200
+    assert unchanged.json()["version"] == 1
+    assert unchanged.json()["start_time"] == "23:00"
+    assert unchanged.json()["end_time"] == "02:00"
 
 
 def test_rules_router_is_behind_shared_admin_dependency() -> None:
