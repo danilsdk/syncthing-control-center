@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import time
+from uuid import uuid4
+
 from app.api.rules import router
 from app.config import Settings
 from app.main import create_app
 from app.models import SyncRule
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import event, insert, select
 
 
 def payload(folder_id: str, **changes) -> dict:
@@ -73,6 +76,74 @@ def test_crud_and_optimistic_versioning(
     assert client.get(f"/api/rules/{rule['id']}").status_code == 404
     with postgres_engine.connect() as connection:
         assert connection.scalar(select(SyncRule.id)) is None
+
+
+def test_rule_page_stays_consistent_if_writer_commits_between_count_and_items(
+    client: TestClient, graph, postgres_engine
+) -> None:
+    """A READ COMMITTED count/items interleaving must not yield HTTP 500.
+
+    The listener models the exact race from two-statement implementations: if a
+    count statement is observed, a separate transaction commits a new rule
+    before the following page query.  The production query reads one snapshot,
+    so the listener is never able to make ``total`` and ``items`` disagree.
+    """
+
+    _node_id, folder_id = graph
+    count_seen = False
+
+    def insert_after_count(
+        _connection, _cursor, statement, _parameters, _context, _executemany
+    ):
+        nonlocal count_seen
+        normalized = " ".join(statement.lower().split())
+        if (
+            count_seen
+            or "select count(" not in normalized
+            or "from sync_rules" not in normalized
+        ):
+            return
+        count_seen = True
+        with postgres_engine.begin() as writer:
+            writer.execute(
+                insert(SyncRule).values(
+                    id=uuid4(),
+                    folder_id=folder_id,
+                    timezone="Europe/Moscow",
+                    days_mask=32,
+                    start_time=time(8, 0),
+                    end_time=time(9, 0),
+                    enabled=False,
+                    version=1,
+                )
+            )
+
+    event.listen(postgres_engine, "after_cursor_execute", insert_after_count)
+    try:
+        response = client.get("/api/rules", params={"folder_id": str(folder_id)})
+    finally:
+        event.remove(postgres_engine, "after_cursor_execute", insert_after_count)
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == len(body["items"])
+    assert body["total"] >= 0
+
+
+def test_rule_page_reports_total_for_an_empty_offset_page(
+    client: TestClient, graph
+) -> None:
+    _node_id, folder_id = graph
+    created = client.post("/api/rules", json=payload(str(folder_id), enabled=False))
+    assert created.status_code == 201, created.text
+
+    response = client.get(
+        "/api/rules", params={"folder_id": str(folder_id), "limit": 1, "offset": 1}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 1
+    assert body["items"] == []
 
 
 def test_only_one_active_rule_and_invalid_business_states(

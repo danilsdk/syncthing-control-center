@@ -1,0 +1,19 @@
+{
+  "id": "scc-a1-shared",
+  "label": "scc-a1-shared",
+  "type": "sendreceive",
+  "paused": false,
+  "rescanIntervalS": 7200,
+  "fsWatcherEnabled": false,
+  "fsWatcherDelayS": 10,
+  "filesystemType": "basic",
+  "path": "/DEMO/node-b/scc-a1-shared",
+  "devices": [
+    {
+      "deviceID": "NXI35NA-WYYWTSJ-IDSKEFA-AOIHWN7-ENJ6UE2-VKIHQVE-3K6HHJU-QOXUHAY"
+    },
+    {
+      "deviceID": "QRWMT3K-NXGE3OF-HF7ZFPH-6DXPV4O-MSQSIV4-N5SBT3M-L5PXTS3-SBYQOAG"
+    }
+  ]
+}

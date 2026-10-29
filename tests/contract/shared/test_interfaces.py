@@ -9,7 +9,9 @@ from app.contracts.interfaces import (
     Clock,
     EventBatch,
     NodeConnection,
+    SourceCheckpoint,
     SourceEvent,
+    StreamAnchor,
     SystemClock,
     SystemObservation,
     source_session_id,
@@ -19,24 +21,49 @@ from pydantic import ValidationError
 NODE = UUID("11111111-1111-4111-8111-111111111111")
 RAW = "2026-10-24T12:00:00.123456789Z"
 NOW = datetime(2026, 10, 24, 12, tzinfo=UTC)
+ANCHOR = StreamAnchor.from_event(
+    SourceEvent(
+        id=1,
+        global_id=1,
+        type="Starting",
+        time_raw=RAW,
+        syncthing_folder_id=None,
+        payload_summary=EventPayload(),
+    )
+)
 
 
 def test_source_session_preserves_raw_precision_and_separates_nodes():
     observation = SystemObservation.from_source(
-        node_id=NODE, device_id="DEMO-DEVICE", start_time_raw=RAW, observed_at=NOW
+        node_id=NODE,
+        device_id="DEMO-DEVICE",
+        start_time_raw=RAW,
+        observed_at=NOW,
+        stream_anchor=ANCHOR,
     )
     assert observation.start_time_raw == RAW
-    assert (
-        observation.source_session_id
-        == "2c717fafafa6d8c916f5be94a9eedc01a0c4aeb1f7006bb0b2591c2642672911"
+    assert observation.source_session_id == source_session_id(NODE, RAW, ANCHOR)
+    assert observation.source_session_id == (
+        "9ea0dd2e43a91619cbc0430c317448b22c12e8e7a41c8cb797e07bfab71c699b"
     )
-    assert source_session_id(uuid4(), RAW) != observation.source_session_id
-    assert source_session_id(NODE, RAW.replace("789Z", "780Z")) != observation.source_session_id
-    assert source_session_id(NODE, RAW.replace("Z", "+00:00")) != observation.source_session_id
+    assert source_session_id(uuid4(), RAW, ANCHOR) != observation.source_session_id
+    assert (
+        source_session_id(NODE, RAW.replace("789Z", "780Z"), ANCHOR)
+        != observation.source_session_id
+    )
+    assert (
+        source_session_id(NODE, RAW.replace("Z", "+00:00"), ANCHOR) != observation.source_session_id
+    )
     with pytest.raises(TypeError):
-        source_session_id(str(NODE), RAW)
+        source_session_id(str(NODE), RAW, ANCHOR)
     with pytest.raises(ValueError):
-        source_session_id(NODE, "not-a-date")
+        source_session_id(NODE, "not-a-date", ANCHOR)
+    with pytest.raises(TypeError):
+        source_session_id(NODE, RAW)
+    assert (
+        source_session_id(NODE, RAW, ANCHOR, previous_session_id=observation.source_session_id)
+        != observation.source_session_id
+    )
 
 
 def test_source_event_position_is_distinct_from_global_id_and_payload_is_bounded():
@@ -48,15 +75,52 @@ def test_source_event_position_is_distinct_from_global_id_and_payload_is_bounded
         syncthing_folder_id="demo/folder",
         payload_summary=EventPayload(state="idle"),
     )
-    batch = EventBatch(source_session_id="a" * 64, events=[event], observed_at=NOW)
+    checkpoint = SourceCheckpoint(
+        node_id=NODE,
+        start_time_raw=RAW,
+        source_session_id="a" * 64,
+        anchor=StreamAnchor.from_event(event),
+    )
+    batch = EventBatch(
+        source_session_id="a" * 64, events=[event], observed_at=NOW, source_checkpoint=checkpoint
+    )
     assert batch.events[0].id == 4 and batch.events[0].global_id == 91
     assert batch.events[0].time_raw == RAW
     assert event.model_dump(mode="json")["payload_summary"] == {"state": "idle"}
     with pytest.raises(ValidationError):
-        EventBatch(source_session_id="a" * 64, events=[event, event], observed_at=NOW)
+        EventBatch(
+            source_session_id="a" * 64,
+            events=[event, event],
+            observed_at=NOW,
+            source_checkpoint=checkpoint,
+        )
     with pytest.raises(ValidationError):
         EventPayload(path="private-path-canary")
-    assert EventBatch(source_session_id="a" * 64, events=[], observed_at=NOW).events == ()
+    assert (
+        EventBatch(
+            source_session_id="a" * 64, events=[], observed_at=NOW, source_checkpoint=checkpoint
+        ).events
+        == ()
+    )
+    assert SourceCheckpoint.model_validate_json(checkpoint.model_dump_json()) == checkpoint
+    with pytest.raises(ValidationError):
+        EventBatch(
+            source_session_id="b" * 64, events=[], observed_at=NOW, source_checkpoint=checkpoint
+        )
+
+
+def test_source_position_and_anchor_share_the_database_bigint_boundary():
+    fields = dict(
+        global_id=None,
+        type="Starting",
+        time_raw=RAW,
+        syncthing_folder_id=None,
+        payload_summary=EventPayload(),
+    )
+    event = SourceEvent(id=2**63 - 1, **fields)
+    assert StreamAnchor.from_event(event).id == event.id
+    with pytest.raises(ValidationError):
+        SourceEvent(id=2**63, **fields)
 
 
 def test_connections_and_login_never_expose_secrets_in_repr_or_serialization():

@@ -148,7 +148,7 @@ def test_migration_roundtrip_and_metadata_agree(pg):
         migrate(connection)
         migrate(connection)  # Reapplying head is a no-op.
         context = MigrationContext.configure(connection, opts={"compare_server_default": True})
-        assert context.get_current_revision() == "a003_initial_schema"
+        assert context.get_current_revision() == "a101_stream_anchor"
         assert compare_metadata(context, Base.metadata) == []
 
 
