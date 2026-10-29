@@ -1,16 +1,17 @@
 {
-  "stage": "A1 after PR9 review fixes",
+  "stage": "A1 on accepted main after PR9 merge",
   "date": "2026-10-29",
   "timezone": "Europe/Moscow",
-  "status": "verification_complete_dependency_review_pending",
+  "status": "verification_complete_review_pending",
   "branch": "codex/a01-adapter",
-  "source_commit": "3dbc588b1ed127a656e6c24fb22e5765cbd3f653",
+  "source_commit": "9ee07dde82819edfc8b7a9d0bdafc27fd3570941",
   "shared_dependency": {
     "pr": 9,
     "head": "cb5d983102189b19b35f8be8387b162d4dfcd072",
-    "accepted": false
+    "accepted": true,
+    "accepted_commit": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2"
   },
-  "accepted_main": "bf5b8a4ce97f1db7f285001003129fb6ce4e8adf",
+  "accepted_main": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2",
   "final_pr_diff_files": 43,
   "tested_source_sha256_lf": {
     "backend/app/__init__.py": "96b0ef7b174044117a873a43f91759a9dc4695bd28e43c5f6c6a92e904161297",
@@ -72,7 +73,8 @@
       "backend_passed": 314,
       "postgres_skipped": 99,
       "contract_documents": 12,
-      "scope_files": 43
+      "scope_files": 43,
+      "comparison_base": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2"
     },
     "postgres": {
       "result": "passed",
@@ -488,7 +490,8 @@
     "final_pr_diff_files": 43
   },
   "review_limits": [
-    "PR9 review fixes must be accepted before A1 can be retargeted to main and merged.",
-    "Exact head/base CI and peer review still required; no own approval/merge."
-  ]
+    "Independent A1 review and human inspection of demo config evidence required before merge.",
+    "Exact head/base CI must be green; author does not approve or merge own PR."
+  ],
+  "source_commit_note": "Ordinary merge of accepted main; entire tree identical to a46b58c before status/evidence-only updates."
 }

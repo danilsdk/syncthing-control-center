@@ -1,14 +1,16 @@
 # Адаптер A1: передача A2 / A3 / B2
 
 
-Актуально на 29.10.2026: адаптер подготовлен в `codex/a01-adapter` поверх
-[общего продолжения A0/D-01 #9](https://github.com/danilsdk/syncthing-control-center/pull/9).
-Исходный A0 #2 принят. Свежие validate и настоящий A1/D-01 passed; сведения
-об исходниках, результатах и сохранённых предыдущих отчётах находятся в
-[acceptance-a1.json](../../../tests/integration/syncthing_adapter/acceptance-a1.json).
-Для merge A1 нужны принятие #9 и review danilsdk. Исторические сведения ниже
-относятся к своим датам.
-
+Актуально на 29.10.2026: H0, исходный A0 и общее продолжение A0/D-01
+[#9](https://github.com/danilsdk/syncthing-control-center/pull/9) приняты.
+В A1 обычным merge включён main `dac41de`; ветка `codex/a01-adapter`.
+Полный validate: 314 backend passed / 99 PostgreSQL skipped, 32 harness tests.
+Все 99 SQL прошли отдельно ранее сегодня на неизменённой принятой схеме.
+Проверенный код адаптера и стенда не менялся при обновлении базы.
+[Acceptance](../../../tests/integration/syncthing_adapter/acceptance-a1.json)
+сохраняет фактические проверки и прежний реальный A1/D-01. Для merge A1
+остаются независимый review и человеческая проверка demo-конфигурации.
+Исторические сведения ниже относятся к своим датам.
 
 Состояние на 2026-10-25: A1.1–A1.5 подготовлены и проверены локально на Windows
 amd64 / Syncthing **2.1.7** / Python **3.12.14**. Общий контракт остаётся

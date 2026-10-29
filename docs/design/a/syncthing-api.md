@@ -3,16 +3,17 @@
 
 ## Актуальная передача — 29.10.2026
 
-Исходный A0 принят в #2; общие изменения D-01 r2 и исправления API/config
-выделены в [продолжение A0 #9](https://github.com/danilsdk/syncthing-control-center/pull/9).
-A1 ведётся в штатной ветке `codex/a01-adapter`, строго в исходных границах.
-Свежий полный validate: 310 backend passed / 85 PostgreSQL skipped, 32 harness
-self-tests; все 85 SQL отдельно прошли сегодня на идентичной общей схеме в #9.
-Полный настоящий A1/D-01 повторён 29.10.2026, отчёты и хеши обновлены в
-[acceptance-a1.json](../../../tests/integration/syncthing_adapter/acceptance-a1.json).
-До merge требуются принятие #9, review A1 и проверка человеком изменений demo
-config/его восстановления. Записи ниже сохраняют историю своих дат.
-
+Исходный A0 #2 и продолжение D-01 #9 приняты. В A1 обычным merge включён
+актуальный main `dac41de585ba36a6fd5a75f132342fcfd0d5afb2`.
+Ветка `codex/a01-adapter`, все 43 пути diff входят в принятую карточку A1.
+Полный validate: 314 backend passed / 99 PostgreSQL skipped, 32 harness tests;
+все 99 SQL прошли отдельно ранее сегодня на идентичной принятой схеме.
+Обновление базы не меняло код адаптера, стенда или тестов.
+Ранее успешный настоящий A1/D-01 сохранён со своим временем в
+[acceptance-a1.json](../../../tests/integration/syncthing_adapter/acceptance-a1.json);
+новый live-run при обновлении базы не выполнялся.
+Нужны review A1 для актуального head/main и человеческая проверка demo config
+перед merge. Записи ниже сохраняют историю своих дат.
 
 Обновлено: 2026-10-25. Исполнитель — A / playerboom. A1.1–A1.4 реализованы и
 проверены локально. Отдельная задача [D01](d01-stream-continuity.md) заменила
