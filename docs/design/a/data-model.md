@@ -55,14 +55,24 @@ erDiagram
 | last_checked_at?, last_seen_at? | timestamptz; последняя любая / успешная проверка |
 | source_start_time_raw? | text; точный startTime без усечения точности |
 | source_session_id? | char(64), lowercase hex |
+| source_stream_anchor? | jsonb: id, точный time_raw, fingerprint; null для legacy/неподтверждённого источника |
 | last_event_id | bigint, default 0 |
 | created_at, updated_at | timestamptz |
 
 CHECK: raw/session оба null либо оба заполнены; при пустой сессии курсор равен 0.
 last_seen_at <= last_checked_at, если оба заполнены. last_seen_at не обновляется
 при ошибке API. Ожидаемый Device ID не заменяется молча при identity_mismatch.
-Коллектор меняет session/cursor атомарно с пакетом sync_events под блокировкой узла.
+Коллектор меняет session/cursor/anchor атомарно с пакетом sync_events и маркером
+границы под блокировкой узла. Непустой anchor требует сессию и ровно три поля
+с ограничениями типов/формата (ck_managed_nodes_stream_anchor). Legacy-сессия
+без anchor сохраняется, но не доказывает непрерывность нового чтения.
 Несколько папок одного экземпляра не создают несколько managed_nodes.
+
+Миграция a101_stream_anchor после неизменённой a003_initial_schema добавляет
+nullable JSONB и разрешает SourceContinuityLost. Старые курсоры и история
+сохраняются. Downgrade отказывается удалять уже записанные ориентиры или
+переименовывать неопределённую границу в рестарт. Порядок перехода —
+[D-01, редакция 2](d01-stream-continuity.md).
 
 ## folders
 
@@ -156,7 +166,7 @@ CHECK/индексы:
 | kind | text: source / gap / restart |
 | source_session_id | char(64), lowercase hex |
 | source_event_id? | bigint>=1, только kind=source |
-| event_type | varchar(80); внешний тип или HistoryGap/SourceRestarted |
+| event_type | varchar(80); внешний тип или HistoryGap/SourceRestarted/SourceContinuityLost |
 | occurred_at? | timestamptz; для source обязателен |
 | received_at | timestamptz |
 | payload_summary | jsonb; только разрешённые поля Event.payload_summary |
@@ -164,6 +174,7 @@ CHECK/индексы:
 UNIQUE(node_id,source_session_id,source_event_id) WHERE kind='source'.
 CHECK: source_event_id заполнен только для source; kind=source требует occurred_at.
 Локальные gap/restart имеют source_event_id=NULL и не занимают номера источника.
+SourceContinuityLost имеет kind=restart, но не утверждает доказанный рестарт.
 Неизвестная папка события допускает folder_id=NULL; произвольные пути не сохраняются.
 JSONB CHECK требует object и только ключи from_id/to_id/state/previous_session_id;
 проверка значений и фильтрация содержимого выполняются DTO/коллектором.

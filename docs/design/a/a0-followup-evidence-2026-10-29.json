@@ -1,0 +1,40 @@
+{
+  "date": "2026-10-29",
+  "accepted_base": "bf5b8a4ce97f1db7f285001003129fb6ce4e8adf",
+  "original_source": "19583c0b9e743deac82582272957d5c7208231cb",
+  "scope_policy_changed": false,
+  "runtime_sources_changed_from_original_A1": false,
+  "checks": {
+    "harness_validate": {
+      "result": "passed",
+      "self_tests": 32,
+      "backend_passed": 183,
+      "postgres_skipped_in_default_suite": 85,
+      "contract_documents": 11
+    },
+    "private_postgresql": {
+      "result": "passed",
+      "server_version": "18.6",
+      "passed": 85,
+      "deselected": 110,
+      "alembic_upgrade": "passed",
+      "alembic_check": "passed",
+      "cleanup": "private cluster stopped and removed"
+    }
+  },
+  "boundary_test_change": "API dependency test now injects AdapterFactory; original HttpAdapterFactory integration moves to A1",
+  "source_sha256_lf": {
+    "backend/app/api/dependencies.py": "37d1a7f1e4be001cdaf1d69ffb25df38d8f4ad7e88bbb54b4fba7ee3212f5b9c",
+    "backend/app/config.py": "023c6afb717285768dce12d177598e6eb153c9744b8b01979080d6fca6f29bc3",
+    "backend/app/contracts/dto.py": "4ae4be2d5f8935cf1fe355955491ac959012e3a5810487c1e7c509c47efa621b",
+    "backend/app/contracts/interfaces.py": "48d4b443eb81afbc5e6a7a83c06ec26ba94071fe67b53a5ebeeec80bc79d6e67",
+    "backend/app/models/entities.py": "a41dc67fdc1221e3d7e9bf9374a31e9096f5018529663ba76d677466c47f943f",
+    "backend/migrations/versions/a101_stream_anchor.py": "b5e9d8866eccc57f7131169ac16ea03e32ead81b39025280577add9fe37c0146",
+    "tests/contract/shared/test_d01_migration.py": "c998c16581183d636a562cc619d4459993e30f6508f053d9dfe25c48c4e58f85",
+    "tests/contract/shared/test_dto.py": "4ef7d9be1409d7cfa6d1a1cb35963f32766973794265cd8c813ade1e53ab3dd8",
+    "tests/contract/shared/test_interfaces.py": "a0acede88e8018bc6fb60a04d334372b63a3a0ce087e81b80f7a0763f34a570f",
+    "tests/contract/shared/test_postgres_schema.py": "7554d4c47bb026af815639d5c96bf5b0af6723259329c72ae4595e5943f745a3",
+    "tests/unit/bootstrap/test_composition.py": "bd6c974674bea49c75dda1f45a83f93163970f838d99e854151d328ad1b858f1",
+    "tests/unit/bootstrap/test_config.py": "4dce877596a28012f095e6e1c9de1a451c843e09db6a1f41e261c5ea0add2ea4"
+  }
+}
