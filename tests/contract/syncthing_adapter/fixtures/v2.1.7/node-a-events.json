@@ -1,0 +1,243 @@
+[
+  {
+    "id": 1,
+    "globalID": 1,
+    "time": "2026-10-24T23:46:49.4924098+03:00",
+    "type": "Starting",
+    "data": {}
+  },
+  {
+    "id": 2,
+    "globalID": 2,
+    "time": "2026-10-24T23:46:49.4959862+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-control",
+      "from": "idle",
+      "to": "starting"
+    }
+  },
+  {
+    "id": 3,
+    "globalID": 3,
+    "time": "2026-10-24T23:46:49.4959862+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-control",
+      "from": "starting",
+      "to": "idle"
+    }
+  },
+  {
+    "id": 4,
+    "globalID": 4,
+    "time": "2026-10-24T23:46:49.4959862+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-control",
+      "from": "idle",
+      "to": "scan-waiting"
+    }
+  },
+  {
+    "id": 5,
+    "globalID": 5,
+    "time": "2026-10-24T23:46:49.4959862+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-control",
+      "from": "scan-waiting",
+      "to": "scanning"
+    }
+  },
+  {
+    "id": 6,
+    "globalID": 6,
+    "time": "2026-10-24T23:46:49.4964958+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "idle",
+      "to": "starting"
+    }
+  },
+  {
+    "id": 7,
+    "globalID": 7,
+    "time": "2026-10-24T23:46:49.4964958+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "starting",
+      "to": "idle"
+    }
+  },
+  {
+    "id": 8,
+    "globalID": 8,
+    "time": "2026-10-24T23:46:49.4964958+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "idle",
+      "to": "scan-waiting"
+    }
+  },
+  {
+    "id": 9,
+    "globalID": 9,
+    "time": "2026-10-24T23:46:49.4964958+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "scan-waiting",
+      "to": "scanning"
+    }
+  },
+  {
+    "id": 10,
+    "globalID": 10,
+    "time": "2026-10-24T23:46:49.4964958+03:00",
+    "type": "ListenAddressesChanged",
+    "data": {}
+  },
+  {
+    "id": 11,
+    "globalID": 11,
+    "time": "2026-10-24T23:46:49.4975138+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-control",
+      "from": "scanning",
+      "to": "idle"
+    }
+  },
+  {
+    "id": 12,
+    "globalID": 12,
+    "time": "2026-10-24T23:46:49.4995533+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "scanning",
+      "to": "idle"
+    }
+  },
+  {
+    "id": 13,
+    "globalID": 13,
+    "time": "2026-10-24T23:46:49.5010795+03:00",
+    "type": "StartupComplete",
+    "data": {}
+  },
+  {
+    "id": 14,
+    "globalID": 14,
+    "time": "2026-10-24T23:46:49.5549939+03:00",
+    "type": "DeviceConnected",
+    "data": {}
+  },
+  {
+    "id": 15,
+    "globalID": 15,
+    "time": "2026-10-24T23:46:50.0586861+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "idle",
+      "to": "scan-waiting"
+    }
+  },
+  {
+    "id": 16,
+    "globalID": 16,
+    "time": "2026-10-24T23:46:50.0586861+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "scan-waiting",
+      "to": "scanning"
+    }
+  },
+  {
+    "id": 17,
+    "globalID": 17,
+    "time": "2026-10-24T23:46:50.0597165+03:00",
+    "type": "FolderScanProgress",
+    "data": {
+      "folder": "scc-a1-shared"
+    }
+  },
+  {
+    "id": 18,
+    "globalID": 18,
+    "time": "2026-10-24T23:46:50.061259+03:00",
+    "type": "LocalIndexUpdated",
+    "data": {
+      "folder": "scc-a1-shared"
+    }
+  },
+  {
+    "id": 19,
+    "globalID": 20,
+    "time": "2026-10-24T23:46:50.061259+03:00",
+    "type": "StateChanged",
+    "data": {
+      "folder": "scc-a1-shared",
+      "from": "scanning",
+      "to": "idle"
+    }
+  },
+  {
+    "id": 20,
+    "globalID": 21,
+    "time": "2026-10-24T23:46:50.5565306+03:00",
+    "type": "ClusterConfigReceived",
+    "data": {}
+  },
+  {
+    "id": 21,
+    "globalID": 22,
+    "time": "2026-10-24T23:46:50.5622446+03:00",
+    "type": "RemoteIndexUpdated",
+    "data": {
+      "folder": "scc-a1-shared"
+    }
+  },
+  {
+    "id": 22,
+    "globalID": 23,
+    "time": "2026-10-24T23:46:51.4930531+03:00",
+    "type": "FolderSummary",
+    "data": {
+      "folder": "scc-a1-control"
+    }
+  },
+  {
+    "id": 23,
+    "globalID": 24,
+    "time": "2026-10-24T23:46:51.4935568+03:00",
+    "type": "FolderCompletion",
+    "data": {
+      "folder": "scc-a1-control"
+    }
+  },
+  {
+    "id": 24,
+    "globalID": 25,
+    "time": "2026-10-24T23:46:51.4940748+03:00",
+    "type": "FolderSummary",
+    "data": {
+      "folder": "scc-a1-shared"
+    }
+  },
+  {
+    "id": 25,
+    "globalID": 26,
+    "time": "2026-10-24T23:46:51.4940748+03:00",
+    "type": "FolderCompletion",
+    "data": {
+      "folder": "scc-a1-shared"
+    }
+  }
+]
