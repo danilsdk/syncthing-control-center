@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -126,18 +126,22 @@ def create_rule(data: RuleCreate, locks: AdvisoryLocks) -> Rule:
 def list_rules(
     session: Session, *, folder_id: UUID | None, limit: int, offset: int
 ) -> tuple[tuple[Rule, ...], int]:
-    """Return a stable page ordered by creation time and id."""
+    """Return a stable page and total from one database snapshot.
+
+    Counting and fetching the page with separate READ COMMITTED statements can
+    produce a page whose ``items`` no longer agrees with ``total`` when another
+    transaction commits between them.  Fetch the ordered filtered relation
+    once, then slice the requested page in memory so both values describe the
+    same snapshot, including an empty page beyond the end.
+    """
 
     filters = () if folder_id is None else (SyncRule.folder_id == folder_id,)
-    total = int(session.scalar(select(func.count()).select_from(SyncRule).where(*filters)) or 0)
     rows = session.scalars(
-        select(SyncRule)
-        .where(*filters)
-        .order_by(SyncRule.created_at.desc(), SyncRule.id.desc())
-        .offset(offset)
-        .limit(limit)
+        select(SyncRule).where(*filters).order_by(SyncRule.created_at.desc(), SyncRule.id.desc())
     ).all()
-    return tuple(_rule_dto(row) for row in rows), total
+    total = len(rows)
+    page = rows[offset : offset + limit]
+    return tuple(_rule_dto(row) for row in page), total
 
 
 def get_rule(session: Session, rule_id: UUID) -> Rule:
