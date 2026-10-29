@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import platform
+import stat
 import tarfile
 import time
 import urllib.request
@@ -21,6 +22,32 @@ MAX_DOWNLOAD_SECONDS = 300
 
 class BenchError(Exception):
     """Only fixed, safe operational messages are exposed to the console."""
+
+
+def runtime_path(runtime: Path, path: Path) -> Path:
+    """Check the lexical boundary before inspecting any filesystem redirects.
+
+    Do not resolve the expected boundary: a link must not redefine what the
+    bench owns. Check ancestors from the filesystem root so lstat never walks
+    through an already accepted symlink/junction. Missing paths are permitted
+    for subsequent creation; other inspection failures are refused.
+    """
+    runtime, path = Path(runtime), Path(path)
+    if ".." in runtime.parts or ".." in path.parts:
+        raise BenchError("Bench path is outside its private runtime")
+    runtime, path = runtime.absolute(), path.absolute()
+    if not path.is_relative_to(runtime):
+        raise BenchError("Bench path is outside its private runtime")
+    for component in reversed((path, *path.parents)):
+        try:
+            status = component.lstat()
+        except FileNotFoundError:
+            break
+        except OSError:
+            raise BenchError("Cannot verify the private runtime path") from None
+        if stat.S_ISLNK(status.st_mode) or getattr(status, "st_file_attributes", 0) & 0x400:
+            raise BenchError("Private runtime paths must not traverse links or reparse points")
+    return path
 
 
 def release() -> dict:
@@ -69,17 +96,25 @@ def prepare() -> Path:
     metadata = release()
     target = platform_name()
     asset = metadata["assets"][target]
-    cache = RUNTIME / "downloads"
+    cache = runtime_path(RUNTIME, RUNTIME / "downloads")
+    archive = runtime_path(RUNTIME, cache / asset["name"])
+    temporary = runtime_path(RUNTIME, archive.with_suffix(archive.suffix + ".part"))
+    binary = runtime_path(
+        RUNTIME,
+        RUNTIME
+        / "bin"
+        / metadata["version"]
+        / target
+        / ("syncthing.exe" if target.startswith("windows") else "syncthing"),
+    )
     cache.mkdir(parents=True, exist_ok=True)
-    archive = cache / asset["name"]
     if not archive.exists():
-        temporary = archive.with_suffix(archive.suffix + ".part")
         request = urllib.request.Request(asset["url"], headers={"User-Agent": "SCC-A1-bench"})
         started = time.monotonic()
         try:
             with (
                 urllib.request.urlopen(request, timeout=30) as response,
-                temporary.open("wb") as out,
+                runtime_path(RUNTIME, temporary).open("wb") as out,
             ):
                 total = 0
                 progress = 0
@@ -95,23 +130,16 @@ def prepare() -> Path:
                         progress = total // (1024 * 1024)
                         print(f"Pinned release download: {progress} MiB", flush=True)
             verify_archive(temporary, asset["sha256"])
-            temporary.replace(archive)
+            runtime_path(RUNTIME, temporary).replace(runtime_path(RUNTIME, archive))
         except Exception:
-            temporary.unlink(missing_ok=True)
+            runtime_path(RUNTIME, temporary).unlink(missing_ok=True)
             raise
     verify_archive(archive, asset["sha256"])
     content = extract_binary(archive, target.startswith("windows"))
-    binary = (
-        RUNTIME
-        / "bin"
-        / metadata["version"]
-        / target
-        / ("syncthing.exe" if target.startswith("windows") else "syncthing")
-    )
-    binary.parent.mkdir(parents=True, exist_ok=True)
+    runtime_path(RUNTIME, binary.parent).mkdir(parents=True, exist_ok=True)
     if not binary.exists() or binary.read_bytes() != content:
-        binary.write_bytes(content)
-    binary.chmod(binary.stat().st_mode | 0o111)
+        runtime_path(RUNTIME, binary).write_bytes(content)
+    runtime_path(RUNTIME, binary).chmod(binary.stat().st_mode | 0o111)
     return binary
 
 
