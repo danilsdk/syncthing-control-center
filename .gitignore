@@ -94,3 +94,7 @@ Desktop.ini
 *.swo
 *.tmp
 *~
+
+# Per-worktree harness state and generated local output
+.harness/local/
+.harness/output/

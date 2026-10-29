@@ -1,0 +1,30 @@
+{
+  "id": "B4",
+  "role": "B",
+  "title": "Аналитика и пользовательский E2E",
+  "branch": "codex/b04-analytics",
+  "depends_on": [
+    "A3",
+    "B2",
+    "B3",
+    "A4"
+  ],
+  "allow": [
+    "backend/app/analytics/**",
+    "backend/app/api/analytics.py",
+    "frontend/**",
+    "tests/unit/analytics/**",
+    "tests/integration/analytics/**",
+    "tests/e2e/ui/**",
+    "docs/design/b/analytics.md",
+    ".harness/tasks/B4.json",
+    "docs/agent-log/b/B4.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b4",
+  "acceptance": [
+    "Минимум две метрики совпадают с ручным расчётом; нет данных учитывается явно.",
+    "Реальный E2E проходит путь от UI до Syncthing и истории.",
+    "T-13 и пользовательский сценарий проверены на реальном стенде."
+  ]
+}

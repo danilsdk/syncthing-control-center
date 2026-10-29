@@ -1,0 +1,19 @@
+{
+  "id": "B0",
+  "role": "B",
+  "title": "Сценарии и подготовка интерфейса",
+  "branch": "codex/b00-scenarios",
+  "depends_on": [],
+  "allow": [
+    "docs/design/b/**",
+    ".harness/tasks/B0.json",
+    "docs/agent-log/b/B0.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b0",
+  "acceptance": [
+    "Определены границы окон, timezone/DST и поведение выключенного правила.",
+    "Есть переходы команд, формулы метрик и требования к данным A.",
+    "Подготовлены план UI, JSON-примеры и замечания к A0."
+  ]
+}
