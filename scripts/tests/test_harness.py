@@ -4,7 +4,9 @@ from contextlib import redirect_stdout
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -58,7 +60,7 @@ class HarnessTests(unittest.TestCase):
     def write(self, name, content):
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8")
 
     def write_json(self, name, value):
         self.write(name, json.dumps(value, ensure_ascii=False) + "\n")
@@ -153,7 +155,7 @@ class HarnessTests(unittest.TestCase):
         with redirect_stdout(self.output):
             h.start(self.root, self.task, args)
         self.assertEqual(h.git(self.root, "branch", "--show-current").strip(), "main")
-        self.assertEqual((self.root / "existing-local-file.txt").read_text(), "keep me")
+        self.assertEqual((self.root / "existing-local-file.txt").read_text(encoding="utf-8"), "keep me")
         self.assertEqual(h.git(destination, "branch", "--show-current").strip(), self.task["branch"])
         self.assertTrue((destination / ".harness/local/B1.json").is_file())
 
@@ -199,9 +201,11 @@ class HarnessTests(unittest.TestCase):
             h.check_structure(self.root)
 
     def test_real_precommit_hook_blocks_foreign_commit(self):
-        self.write("scripts/harness.py", MODULE.read_text())
+        self.write("scripts/harness.py", MODULE.read_text(encoding="utf-8"))
         source_hook = MODULE.parent.parent / ".githooks/pre-commit"
-        self.write(".githooks/pre-commit", source_hook.read_text())
+        self.write(".githooks/pre-commit", source_hook.read_text(encoding="utf-8"))
+        source_runner = MODULE.parent.parent / ".githooks/python"
+        self.write(".githooks/python", source_runner.read_text(encoding="utf-8"))
         with redirect_stdout(self.output):
             h.install_hooks(self.root)
         self.write("backend/app/scheduling/engine.py", "enabled = True\n")
@@ -212,6 +216,54 @@ class HarnessTests(unittest.TestCase):
         with self.assertRaises(h.HarnessError):
             h.git(self.root, "commit", "-m", "foreign change")
         self.assertEqual(h.git(self.root, "log", "-1", "--format=%s").strip(), "own change")
+
+    def test_hook_falls_back_to_python_when_python3_is_unusable(self):
+        source_runner = MODULE.parent.parent / ".githooks/python"
+        self.write(".githooks/python", source_runner.read_text(encoding="utf-8"))
+        fake_bin = self.root / "fake-bin"
+        fake_bin.mkdir()
+        marker = self.root / "selected-python.txt"
+        fake_python3 = fake_bin / "python3"
+        fake_python3.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        fake_python3.chmod(0o755)
+        fake_python = fake_bin / "python"
+        fake_python.write_text(
+            "#!/bin/sh\n"
+            "if [ \"$1\" = \"-c\" ]; then exit 0; fi\n"
+            "printf '%s\\n' \"$*\" > \"$MARKER\"\n",
+            encoding="utf-8",
+        )
+        fake_python.chmod(0o755)
+        environment = os.environ.copy()
+        environment.update({"PATH": f"{fake_bin}:/usr/bin:/bin", "MARKER": str(marker)})
+        result = subprocess.run(
+            ["sh", str(self.root / ".githooks/python"), "scope", "--staged"],
+            cwd=self.root,
+            env=environment,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("scripts/harness.py scope --staged", marker.read_text(encoding="utf-8"))
+
+    def test_trusted_validator_rejects_replaced_pr_script(self):
+        self.write("scripts/harness.py", "print('all checks passed')\n")
+        self.write("frontend/outside-task.txt", "foreign\n")
+        h.git(self.root, "add", "scripts/harness.py", "frontend/outside-task.txt")
+        h.git(self.root, "commit", "-m", "replace validator")
+        replacement = subprocess.run(
+            [sys.executable, "scripts/harness.py", "scope"],
+            cwd=self.root,
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(replacement.returncode, 0)
+        with self.assertRaises(h.HarnessError):
+            self.check(committed_only=True)
 
     def test_prepush_refuses_main_before_any_external_action(self):
         head = h.git(self.root, "rev-parse", "HEAD").strip()
@@ -290,7 +342,7 @@ class HarnessTests(unittest.TestCase):
         self.assertTrue(self.plan(base=self.empty_base, branch=task["branch"])["bootstrap"])
 
     def test_review_plan_does_not_fall_back_to_pr_policy(self):
-        original_policy = (self.root / ".harness/merge-policy.json").read_text()
+        original_policy = (self.root / ".harness/merge-policy.json").read_text(encoding="utf-8")
         h.git(self.root, "rm", ".harness/merge-policy.json")
         h.git(self.root, "commit", "-m", "no accepted merge policy")
         h.git(self.root, "update-ref", "refs/remotes/origin/main", "HEAD")
@@ -317,7 +369,7 @@ class HarnessTests(unittest.TestCase):
         self.assertEqual(plan["reviewer"], "danilsdk")
 
     def test_empty_merge_checks_cannot_enable_peer_mode(self):
-        policy = json.loads((self.root / ".harness/merge-policy.json").read_text())
+        policy = json.loads((self.root / ".harness/merge-policy.json").read_text(encoding="utf-8"))
         self.write_json(".harness/merge-policy.json", dict(policy, required_checks=[]))
         with self.assertRaises(h.HarnessError):
             h.check_structure(self.root)
