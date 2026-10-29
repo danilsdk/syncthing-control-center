@@ -171,6 +171,15 @@ def update_rule(rule_id: UUID, data: RulePatch, locks: AdvisoryLocks) -> Rule:
             if row.version != data.expected_version:
                 raise _error(409, "version_conflict", "Rule version is stale")
             current = _fields(row)
+            changes = data.changes()
+            # RulePatch validates a single submitted time, but only the complete
+            # merged rule can reveal equal boundaries when the other endpoint is
+            # read from storage. Convert that business error into the public API
+            # response instead of leaking a Pydantic ValidationError as HTTP 500.
+            if changes.get("start_time", current.start_time) == changes.get(
+                "end_time", current.end_time
+            ):
+                raise _error(422, "invalid_window", "Window boundaries must differ")
             merged = data.apply_to(current)
             folder = _folder_for_rule(session, row.folder_id, require_present=False)
             if merged == current:

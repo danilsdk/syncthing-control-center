@@ -15,16 +15,14 @@ class Rule:
 
 
 def utc(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return datetime.fromisoformat(value)
 
 
 class ScheduleEngineTests(TestCase):
     def test_absent_or_disabled_rule_has_no_desired_state(self) -> None:
         assert calculate_desired_paused(None, utc("2026-10-23T20:00:00Z")) is None
         assert (
-            calculate_desired_paused(
-                Rule(enabled=False), utc("2026-10-23T20:00:00Z")
-            )
+            calculate_desired_paused(Rule(enabled=False), utc("2026-10-23T20:00:00Z"))
             is None
         )
 
@@ -50,14 +48,20 @@ class ScheduleEngineTests(TestCase):
 
     def test_repeated_dst_hour_has_the_same_result(self) -> None:
         rule = Rule(
-            timezone="Europe/Berlin", days_of_week=(7,), start_time="02:00", end_time="03:00"
+            timezone="Europe/Berlin",
+            days_of_week=(7,),
+            start_time="02:00",
+            end_time="03:00",
         )
         assert calculate_desired_paused(rule, utc("2026-10-25T00:30:00Z")) is False
         assert calculate_desired_paused(rule, utc("2026-10-25T01:30:00Z")) is False
 
     def test_missing_dst_hour_is_not_replayed(self) -> None:
         rule = Rule(
-            timezone="Europe/Berlin", days_of_week=(7,), start_time="02:00", end_time="03:00"
+            timezone="Europe/Berlin",
+            days_of_week=(7,),
+            start_time="02:00",
+            end_time="03:00",
         )
         assert calculate_desired_paused(rule, utc("2026-03-29T00:59:00Z")) is True
         assert calculate_desired_paused(rule, utc("2026-03-29T01:00:00Z")) is True
@@ -72,6 +76,8 @@ class ScheduleEngineTests(TestCase):
                 Rule(start_time="23:00", end_time="23:00"), utc("2026-10-23T20:00:00Z")
             )
         with self.assertRaises(ValueError):
-            calculate_desired_paused(Rule(days_of_week=(0,)), utc("2026-10-23T20:00:00Z"))
+            calculate_desired_paused(
+                Rule(days_of_week=(0,)), utc("2026-10-23T20:00:00Z")
+            )
         with self.assertRaises(ValueError):
             calculate_desired_paused(Rule(), datetime(2026, 10, 23, 20, tzinfo=None))

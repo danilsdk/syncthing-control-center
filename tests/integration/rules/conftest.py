@@ -39,7 +39,9 @@ def postgres_engine() -> Engine:
         or not url.port
         or url.port == 5432
     ):
-        pytest.fail("Refusing PostgreSQL tests outside the explicitly owned private cluster")
+        pytest.fail(
+            "Refusing PostgreSQL tests outside the explicitly owned private cluster"
+        )
     engine = create_engine(
         url,
         hide_parameters=True,
@@ -66,7 +68,9 @@ def graph(postgres_engine: Engine):
     node_id = uuid4()
     folder_id = uuid4()
     with postgres_engine.begin() as connection:
-        tables = ", ".join(table.name for table in reversed(Base.metadata.sorted_tables))
+        tables = ", ".join(
+            table.name for table in reversed(Base.metadata.sorted_tables)
+        )
         connection.execute(text(f"TRUNCATE TABLE {tables} CASCADE"))
         connection.execute(
             insert(ManagedNode).values(
@@ -90,8 +94,6 @@ def client(postgres_engine: Engine, graph):
     database.engine = postgres_engine
     database._sessions = sessionmaker(bind=postgres_engine, expire_on_commit=False)
     app = create_app(database=database, routers=[router])
-    app.dependency_overrides[require_admin] = lambda: User(
-        id=uuid4(), login="admin"
-    )
+    app.dependency_overrides[require_admin] = lambda: User(id=uuid4(), login="admin")
     with TestClient(app) as test_client:
         yield test_client
