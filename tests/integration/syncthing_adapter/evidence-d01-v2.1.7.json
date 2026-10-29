@@ -1,6 +1,6 @@
 {
   "stage": "D-01-r2",
-  "started_at": "2026-10-29T05:28:42.937251Z",
+  "started_at": "2026-10-29T17:20:21.153485Z",
   "result": "passed",
   "scheme": "scc:source-epoch:v2",
   "adapter_regression": {
@@ -8,8 +8,8 @@
     "pause": {
       "config_paused": true,
       "requires_restart": false,
-      "source_session_id": "a25f79de61ddfe13d8935218b32bf91232b2df462683b75a6853856ccd5f0159",
-      "observed_at": "2026-10-29T05:28:47.534857Z",
+      "source_session_id": "9a176a83f5a1cfa07e2d2778d7843f8d5457ba0744dacec266f54432e4d65e6d",
+      "observed_at": "2026-10-29T17:20:25.618225Z",
       "runtime": {
         "available": false,
         "error_code": "invalid_response"
@@ -32,25 +32,25 @@
     "resume": {
       "config_paused": false,
       "requires_restart": false,
-      "source_session_id": "a25f79de61ddfe13d8935218b32bf91232b2df462683b75a6853856ccd5f0159",
-      "observed_at": "2026-10-29T05:28:49.861453Z",
+      "source_session_id": "9a176a83f5a1cfa07e2d2778d7843f8d5457ba0744dacec266f54432e4d65e6d",
+      "observed_at": "2026-10-29T17:20:27.835780Z",
       "runtime": {
         "state": "syncing",
         "need_bytes": 63,
         "pull_errors": 0,
-        "observed_at": "2026-10-29T05:28:49.861453Z"
+        "observed_at": "2026-10-29T17:20:27.835780Z"
       },
       "changed_config_fields": []
     },
     "transfer_after_resume": {
       "bytes": 63,
-      "sha256": "653b896d430405eb125f2278069258a1f48fe0f96647dee7d5a54fdb6b68ce68",
+      "sha256": "47fd5420eb5c8f47b585086bc6e8a59c5d1322982bfae7596e7c0cefc70b8fd4",
       "exact_content_matched": true
     },
     "non_target_folders_unchanged": true,
     "explicit_restart_test": {
-      "old_session": "a25f79de61ddfe13d8935218b32bf91232b2df462683b75a6853856ccd5f0159",
-      "new_session": "1cb0250da4583cb31205ca6de815a10f2c826c764bbea56c07bcb720cda6a7fe",
+      "old_session": "9a176a83f5a1cfa07e2d2778d7843f8d5457ba0744dacec266f54432e4d65e6d",
+      "new_session": "29fa5768366b2b82030a63926b192091c5c18eed4255d36d9f0560a6a918ced2",
       "identity_preserved": true,
       "first_source_event_id": 1
     }
@@ -60,12 +60,12 @@
     "native_processes_unchanged": true,
     "checkpoint": {
       "node_id": "00000000-0000-0000-0000-000000000001",
-      "start_time_raw": "2026-10-29T08:29:03+03:00",
-      "source_session_id": "2830072555801fa3fa316f683edcb4c32d1e456c235472b6f922d5caed22d416",
+      "start_time_raw": "2026-10-29T20:20:41+03:00",
+      "source_session_id": "0636f71b94df6e27c17c6dd39a923137989c9a1ec7f5b5f6d529e4ba64c06d54",
       "anchor": {
         "id": 15,
-        "time_raw": "2026-10-29T08:29:04.7743304+03:00",
-        "fingerprint": "4d7687909406bbb2d296fd98881e0735fb0bc6ae0e1af05ca0dddd3af0ccd10b"
+        "time_raw": "2026-10-29T20:20:43.2722307+03:00",
+        "fingerprint": "f150a044a492abb64d3af37265074fb2357ec1ff0182cb8b71b1bd7ed8453bf9"
       }
     }
   },
@@ -73,15 +73,15 @@
     "mode": "test transport freezes startTime and uptime; real source events and restart",
     "native_same_second_restart_claimed": false,
     "actual_native_start_times": [
-      "2026-10-29T08:29:03+03:00",
-      "2026-10-29T08:29:06+03:00"
+      "2026-10-29T20:20:41+03:00",
+      "2026-10-29T20:20:44+03:00"
     ],
-    "status_start_time_before_after": "2026-10-29T08:29:03+03:00",
+    "status_start_time_before_after": "2026-10-29T20:20:41+03:00",
     "old_anchor_id": 15,
-    "new_tail_before_read": 18,
+    "new_tail_before_read": 17,
     "old_cursor_rejected": true,
-    "old_epoch": "2830072555801fa3fa316f683edcb4c32d1e456c235472b6f922d5caed22d416",
-    "new_epoch": "ecacb4186d4db750cd6b1f9ab840c5a1c3f21aa8a453f4bdb36a64d2d067af0f",
+    "old_epoch": "0636f71b94df6e27c17c6dd39a923137989c9a1ec7f5b5f6d529e4ba64c06d54",
+    "new_epoch": "e76c11885103a9bc647ffa74cccf3373263e5e5ce7992fcfa9a90a595ccdc405",
     "first_rebased_event_id": 1
   },
   "cleanup": {
@@ -91,5 +91,5 @@
     ],
     "running": []
   },
-  "completed_at": "2026-10-29T05:29:15.997201Z"
+  "completed_at": "2026-10-29T17:20:54.482161Z"
 }
