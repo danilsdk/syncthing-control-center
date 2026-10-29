@@ -74,7 +74,8 @@
       "harness_self_tests": 32,
       "backend_passed": 310,
       "postgres_skipped": 85,
-      "contract_documents": 12
+      "contract_documents": 12,
+      "working_scope_note": "45 checked working paths included restoration of unchanged A1 card and adapter AGENTS; final committed PR diff has 43 paths."
     },
     "live_adapter": {
       "result": "passed",
@@ -374,5 +375,6 @@
     "Shared A0/D-01 PR #9 must be accepted before A1 can target main and be merged.",
     "Independent adapter review and human inspection of demo config/restoration/transfer evidence remain required.",
     "No scheduler/worker, UI or VPS acceptance is claimed."
-  ]
+  ],
+  "final_pr_diff_files": 43
 }
