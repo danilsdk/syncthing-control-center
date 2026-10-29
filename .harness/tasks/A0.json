@@ -1,0 +1,39 @@
+{
+  "id": "A0",
+  "role": "A",
+  "title": "Каркас и общий контракт",
+  "branch": "codex/a00-foundation",
+  "depends_on": [],
+  "allow": [
+    "backend/pyproject.toml",
+    "backend/uv.lock",
+    "backend/requirements*.txt",
+    "backend/Dockerfile",
+    "backend/alembic.ini",
+    "backend/app/__init__.py",
+    "backend/app/main.py",
+    "backend/app/db.py",
+    "backend/app/config.py",
+    "backend/app/contracts/**",
+    "backend/app/models/**",
+    "backend/migrations/**",
+    "backend/app/api/dependencies.py",
+    "backend/app/api/auth.py",
+    "backend/app/api/__init__.py",
+    "tests/contract/shared/**",
+    "tests/unit/bootstrap/**",
+    "docs/contracts.md",
+    "docs/design/a/**",
+    "README.md",
+    ".harness/checks/backend.json",
+    ".harness/tasks/A0.json",
+    "docs/agent-log/a/A0.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#a0",
+  "acceptance": [
+    "Каркас запускается, базовая миграция применяется к пустой тестовой БД.",
+    "Схема и DTO всех модулей описаны без неоднозначностей; B0 учтён.",
+    "B может начать независимые проверки расписаний и исполнителя."
+  ]
+}

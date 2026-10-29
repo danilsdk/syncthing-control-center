@@ -1,0 +1,34 @@
+name: Agent task
+description: Задача coding agent с одним владельцем и точными границами
+title: "[ID] Название задачи"
+body:
+  - type: input
+    id: task
+    attributes:
+      label: ID и роль
+      placeholder: B1 / danilsdk
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Поведение и критерии готовности
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Карточка, ветка и разрешённые пути
+      description: Ссылка на .harness/tasks/ID.json; один исполняющий агент
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Зависимости и контракт
+  - type: textarea
+    id: checks
+    attributes:
+      label: Проверки и ожидаемые доказательства
+    validations:
+      required: true
