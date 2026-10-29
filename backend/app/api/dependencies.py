@@ -7,7 +7,7 @@ from fastapi import Request
 from sqlalchemy.orm import Session
 
 from app.contracts.errors import AppError
-from app.contracts.interfaces import AdapterFactory, Clock, SyncthingAdapter
+from app.contracts.interfaces import AdapterError, AdapterFactory, Clock, SyncthingAdapter
 from app.contracts.locks import AdvisoryLocks
 from app.db import Database, DatabaseNotReady
 
@@ -28,7 +28,12 @@ def get_adapter_factory(request: Request) -> AdapterFactory:
 
 
 def get_adapter(node_id: UUID, request: Request) -> SyncthingAdapter:
-    return get_adapter_factory(request).for_node(node_id)
+    try:
+        return get_adapter_factory(request).for_node(node_id)
+    except AdapterError as error:
+        if error.code == "not_found":
+            raise AppError(404, "not_found", "Node was not found") from None
+        raise AppError(503, "service_unavailable", "Syncthing adapter is unavailable") from None
 
 
 def get_folder_locks(request: Request) -> AdvisoryLocks:

@@ -305,8 +305,11 @@ class Event(DTO):
                 raise ValueError("Gap requires a bounded range")
             if payload.from_id > payload.to_id:
                 raise ValueError("Gap range must be ordered")
-        if self.kind == "restart" and self.event_type != "SourceRestarted":
-            raise ValueError("Restart marker requires SourceRestarted type")
+        if self.kind == "restart":
+            if self.event_type not in {"SourceRestarted", "SourceContinuityLost"}:
+                raise ValueError("Source boundary marker requires restart or continuity-loss type")
+            if self.payload_summary.previous_session_id is None:
+                raise ValueError("Source boundary marker requires the previous source epoch")
         return self
 
 
