@@ -7,9 +7,9 @@ from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, true
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.api.auth import require_admin
 from app.api.dependencies import get_folder_locks, get_session
@@ -58,19 +58,28 @@ def list_executions(
         filters.append(CommandExecution.source == source)
     if status is not None:
         filters.append(CommandExecution.status == status)
-    total = int(
-        session.scalar(select(func.count()).select_from(CommandExecution).where(*filters)) or 0
+    # One statement uses one MVCC snapshot, even while the worker adds history.
+    # The outer join preserves the total for an empty/beyond-end page too.
+    totals = (
+        select(func.count().label("total")).select_from(CommandExecution).where(*filters).subquery()
     )
-    rows = session.scalars(
+    page = (
         select(CommandExecution)
         .where(*filters)
         .order_by(CommandExecution.created_at.desc(), CommandExecution.id.desc())
         .offset(offset)
         .limit(limit)
+        .subquery()
+    )
+    execution = aliased(CommandExecution, page)
+    rows = session.execute(
+        select(execution, totals.c.total)
+        .select_from(totals.outerjoin(page, true()))
+        .order_by(execution.created_at.desc(), execution.id.desc())
     ).all()
     return ExecutionPage(
-        items=tuple(execution_to_dto(row) for row in rows),
-        total=total,
+        items=tuple(execution_to_dto(row) for row, _total in rows if row is not None),
+        total=rows[0][1],
         limit=limit,
         offset=offset,
     )

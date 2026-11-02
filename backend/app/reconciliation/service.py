@@ -13,7 +13,7 @@ from uuid import UUID, uuid4
 
 from app.contracts.dto import Execution, RuleFields, RuleSnapshot
 from app.contracts.interfaces import AdapterError, AdapterFactory, Clock, SyncthingAdapter
-from app.contracts.locks import AdvisoryLocks
+from app.contracts.locks import AdvisoryLocks, LockLease
 from app.contracts.types import ExecutionStatus, mask_to_days, time_to_hhmm
 from app.db import Database
 from app.models import CommandExecution, Folder, ManagedNode, SyncRule
@@ -224,7 +224,8 @@ class ReconciliationService:
                 row.sent_at = self.clock.now_utc()
                 session.flush()
                 session.commit()
-        self._send_and_confirm(target)
+                write_error = self._send(target, lease)
+        self._confirm(target, write_error)
         return True
 
     def _process_manual(self, execution_id: UUID) -> bool:
@@ -239,6 +240,15 @@ class ReconciliationService:
                 folder = session.get(Folder, folder_id)
                 if row is None or folder is None or row.status != ExecutionStatus.PENDING:
                     return False
+                if row.sent_at is not None:
+                    # A sent manual intent is just as ambiguous after restart
+                    # as a sent rule attempt. Never overwrite its send time or
+                    # send it again under the same execution UUID.
+                    row.status = ExecutionStatus.UNKNOWN
+                    row.error_code = "worker_interrupted"
+                    row.completed_at = self.clock.now_utc()
+                    session.commit()
+                    return True
                 node = session.get(ManagedNode, folder.node_id)
                 if node is None or not node.enabled or not folder.present:
                     row.status = ExecutionStatus.UNKNOWN
@@ -297,15 +307,25 @@ class ReconciliationService:
                     None,
                     None,
                 )
-        self._send_and_confirm(target)
+                write_error = self._send(target, lease)
+        self._confirm(target, write_error)
         return True
 
-    def _send_and_confirm(self, target: _Target) -> None:
-        write_error: AdapterError | None = None
+    def _send(self, target: _Target, lease: LockLease) -> AdapterError | None:
+        # sent_at is durable, but the same folder lease still serializes this
+        # bounded write with rule updates. Both rights must be rechecked after
+        # adapter resolution and reads, immediately before the external call.
+        self.ensure_active()
+        lease.ensure_held()
         try:
             target.adapter.set_paused(target.external_folder_id, target.desired_paused)
         except AdapterError as error:
-            write_error = error
+            return error
+        return None
+
+    def _confirm(self, target: _Target, write_error: AdapterError | None) -> None:
+        # Observation can take place outside the folder lease; _finish checks
+        # the rule version again before accepting the evidence.
         observed_paused: bool | None = None
         restart_required: bool | None = None
         observed_session: str | None = None
@@ -342,6 +362,7 @@ class ReconciliationService:
         restart_required: bool | None,
         source_session_id: str | None,
     ) -> None:
+        self.ensure_active()
         # Serialize the final evidence with rule updates. A version change that
         # happened while the external call was in flight invalidates the old
         # confirmation and must be retried from a fresh rule calculation.

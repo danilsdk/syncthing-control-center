@@ -20,9 +20,7 @@ class FixedClock:
 
 
 class FakeAdapter:
-    def __init__(
-        self, *, paused: bool, write_error: AdapterError | None = None
-    ) -> None:
+    def __init__(self, *, paused: bool, write_error: AdapterError | None = None) -> None:
         self.paused = paused
         self.write_error = write_error
         self.writes: list[tuple[str, bool]] = []
@@ -63,7 +61,8 @@ def test_worker_records_applied_only_after_post_write_read() -> None:
     captured = {}
     service._finish = lambda *args, **kwargs: captured.update(outcome=args[1], **kwargs)  # type: ignore[method-assign]
 
-    service._send_and_confirm(target(adapter))
+    selected = target(adapter)
+    service._confirm(selected, service._send(selected, FakeLease(None)))
 
     assert adapter.writes == [("shared", True)]
     assert captured["outcome"].status is ExecutionStatus.APPLIED
@@ -79,7 +78,8 @@ def test_unknown_write_can_finish_applied_after_confirmation() -> None:
     captured = {}
     service._finish = lambda *args, **kwargs: captured.update(outcome=args[1], **kwargs)  # type: ignore[method-assign]
 
-    service._send_and_confirm(target(adapter))
+    selected = target(adapter)
+    service._confirm(selected, service._send(selected, FakeLease(None)))
 
     assert captured["outcome"].status is ExecutionStatus.APPLIED
 
@@ -108,6 +108,9 @@ class FakeDatabase:
 class FakeLease:
     def __init__(self, session) -> None:
         self._session = session
+
+    def ensure_held(self) -> None:
+        pass
 
     @contextmanager
     def session(self):
