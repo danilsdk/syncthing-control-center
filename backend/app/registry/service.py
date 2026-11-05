@@ -5,9 +5,9 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, true
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.config import Settings
 from app.contracts import dto
@@ -111,17 +111,30 @@ class RegistryService:
 
     def nodes(self, limit: int, offset: int) -> dto.NodePage:
         with self._session() as session:
-            count = session.scalar(select(func.count()).select_from(ManagedNode))
-            rows = session.scalars(
+            # Count and items must share a snapshot while registration adds nodes.
+            # LEFT JOIN keeps the total even when offset is beyond the last item.
+            totals = select(func.count().label("total")).select_from(ManagedNode).subquery()
+            page = (
                 select(ManagedNode)
                 .order_by(ManagedNode.display_name, ManagedNode.id)
                 .limit(limit)
                 .offset(offset)
+                .subquery()
+            )
+            node = aliased(ManagedNode, page)
+            result = session.execute(
+                select(node, totals.c.total)
+                .select_from(totals.outerjoin(page, true()))
+                .order_by(node.display_name, node.id)
             ).all()
             now = self.clock.now_utc()
             return dto.NodePage(
-                items=[node_dto(n, now, self.settings.stale_after_seconds) for n in rows],
-                total=count,
+                items=[
+                    node_dto(n, now, self.settings.stale_after_seconds)
+                    for n, _total in result
+                    if n is not None
+                ],
+                total=result[0][1],
                 limit=limit,
                 offset=offset,
             )
@@ -336,16 +349,27 @@ class RegistryService:
         self.refresh_node(identifier)
         with self._session() as session:
             node = self._node(session, identifier)
-            count = session.scalar(
-                select(func.count()).select_from(Folder).where(Folder.node_id == identifier)
+            totals = (
+                select(func.count().label("total"))
+                .select_from(Folder)
+                .where(Folder.node_id == identifier)
+                .subquery()
             )
-            rows = session.scalars(
+            page = (
                 select(Folder)
                 .where(Folder.node_id == identifier)
                 .order_by(Folder.created_at.desc(), Folder.id.desc())
                 .limit(limit)
                 .offset(offset)
+                .subquery()
+            )
+            folder = aliased(Folder, page)
+            result = session.execute(
+                select(folder, totals.c.total)
+                .select_from(totals.outerjoin(page, true()))
+                .order_by(folder.created_at.desc(), folder.id.desc())
             ).all()
+            rows = [row for row, _total in result if row is not None]
             rules = session.scalars(
                 select(SyncRule).where(
                     SyncRule.folder_id.in_([row.id for row in rows]),
@@ -366,7 +390,7 @@ class RegistryService:
                     )
                     for row in rows
                 ],
-                total=count,
+                total=result[0][1],
                 limit=limit,
                 offset=offset,
             )
