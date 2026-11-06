@@ -1,0 +1,48 @@
+{
+  "stage": "A2.4",
+  "started_at": "2026-10-25T16:19:24.777895Z",
+  "result": "passed",
+  "syncthing_version": "v2.1.7",
+  "checks": [
+    "owned_services_ready",
+    "T12_session_and_all_registry_guards",
+    "origin_csrf_allowlist_and_atomic_wrong_key_failure",
+    "T01_two_real_nodes_four_distinct_folder_records_and_unknown_runtime",
+    "paging_duplicate_patch_and_observed_runtime_recovery",
+    "single_source_outage_retains_observations_and_peer_availability",
+    "pinned_identity_and_registered_source_auth_failure",
+    "api_and_source_restart_preserve_registry_and_canonical_checkpoint",
+    "logout_relogin_and_restored_demo_configuration"
+  ],
+  "cleanup": {
+    "api_running": false,
+    "syncthing_running": []
+  },
+  "completed_at": "2026-10-25T16:19:51.034021Z",
+  "tested_product_commit": "395fb30bb1eee3e610a2c441514a05045baf5dfb",
+  "python": "3.12.14",
+  "postgresql": "18.6",
+  "transport": "real loopback HTTP; default create_app; real SQL and adapter; no injected doubles",
+  "observation_interval_seconds": 1,
+  "stale_after_seconds": 60,
+  "source_sha256_lf": {
+    "backend/app/api/__init__.py": "948cc602ed07a139c9342794636a9185701615a8cbc4acc577e7a17a92c659ce",
+    "backend/app/api/auth.py": "6026cded4fc869e5785fbcb27f7caf9e4d5c8c3ca606da3a0375c332054110de",
+    "backend/app/api/dependencies.py": "37d1a7f1e4be001cdaf1d69ffb25df38d8f4ad7e88bbb54b4fba7ee3212f5b9c",
+    "backend/app/api/folders.py": "7acaedb30ab478ad5a5e109e4dec8fb242d19b9080cb41e2f442ce167234e057",
+    "backend/app/api/nodes.py": "ee1fb8504638a1f62fe9b0c87596988aca2146349953a585ec5c8dfe156a8578",
+    "backend/app/main.py": "dccbd378b326e9e939b9e8ef797c70672ca95adfa2a1946a8eeb8b8d7b4fa67e",
+    "backend/app/registry/__init__.py": "693e5bf02f79c65a653e81b21b6d4e4b2a27c1727f949ceba67b2de338331963",
+    "backend/app/registry/__main__.py": "6497d0410522800d22f62631184f061a23083cfad5bbf67f9cc9e5c6bb0f3232",
+    "backend/app/registry/admin.py": "8bdb75564d17bdea91d2346758ee07fe7af52cbf73f7119ca8c87b43d7d1a48a",
+    "backend/app/registry/authentication.py": "d69eb1b0515c0fe81190accfd77e2aa4d84834a806efd82de8865a62ed508452",
+    "backend/app/registry/projections.py": "a00e3b99778ea12ac784edc0fe35b19f429d2ce749e5dfe3d8386b5259d1c842",
+    "backend/app/registry/resolver.py": "6ab7df1ae01cef6684884d8064e683b52260e829a1695535668f3c5b94d5511d",
+    "backend/app/registry/security.py": "460309a9a6a9078ba6f128cbe3c82f651694387583715632ecf7d0b88ada05db",
+    "backend/app/registry/service.py": "966a2e911638123d2d99a5e2de516180349d850ace02908fe27f3559235cbec2",
+    "deploy/syncthing/bench.py": "dd9ed56728ef77807cb357281335029b6a57335735b01dc9bcd9a411f1a9df38",
+    "deploy/syncthing/prepare.py": "245108c467ba979fa8c48f6b590727e1b6feea727fd316401ec05117f266f5c0",
+    "tests/integration/auth/check_postgres.py": "edcd085d9a7fe2b697c91d151efb80d7e857950954ef71cced6fe97e6fb86339",
+    "tests/integration/registry/check_live.py": "04cfbbb4565096703737eb95e7d550ec4a418893aa1e00eb9f2245275ca46525"
+  }
+}
