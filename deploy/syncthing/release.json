@@ -1,0 +1,17 @@
+{
+  "version": "v2.1.7",
+  "release_url": "https://github.com/syncthing/syncthing/releases/tag/v2.1.7",
+  "published_at": "2026-10-21T06:09:14Z",
+  "assets": {
+    "windows-amd64": {
+      "name": "syncthing-windows-amd64-v2.1.7.zip",
+      "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-windows-amd64-v2.1.7.zip",
+      "sha256": "3ce7da770f546a8d02b65b2e7ee31f2a3b8b7c3f990ede045590cca4172ecfe1"
+    },
+    "linux-amd64": {
+      "name": "syncthing-linux-amd64-v2.1.7.tar.gz",
+      "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-linux-amd64-v2.1.7.tar.gz",
+      "sha256": "2edc416e7ed136b7c858ed5f3f02a3b8316589605e54c380228ceea7acbf0142"
+    }
+  }
+}

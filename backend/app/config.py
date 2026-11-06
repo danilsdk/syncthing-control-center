@@ -9,6 +9,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import ArgumentError
 
+from app.contracts.types import DisplayName
+
 
 def _http_root(value: str) -> str:
     try:
@@ -35,7 +37,7 @@ def _http_root(value: str) -> str:
 class ConnectionSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
 
-    display_name: str = Field(min_length=1, max_length=80)
+    display_name: DisplayName
     base_url: SecretStr = Field(repr=False, exclude=True)
     api_key: SecretStr = Field(repr=False, exclude=True)
 

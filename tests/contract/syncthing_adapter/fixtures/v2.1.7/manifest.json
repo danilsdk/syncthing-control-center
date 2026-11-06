@@ -1,0 +1,109 @@
+{
+  "captured_at": "2026-10-24T20:46:51.734166Z",
+  "version": "v2.1.7",
+  "release_url": "https://github.com/syncthing/syncthing/releases/tag/v2.1.7",
+  "archive_sha256": "3ce7da770f546a8d02b65b2e7ee31f2a3b8b7c3f990ede045590cca4172ecfe1",
+  "requests": [
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/system/status",
+      "status_code": 200
+    },
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/system/version",
+      "status_code": 200
+    },
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/config/folders",
+      "status_code": 200
+    },
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/config/folders/scc-a1-shared",
+      "status_code": 200
+    },
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/db/status?folder=scc-a1-shared",
+      "status_code": 200
+    },
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/config/restart-required",
+      "status_code": 200
+    },
+    {
+      "node": "node-a",
+      "method": "GET",
+      "path": "/rest/events?since=0&timeout=1",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/system/status",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/system/version",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/config/folders",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/config/folders/scc-a1-shared",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/db/status?folder=scc-a1-shared",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/config/restart-required",
+      "status_code": 200
+    },
+    {
+      "node": "node-b",
+      "method": "GET",
+      "path": "/rest/events?since=0&timeout=1",
+      "status_code": 200
+    }
+  ],
+  "negative_reads": {
+    "node-a": {
+      "auth": 403,
+      "missing_folder": 404
+    },
+    "node-b": {
+      "auth": 403,
+      "missing_folder": 404
+    }
+  },
+  "redactions": [
+    "Only allowlisted fields retained",
+    "Folder paths replaced by /DEMO",
+    "Event payloads reduced",
+    "Device IDs belong only to fresh demo nodes"
+  ],
+  "config_changes": "Initial offline XML of owned homes only; paused PATCH not performed"
+}

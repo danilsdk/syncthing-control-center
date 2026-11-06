@@ -1,0 +1,36 @@
+{
+  "started_at": "2026-10-24T20:46:48.585254Z",
+  "stage": "A1.1",
+  "paused_patch_performed": false,
+  "result": "passed",
+  "version": "v2.1.7",
+  "nodes_ready": 2,
+  "synchronized_sha256": "b01512ff8a3a9c4affa30f530e9e3a7a4d3b1cbb5ab9699cccf04759dfa4a30d",
+  "captured_responses": 18,
+  "negative_reads": {
+    "node-a": {
+      "auth": 403,
+      "missing_folder": 404
+    },
+    "node-b": {
+      "auth": 403,
+      "missing_folder": 404
+    }
+  },
+  "fixtures_exported": true,
+  "network_isolation_verified": true,
+  "initial_configuration": "offline owned homes",
+  "runtime_actions": [
+    "write one disposable file",
+    "POST db/scan",
+    "GET API probes"
+  ],
+  "cleanup": {
+    "stopped": [
+      "node-a",
+      "node-b"
+    ],
+    "running": []
+  },
+  "completed_at": "2026-10-24T20:46:52.773188Z"
+}

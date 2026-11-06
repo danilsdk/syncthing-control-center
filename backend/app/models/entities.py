@@ -61,6 +61,23 @@ class ManagedNode(IdentityMixin, TimestampsMixin, Base):
             name="source_session_pair",
         ),
         CheckConstraint("source_session_id ~ '^[0-9a-f]{64}$'", name="source_session_hash"),
+        CheckConstraint(
+            "source_stream_anchor IS NULL OR (source_session_id IS NOT NULL AND "
+            "jsonb_typeof(source_stream_anchor) = 'object' AND "
+            "source_stream_anchor ?& ARRAY['id','time_raw','fingerprint'] AND "
+            "source_stream_anchor - ARRAY['id','time_raw','fingerprint'] = '{}'::jsonb AND "
+            "jsonb_typeof(source_stream_anchor->'id') = 'number' AND "
+            "CASE WHEN source_stream_anchor->>'id' ~ '^[1-9][0-9]{0,18}$' "
+            "THEN (source_stream_anchor->>'id')::numeric <= 9223372036854775807 "
+            "ELSE false END AND "
+            "jsonb_typeof(source_stream_anchor->'time_raw') = 'string' AND "
+            "source_stream_anchor->>'time_raw' ~ "
+            "'^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+            "([.][0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})$' AND "
+            "jsonb_typeof(source_stream_anchor->'fingerprint') = 'string' AND "
+            "source_stream_anchor->>'fingerprint' ~ '^[0-9a-f]{64}$')",
+            name="stream_anchor",
+        ),
         CheckConstraint("last_seen_at <= last_checked_at", name="seen_before_check"),
     )
 
@@ -73,6 +90,7 @@ class ManagedNode(IdentityMixin, TimestampsMixin, Base):
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     source_start_time_raw: Mapped[str | None] = mapped_column(Text)
     source_session_id: Mapped[str | None] = mapped_column(CHAR(64))
+    source_stream_anchor: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     last_event_id: Mapped[int] = mapped_column(BigInteger, server_default=text("0"))
 
 
@@ -236,7 +254,7 @@ class SyncEvent(IdentityMixin, Base):
         CheckConstraint("btrim(event_type) <> ''", name="event_type_nonempty"),
         CheckConstraint(
             "(kind <> 'gap' OR event_type = 'HistoryGap') AND "
-            "(kind <> 'restart' OR event_type = 'SourceRestarted')",
+            "(kind <> 'restart' OR event_type IN ('SourceRestarted','SourceContinuityLost'))",
             name="marker_type",
         ),
         CheckConstraint(
