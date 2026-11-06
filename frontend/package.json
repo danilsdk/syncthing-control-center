@@ -7,7 +7,9 @@
     "dev": "vite",
     "lint": "tsc --noEmit",
     "test:ci": "vitest run",
-    "build": "tsc --noEmit && vite build"
+    "build": "tsc --noEmit && vite build",
+    "test:e2e": "playwright test",
+    "dev:mock": "vite --mode demo"
   },
   "keywords": [],
   "type": "module",
@@ -16,11 +18,16 @@
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.4",
     "typescript": "^5.9.3",
-    "vite": "^7.1.7",
-    "vitest": "^3.2.4"
+    "vite": "7.3.7",
+    "vitest": "5.1.0"
+  },
+  "engines": {
+    "node": "^22.12.0 || ^24.0.0 || >=26.0.0",
+    "npm": ">=10"
   }
 }

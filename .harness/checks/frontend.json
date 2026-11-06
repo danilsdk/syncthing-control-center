@@ -19,12 +19,24 @@
       "npm",
       "run",
       "build"
+    ],
+    [
+      "npm",
+      "run",
+      "test:e2e"
     ]
   ],
   "setup_commands": [
     [
       "npm",
       "ci"
+    ],
+    [
+      "npx",
+      "playwright",
+      "install",
+      "--with-deps",
+      "chromium"
     ]
   ]
 }

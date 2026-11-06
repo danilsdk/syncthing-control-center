@@ -1,81 +1,189 @@
-import type { AnalyticsSummary, Execution, Folder, Node, Page, Provider, ProviderError, Rule, RuleInput, Session } from './types'
-import { ProviderError as ProviderErrorClass } from './types'
+import type {
+  AnalyticsSummary,
+  Execution,
+  ExecutionQuery,
+  Folder,
+  Node,
+  Page,
+  Provider,
+  Rule,
+  RuleInput,
+  Session,
+} from "./types";
+import { ProviderError } from "./types";
 
-const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN as string | undefined)?.replace(/\/$/, '') ?? ''
-
-type RequestOptions = RequestInit & { csrf?: boolean }
+const messages: Record<string, string> = {
+  invalid_credentials: "Неверный логин или пароль.",
+  authentication_required: "Сессия завершена. Войдите снова.",
+  auth_not_configured: "Администратор ещё не настроен на сервере.",
+  csrf_invalid: "Сессия изменилась. Войдите снова перед сохранением.",
+  origin_forbidden: "Адрес интерфейса не разрешён сервером.",
+  login_rate_limited: "Слишком много попыток входа. Повторите через минуту.",
+  version_conflict: "Правило уже изменено. Перечитайте данные перед повтором.",
+  active_rule_conflict: "У папки уже есть активное правило.",
+  operation_in_progress: "Для этой папки уже выполняется операция.",
+  node_disabled: "Узел отключён от управления.",
+  invalid_timezone: "Укажите существующий часовой пояс IANA.",
+  invalid_window: "Начало и конец окна должны различаться.",
+  invalid_period: "Начало периода должно быть раньше конца.",
+  validation_error: "Проверьте значения полей формы.",
+  service_unavailable: "Сервер временно недоступен. Повторите запрос позже.",
+};
 
 export class ApiProvider implements Provider {
-  readonly mode = 'api' as const
-  private csrfToken: string | null = null
+  readonly mode = "api" as const;
+  private csrfToken: string | null = null;
+  private resumeKeys = new Map<string, string>();
 
-  private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const headers = new Headers(options.headers)
-    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
-    if (options.csrf && this.csrfToken) headers.set('X-CSRF-Token', this.csrfToken)
-    const response = await fetch(`${API_ORIGIN}${path}`, { ...options, credentials: 'include', headers })
-    if (response.status === 204) return undefined as T
-    const payload = await response.json().catch(() => ({})) as Record<string, unknown>
-    if (!response.ok) {
-      const detail = payload.error as { code?: string; message?: string } | undefined
-      if (response.status === 401) this.csrfToken = null
-      throw new ProviderErrorClass(detail?.message ?? 'Сервис недоступен', detail?.code, response.status)
+  private async request<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
+    const headers = new Headers(options.headers);
+    if (options.body) headers.set("Content-Type", "application/json");
+    if (options.method && options.method !== "GET" && this.csrfToken)
+      headers.set("X-CSRF-Token", this.csrfToken);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20_000);
+    try {
+      const response = await fetch(path, {
+        ...options,
+        credentials: "same-origin",
+        headers,
+        signal: controller.signal,
+      });
+      if (response.status === 204) return undefined as T;
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.csrfToken = null;
+          this.resumeKeys.clear();
+        }
+        const code = payload?.error?.code ?? "request_failed";
+        const fallback =
+          response.status === 404
+            ? "Этот раздел API ещё не подключён на сервере."
+            : "Не удалось выполнить запрос. Повторите позже.";
+        throw new ProviderError(
+          messages[code] ?? fallback,
+          code,
+          response.status,
+        );
+      }
+      if (!payload || typeof payload !== "object")
+        throw new ProviderError(
+          "Сервер вернул некорректный ответ.",
+          "invalid_response",
+        );
+      return payload as T;
+    } catch (error) {
+      if (isProviderError(error)) throw error;
+      throw new ProviderError(
+        "Нет ответа сервера. Проверьте подключение и повторите запрос.",
+        "network_error",
+      );
+    } finally {
+      clearTimeout(timeout);
     }
-    return payload as T
   }
-
-  async login(login: string, password: string): Promise<Session> {
-    const session = await this.request<Session>('/api/auth/login', {
-      method: 'POST',
+  async currentSession() {
+    const session = await this.request<Session>("/api/auth/me");
+    this.csrfToken = session.csrf_token;
+    return session;
+  }
+  async login(login: string, password: string) {
+    const session = await this.request<Session>("/api/auth/login", {
+      method: "POST",
       body: JSON.stringify({ login, password }),
-      csrf: false,
-    })
-    this.csrfToken = session.csrf_token
-    return session
+    });
+    this.csrfToken = session.csrf_token;
+    return session;
   }
-
   async logout() {
-    await this.request<void>('/api/auth/logout', { method: 'POST', csrf: true })
-    this.csrfToken = null
+    await this.request<void>("/api/auth/logout", { method: "POST" });
+    this.csrfToken = null;
+    this.resumeKeys.clear();
   }
-
-  private async page<T>(path: string): Promise<T[]> {
-    const response = await this.request<Page<T>>(`${path}${path.includes('?') ? '&' : '?'}limit=100&offset=0`)
-    return response.items
+  private async all<T>(path: string): Promise<T[]> {
+    const items: T[] = [];
+    for (let offset = 0; ; offset += 100) {
+      const page = await this.request<Page<T>>(
+        `${path}?limit=100&offset=${offset}`,
+      );
+      if (!Array.isArray(page.items) || !Number.isInteger(page.total))
+        throw new ProviderError(
+          "Некорректная страница данных.",
+          "invalid_response",
+        );
+      items.push(...page.items);
+      if (!page.items.length || offset + page.items.length >= page.total)
+        return items;
+    }
   }
-
-  listNodes() { return this.page<Node>('/api/nodes') }
-  listFolders(nodeId?: string) { return this.page<Folder>(nodeId ? `/api/nodes/${nodeId}/folders` : '/api/folders') }
-  listRules() { return this.page<Rule>('/api/rules') }
-  listExecutions() { return this.page<Execution>('/api/executions') }
-
+  listNodes() {
+    return this.all<Node>("/api/nodes");
+  }
+  listFolders(nodeId: string) {
+    return this.all<Folder>(`/api/nodes/${encodeURIComponent(nodeId)}/folders`);
+  }
+  listRules() {
+    return this.all<Rule>("/api/rules");
+  }
+  listExecutions(query: ExecutionQuery = {}) {
+    const params = new URLSearchParams({ limit: "20", offset: "0" });
+    for (const [key, value] of Object.entries(query))
+      if (value !== undefined && value !== "") params.set(key, String(value));
+    return this.request<Page<Execution>>(`/api/executions?${params}`);
+  }
+  async getExecution(id: string) {
+    const execution = await this.request<Execution>(
+      `/api/executions/${encodeURIComponent(id)}`,
+    );
+    if (execution.status !== "pending")
+      this.resumeKeys.delete(execution.folder_id);
+    return execution;
+  }
   createRule(input: RuleInput) {
-    return this.request<Rule>('/api/rules', { method: 'POST', body: JSON.stringify(input), csrf: true })
+    return this.request<Rule>("/api/rules", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   }
-
   setRuleEnabled(rule: Rule, enabled: boolean) {
     return this.request<Rule>(`/api/rules/${rule.id}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify({ expected_version: rule.version, enabled }),
-      csrf: true,
-    })
+    });
   }
-
+  updateRule(rule: Rule, input: RuleInput) {
+    const { folder_id: _folder, ...fields } = input;
+    return this.request<Rule>(`/api/rules/${rule.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...fields, expected_version: rule.version }),
+    });
+  }
+  deleteRule(rule: Rule) {
+    return this.request<void>(
+      `/api/rules/${rule.id}?expected_version=${rule.version}`,
+      { method: "DELETE" },
+    );
+  }
   analytics() {
-    const to = new Date()
-    const from = new Date(to.getTime() - 24 * 60 * 60 * 1000)
-    return this.request<AnalyticsSummary>(`/api/analytics/summary?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`)
+    const to = new Date();
+    const from = new Date(to.getTime() - 86_400_000);
+    return this.request<AnalyticsSummary>(
+      `/api/analytics/summary?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
+    );
   }
-
   resume(folderId: string) {
-    return this.request<Execution>('/api/executions/resume', {
-      method: 'POST',
-      body: JSON.stringify({ folder_id: folderId, idempotency_key: crypto.randomUUID() }),
-      csrf: true,
-    })
+    const key = this.resumeKeys.get(folderId) ?? crypto.randomUUID();
+    this.resumeKeys.set(folderId, key);
+    return this.request<Execution>("/api/executions/resume", {
+      method: "POST",
+      body: JSON.stringify({ folder_id: folderId, idempotency_key: key }),
+    });
   }
 }
-
 export function isProviderError(error: unknown): error is ProviderError {
-  return error instanceof ProviderErrorClass
+  return error instanceof ProviderError;
 }
