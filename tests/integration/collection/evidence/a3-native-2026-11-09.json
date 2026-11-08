@@ -1,0 +1,70 @@
+{
+  "stage": "A3.5",
+  "started_at": "2026-11-08T23:44:45.946702Z",
+  "result": "passed",
+  "syncthing_version": "v2.1.7",
+  "checks": [
+    {
+      "name": "native_buffer_rollover",
+      "at": "2026-11-08T23:45:20.731884Z",
+      "files": 600,
+      "first": 284,
+      "last": 1283,
+      "retained": 1000
+    },
+    {
+      "name": "T07_native_batch_replay_and_T08_bounded_gap",
+      "at": "2026-11-08T23:45:26.622351Z",
+      "received": 1000,
+      "gap_from": 1,
+      "gap_to": 284
+    },
+    {
+      "name": "real_login_guard_config_runtime_and_one_node_probe_per_cycle",
+      "at": "2026-11-08T23:45:32.058410Z"
+    },
+    {
+      "name": "backend_restart_retains_session_cursor_anchor_and_due_semantics",
+      "at": "2026-11-08T23:45:39.981124Z"
+    },
+    {
+      "name": "T05_native_outage_stale_cache_and_available_history",
+      "at": "2026-11-08T23:45:46.343335Z"
+    },
+    {
+      "name": "T08_real_restart_boundary_and_T05_current_reconciliation",
+      "at": "2026-11-08T23:45:50.184411Z"
+    },
+    {
+      "name": "T08_legacy_missing_proof_same_native_start_time",
+      "at": "2026-11-08T23:45:54.044630Z"
+    },
+    {
+      "name": "guarded_history_pagination_filters_safe_payloads_and_source_uniqueness",
+      "at": "2026-11-08T23:45:54.193582Z"
+    },
+    {
+      "name": "full_demo_folder_configuration_restored",
+      "at": "2026-11-08T23:45:54.290648Z"
+    }
+  ],
+  "persisted": {
+    "events": 2085,
+    "snapshots": 46,
+    "node_probes": 10,
+    "duplicate_source_positions": 0
+  },
+  "cleanup": {
+    "api_running": false,
+    "syncthing_running": [],
+    "fixture_directories_present": false
+  },
+  "completed_at": "2026-11-08T23:45:56.140533Z",
+  "verified_source_commit": "8e8789ce024662f50243abb17b74e3d72400bcdf",
+  "verified_base_commit": "3db457bc718dc6fc32d91631baa94823db69c6ed",
+  "platform": "Windows amd64",
+  "python_version": "3.12.14",
+  "postgresql_version": "18.6",
+  "local_date": "2026-11-09 Europe/Moscow",
+  "human_demo_config_verification": "pending; required before merge"
+}

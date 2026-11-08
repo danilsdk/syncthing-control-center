@@ -1,10 +1,12 @@
 # A3 — сбор событий и наблюдений
 
-A3.1–A3.5 завершены 2026-10-26, A / playerboom. События/checkpoint, наблюдения,
-API истории и реальный цикл проверены; A3 подготовлен к review danilsdk.
-База — опубликованный
-A2 db6d2fea1e574e8432f198aa7b62c27442ae1383, [PR #5](https://github.com/danilsdk/syncthing-control-center/pull/5)
-на review danilsdk. H0/A0/A1 и общий контракт ещё требуют принятия.
+A3.1–A3.5 реализованы 2026-10-26, A / playerboom. После принятия H0/A0/A1/A2
+и B0/B1/B2 выполнены обычный merge принятого main и новая проверка 09.11.2026.
+База — main `3db457bc718dc6fc32d91631baa94823db69c6ed` (A2 принят в
+[PR #5](https://github.com/danilsdk/syncthing-control-center/pull/5)); проверенный
+source commit A3 — `8e8789ce024662f50243abb17b74e3d72400bcdf`.
+[PR #6](https://github.com/danilsdk/syncthing-control-center/pull/6) возвращается
+на review danilsdk относительно main. Новые результаты приведены в конце документа.
 
 Основа: [контракт](../../contracts.md), [D-01 r2](d01-stream-continuity.md),
 [D-05](mvp-decisions.md#d-05-наблюдения-и-две-обязательные-метрики),
@@ -12,7 +14,7 @@ A2 db6d2fea1e574e8432f198aa7b62c27442ae1383, [PR #5](https://github.com/danilsdk
 [передача A2](../../../backend/app/registry/README.md),
 [карточка A3](../../../.harness/tasks/A3.json),
 [журнал A3](../../agent-log/a/A3.md).
-Карточка перенесена без расширения allow из H0 00c2bf6.
+Используется неизменённая принятая карточка A3 из main; allow не расширялся.
 
 ## Границы и подэтапы
 
@@ -23,6 +25,9 @@ A2 db6d2fea1e574e8432f198aa7b62c27442ae1383, [PR #5](https://github.com/danilsdk
 | A3.3 — наблюдения, выполнен | ObservationCollector и последовательный CollectionService | 63 PG-сценария всего; config/runtime отдельно, поздние ответы и отказы проверены |
 | A3.4 — API истории, выполнен | HistoryService и защищённый router events/snapshots | 14 API-компонентов и 69 PG-сценариев всего; count/page согласованы |
 | A3.5 — реальная проверка и передача, выполнен | Частная PG + два Syncthing + HTTP API | 9 реальных сценариев T-05/T-07/T-08; общий набор 427 без PG и 69 на PG прошёл |
+
+Числа в таблице относятся к первоначальным подэтапам 26.10. Новая проверка
+на принятой базе описана в разделе «Повторная проверка 09.11.2026».
 
 A3 пишет только collection, api/events.py, собственные unit/integration-тесты,
 этот план и журнал. Нужные сущности SyncEvent/StatusSnapshot/ManagedNode/Folder
@@ -294,4 +299,38 @@ CollectionService(settings, database, SystemClock()).collect_once() из еди�
 Для B4: знаменатель доступности — только scope=node; failed row — фактическая
 попытка, отсутствие строки — отсутствие измерения. Folder config/runtime идут
 раздельно; history gap и boundary не восстанавливают отсутствующие метрики.
-Согласование D-01/B0, review danilsdk и принятие зависимостей ожидаются.
+Эта первоначальная передача относится к 26.10. Актуальная база и проверки — ниже.
+
+## Повторная проверка 09.11.2026
+
+Замечание review от 29.10 об устаревшей цепочке устранено обычным merge main.
+Все 23 собственных пути исходного A3 сохранены, включая 19 Python-файлов.
+Карточка взята из принятого main; README и A9 не входят в net diff.
+Все остальные файлы в точности сохранены из main, включая исправления A0/A1/A2
+и принятые B1/B2. При обновлении предметный Python-код A3 не менялся.
+
+На Windows amd64 / Python 3.12.14 прошли полный validate (32 harness self-tests,
+414 unit/contract passed, 99 отдельных PostgreSQL schema/lock skipped, Ruff и
+design-контракт), 59 API-компонентов auth/registry/collection и 69 настоящих
+PostgreSQL collection-сценариев. Два SQL-runner кластера использовали PostgreSQL
+18.6 и были остановлены/удалены; рабочие БД не использовались.
+
+Свежий live-прогон 09.11.2026 02:44:45–02:45:56 МСК прошёл все 9 групп с двумя
+настоящими Syncthing v2.1.7, HTTP API/login/scrypt и новыми процессами коллектора.
+Переданы 600 файлов, сохранены 2085 событий и 46 snapshots (10 node-проб);
+дублей source positions — 0. Проверены реальный gap/повтор пакета, outage,
+restart, legacy anchor=NULL, согласованная история, восстановление полного
+folder config и очистка. Фактические счётчики асинхронного источника не фиксируются
+как постоянные ожидания следующего запуска.
+
+[Общий отчёт](../../../tests/integration/collection/acceptance-a3-2026-11-09.json)
+содержит source/base и 101 SHA-256 проверенных Python-файлов сборки;
+[нативный отчёт](../../../tests/integration/collection/evidence/a3-native-2026-11-09.json)
+содержит времена, сценарии и cleanup. Ранее полученные доказательства сохранены
+как исторические. Новых функциональных дефектов A3 при этом прогоне не обнаружено.
+
+PR подготавливается к повторному review; независимая приёмка danilsdk и ручное
+подтверждение demo-конфигурации человеком остаются условиями merge. Автор не
+принимает собственный PR. Новый прогон macOS не выполнен: A10/B6 — отдельные
+запланированные задачи. A4 подключает коллектор и B2 к единому worker; его полная
+интеграция, Docker/ARM64, UI и VPS этим прогоном не проверены.
