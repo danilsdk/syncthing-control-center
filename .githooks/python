@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+run_candidate() {
+    candidate=$1
+    shift
+    [ -n "$candidate" ] || return 0
+    if ! { [ -f "$candidate" ] || command -v "$candidate" >/dev/null 2>&1; }; then
+        return 0
+    fi
+    # A command may exist under one name but still be unusable (for example a
+    # missing Windows launcher). Probe it before selecting the fallback name.
+    if "$candidate" -c 'import sys' >/dev/null 2>&1; then
+        exec "$candidate" "$repo_root/scripts/harness.py" "$@"
+    fi
+}
+
+if [ -n "${PYTHON:-}" ]; then
+    run_candidate "$PYTHON" "$@"
+fi
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+    run_candidate "$VIRTUAL_ENV/bin/python" "$@"
+    run_candidate "$VIRTUAL_ENV/Scripts/python.exe" "$@"
+fi
+run_candidate "$repo_root/.venv/bin/python" "$@"
+run_candidate "$repo_root/.venv/Scripts/python.exe" "$@"
+run_candidate python3 "$@"
+run_candidate python "$@"
+
+echo "Не найден рабочий интерпретатор Python (проверены python3 и python)" >&2
+exit 127

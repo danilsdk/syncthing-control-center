@@ -1,0 +1,28 @@
+{
+  "id": "B3",
+  "role": "B",
+  "title": "Веб-интерфейс",
+  "branch": "codex/b03-frontend",
+  "depends_on": [
+    "A0",
+    "B0",
+    "A2",
+    "B1",
+    "B2"
+  ],
+  "allow": [
+    "frontend/**",
+    "tests/e2e/ui/**",
+    "docs/design/b/ui.md",
+    ".harness/checks/frontend.json",
+    ".harness/tasks/B3.json",
+    "docs/agent-log/b/B3.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b3",
+  "acceptance": [
+    "Есть вход, обзор, папки, правила и история с явными ошибками.",
+    "Mock-режим отделён от реальной интеграции.",
+    "Сборка и проверки frontend воспроизводимы; API-ключи не попадают в браузер."
+  ]
+}

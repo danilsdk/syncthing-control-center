@@ -1,0 +1,44 @@
+{
+  "id": "A4",
+  "role": "A",
+  "title": "Окружение, CI приложения и интеграция",
+  "branch": "codex/a04-integration",
+  "depends_on": [
+    "A0",
+    "A1",
+    "A2",
+    "A3",
+    "B1",
+    "B2",
+    "B3"
+  ],
+  "allow": [
+    "deploy/**",
+    "scripts/**",
+    ".github/workflows/application.yml",
+    "compose.yml",
+    "compose.yaml",
+    "docker-compose.yml",
+    ".env.example",
+    "backend/Dockerfile",
+    "backend/app/main.py",
+    "backend/app/config.py",
+    "tests/integration/system/**",
+    "tests/e2e/system/**",
+    "docs/design/a/deployment.md",
+    "README.md",
+    ".harness/tasks/A4.json",
+    "docs/agent-log/a/A4.md"
+  ],
+  "deny": [
+    "scripts/harness.py",
+    "scripts/validate.sh",
+    "scripts/tests/**"
+  ],
+  "spec": "docs/agent-tasks.md#a4",
+  "acceptance": [
+    "Чистый checkout запускается по инструкции; один исполнитель.",
+    "Реальные файлы, пауза, возобновление и перезапуск проверены.",
+    "Общая интеграция и проверки приложения воспроизводимы."
+  ]
+}

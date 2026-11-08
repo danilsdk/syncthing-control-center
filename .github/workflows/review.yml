@@ -1,0 +1,38 @@
+name: Assign peer reviewer
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  request-review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      # Only trusted base-branch code runs with the write token.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - name: Request the other participant
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          HARNESS_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ ! -f scripts/harness.py ]; then
+            echo "Bootstrap PR: harness is not in the base branch yet."
+            exit 0
+          fi
+          reviewer=$(python3 scripts/harness.py reviewer --branch "$HARNESS_BRANCH")
+          if [ "$reviewer" = "$PR_AUTHOR" ]; then
+            echo "Author is the selected peer; assign the review manually."
+            exit 0
+          fi
+          gh pr edit "$PR_NUMBER" --add-reviewer "$reviewer"

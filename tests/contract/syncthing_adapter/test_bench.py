@@ -4,6 +4,7 @@ import hashlib
 import importlib.util
 import os
 import socket
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -307,3 +308,134 @@ def test_redirect_does_not_forward_api_key_to_a_second_server(tmp_path, monkeypa
             )
             assert result["status_code"] == 302
     assert received == []
+
+
+def link_directory(link, target):
+    """Exercise real Windows junctions without requiring symlink privileges."""
+    link.parent.mkdir(parents=True, exist_ok=True)
+    if os.name == "nt":
+        subprocess.run(
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "$ErrorActionPreference='Stop'; New-Item -ItemType Junction "
+                "-Path $env:SCC_TEST_LINK -Target $env:SCC_TEST_TARGET | Out-Null",
+            ],
+            env=dict(os.environ, SCC_TEST_LINK=str(link), SCC_TEST_TARGET=str(target)),
+            capture_output=True,
+            check=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+def linked_home(tmp_path, level):
+    runtime = tmp_path / "runtime"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    suffix = {"runtime": "nodes/node-a", "nodes": "node-a", "home": "."}[level]
+    destination = outside / suffix
+    destination.mkdir(parents=True, exist_ok=True)
+    link = {"runtime": runtime, "nodes": runtime / "nodes", "home": runtime / "nodes/node-a"}[level]
+    link_directory(link, outside)
+    return runtime, destination
+
+
+@pytest.mark.parametrize("level", ["runtime", "nodes", "home"])
+@pytest.mark.parametrize("home_form", ["lexical", "resolved"])
+def test_linked_home_cannot_supply_client_credentials(tmp_path, monkeypatch, level, home_form):
+    runtime, outside = linked_home(tmp_path, level)
+    monkeypatch.setattr(bench, "RUNTIME", runtime)
+    config = outside / "config.xml"
+    content = "<configuration><gui><apikey>foreign-fixture-key</apikey></gui></configuration>"
+    config.write_text(content, encoding="utf-8")
+    home = runtime / "nodes/node-a" if home_form == "lexical" else outside
+    with pytest.raises(prepare.BenchError):
+        bench.BenchClient(
+            {"name": "node-a", "home": str(home), "api_port": 18384, "sync_port": 22101}
+        )
+    assert config.read_text(encoding="utf-8") == content
+
+
+@pytest.mark.parametrize("level", ["runtime", "nodes", "home"])
+def test_linked_home_cannot_receive_configuration(tmp_path, monkeypatch, level):
+    runtime, outside = linked_home(tmp_path, level)
+    monkeypatch.setattr(bench, "RUNTIME", runtime)
+    monkeypatch.setattr(bench, "STATE", runtime / "state.json")
+    native_calls = []
+
+    def native(*args):
+        native_calls.append(args)
+        raise prepare.BenchError("Fixture CLI must not be reached")
+
+    monkeypatch.setattr(bench, "native", native)
+    with pytest.raises(prepare.BenchError):
+        bench.configure(runtime / "bin/unused", {"nodes": []})
+    assert native_calls == []
+    assert list(outside.iterdir()) == []
+
+
+def test_linked_home_after_client_creation_cannot_send_http(tmp_path, monkeypatch):
+    runtime = tmp_path / "runtime"
+    client = make_client(runtime, monkeypatch)
+    home = runtime / "nodes/node-a"
+    (home / "config.xml").unlink()
+    home.rmdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link_directory(home, outside)
+    monkeypatch.setattr(client.opener, "open", lambda *_a, **_k: pytest.fail("Foreign HTTP"))
+    with pytest.raises(prepare.BenchError):
+        client.get("/rest/system/status")
+    assert list(outside.iterdir()) == []
+
+
+@pytest.mark.parametrize("level", ["bin", "version"])
+@pytest.mark.parametrize("binary_form", ["lexical", "resolved"])
+def test_linked_binary_cannot_authorize_shutdown(tmp_path, monkeypatch, level, binary_form):
+    runtime = tmp_path / "runtime"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link = runtime / "bin" if level == "bin" else runtime / "bin/version"
+    link_directory(link, outside)
+    executable = outside / "syncthing"
+    executable.write_bytes(b"fixture executable is never started")
+    binary = link / executable.name if binary_form == "lexical" else executable
+    identity = {"pid": 123456789, "created": "fixture", "executable": str(binary)}
+    monkeypatch.setattr(bench, "RUNTIME", runtime)
+    monkeypatch.setattr(bench, "STATE", runtime / "state.json")
+    monkeypatch.setattr(bench, "process_identity", lambda _: identity)
+    monkeypatch.setattr(bench, "BenchClient", lambda _: pytest.fail("Foreign shutdown"))
+    with pytest.raises(prepare.BenchError):
+        bench.stop({"nodes": [{"name": "node-a", "process": identity}]})
+    assert executable.read_bytes() == b"fixture executable is never started"
+
+
+def test_linked_bin_cannot_receive_prepared_executable(tmp_path, monkeypatch):
+    runtime = tmp_path / "runtime"
+    cache = runtime / "downloads"
+    cache.mkdir(parents=True)
+    archive = cache / "fixture.zip"
+    with zipfile.ZipFile(archive, "w") as source:
+        source.writestr("release/syncthing.exe", b"verified fixture executable")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    link_directory(runtime / "bin", outside)
+    metadata = {
+        "version": "fixture",
+        "assets": {
+            "windows-amd64": {
+                "name": archive.name,
+                "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            }
+        },
+    }
+    monkeypatch.setattr(prepare, "RUNTIME", runtime)
+    monkeypatch.setattr(prepare, "release", lambda: metadata)
+    monkeypatch.setattr(prepare, "platform_name", lambda: "windows-amd64")
+    with pytest.raises(prepare.BenchError):
+        prepare.prepare()
+    assert list(outside.iterdir()) == []

@@ -23,7 +23,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from capture import assert_public, publish, sanitize
-from prepare import HERE, RUNTIME, BenchError, platform_name, prepare, release
+from prepare import HERE, RUNTIME, BenchError, platform_name, prepare, release, runtime_path
 
 ROOT = HERE.parents[1]
 STATE = RUNTIME / "state.json"
@@ -37,13 +37,15 @@ def utc_now() -> str:
 
 
 def write_json(path: Path, value) -> None:
+    path = runtime_path(RUNTIME, path)
+    temporary = runtime_path(RUNTIME, path.with_suffix(".tmp"))
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
     temporary.replace(path)
 
 
 def read_state() -> dict:
+    runtime_path(RUNTIME, STATE)
     if not STATE.exists():
         return {"schema_version": 1, "bench": "scc-a1", "nodes": []}
     value = json.loads(STATE.read_text(encoding="utf-8"))
@@ -54,8 +56,9 @@ def read_state() -> dict:
 
 @contextmanager
 def operation_lock():
+    lock = runtime_path(RUNTIME, RUNTIME / "operation.lock")
     RUNTIME.mkdir(parents=True, exist_ok=True)
-    with (RUNTIME / "operation.lock").open("a+b") as handle:
+    with lock.open("a+b") as handle:
         if handle.tell() == 0:
             handle.write(b"0")
             handle.flush()
@@ -143,13 +146,48 @@ def process_identity(pid: int | None):
         return None
 
 
+def binary_path(binary: Path) -> Path:
+    path = runtime_path(RUNTIME, binary)
+    if not path.is_relative_to(RUNTIME.absolute() / "bin"):
+        raise BenchError("Bench executable is outside its private runtime bin directory")
+    return path
+
+
+def check_layout() -> None:
+    """Refuse redirected managed paths before creating files or stopping nodes."""
+    for path in (STATE, RUNTIME / "owner.json", RUNTIME / "bin"):
+        runtime_path(RUNTIME, path)
+    for name, _, _ in NODES:
+        home = RUNTIME / "nodes" / name
+        for child in (
+            "config.xml",
+            "scc-owned-home.json",
+            "process.log",
+            *(f"data/{folder}" for folder in FOLDERS),
+        ):
+            runtime_path(RUNTIME, home / child)
+
+
+def node_home(node: dict) -> Path:
+    expected = next((item for item in NODES if item[0] == node.get("name")), None)
+    if (
+        expected is None
+        or node.get("api_port") != expected[1]
+        or node.get("sync_port") != expected[2]
+    ):
+        raise BenchError("Refusing an endpoint outside the fixed private bench")
+    home = runtime_path(RUNTIME, Path(node["home"]))
+    if home != RUNTIME.absolute() / "nodes" / expected[0]:
+        raise BenchError("Refusing an endpoint outside the fixed private bench")
+    runtime_path(RUNTIME, home / "config.xml")
+    return home
+
+
 def owned(node: dict) -> bool:
     identity = node.get("process")
     if not identity or process_identity(identity["pid"]) != identity:
         return False
-    binary = Path(identity["executable"]).resolve()
-    if not binary.is_relative_to((RUNTIME / "bin").resolve()):
-        raise BenchError("Bench state refers to an executable outside its private runtime")
+    binary_path(Path(identity["executable"]))
     return True
 
 
@@ -165,6 +203,9 @@ def clean_environment(*, inner_process: bool = False) -> dict:
 
 
 def native(binary: Path, *args: str) -> str:
+    binary = binary_path(binary)
+    if "--home" in args:
+        runtime_path(RUNTIME, Path(args[args.index("--home") + 1]))
     result = subprocess.run(
         [str(binary), *args],
         env=clean_environment(),
@@ -188,6 +229,7 @@ def set_text(parent, name: str, value: str) -> None:
 
 
 def configure(binary: Path, previous: dict) -> dict:
+    check_layout()
     if any(owned(node) for node in previous["nodes"]):
         raise BenchError("Stop the owned bench before reconfiguring it")
     owner_file = RUNTIME / "owner.json"
@@ -198,8 +240,8 @@ def configure(binary: Path, previous: dict) -> dict:
         raise BenchError("Unrecognized runtime owner marker")
     nodes = []
     for name, api_port, sync_port in NODES:
-        home = RUNTIME / "nodes" / name
-        stamp = home / "scc-owned-home.json"
+        home = runtime_path(RUNTIME, RUNTIME / "nodes" / name)
+        stamp = runtime_path(RUNTIME, home / "scc-owned-home.json")
         if home.exists() and any(home.iterdir()):
             if not stamp.exists() or json.loads(stamp.read_text(encoding="utf-8")) != owner:
                 raise BenchError("Refusing an existing home without this bench owner marker")
@@ -214,7 +256,7 @@ def configure(binary: Path, previous: dict) -> dict:
         nodes.append(
             {
                 "name": name,
-                "home": str(home.resolve()),
+                "home": str(home),
                 "api_port": api_port,
                 "sync_port": sync_port,
                 "device_id": device_id,
@@ -222,7 +264,8 @@ def configure(binary: Path, previous: dict) -> dict:
         )
     for node in nodes:
         peer = next(item for item in nodes if item is not node)
-        document = ET.parse(Path(node["home"]) / "config.xml")
+        configuration = runtime_path(RUNTIME, node_home(node) / "config.xml")
+        document = ET.parse(configuration)
         root = document.getroot()
         gui = root.find("gui")
         set_text(gui, "address", f"127.0.0.1:{node['api_port']}")
@@ -265,7 +308,7 @@ def configure(binary: Path, previous: dict) -> dict:
             folder.attrib.update(
                 id=folder_id,
                 label=folder_id,
-                path=str((Path(node["home"]) / "data" / folder_id).resolve()),
+                path=str(runtime_path(RUNTIME, Path(node["home"]) / "data" / folder_id)),
                 type="sendreceive",
                 rescanIntervalS="7200",
                 fsWatcherEnabled="false",
@@ -283,7 +326,7 @@ def configure(binary: Path, previous: dict) -> dict:
             minimum.text, minimum.attrib["unit"] = "0", "B"
             Path(folder.attrib["path"]).mkdir(parents=True, exist_ok=True)
             root.append(folder)
-        document.write(Path(node["home"]) / "config.xml", encoding="utf-8", xml_declaration=True)
+        document.write(runtime_path(RUNTIME, configuration), encoding="utf-8", xml_declaration=True)
     value = {
         "schema_version": 1,
         "bench": "scc-a1",
@@ -302,19 +345,13 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 class BenchClient:
     def __init__(self, node: dict):
-        expected = next((item for item in NODES if item[0] == node.get("name")), None)
-        if (
-            expected is None
-            or node.get("api_port") != expected[1]
-            or node.get("sync_port") != expected[2]
-            or Path(node["home"]).resolve() != (RUNTIME / "nodes" / expected[0]).resolve()
-        ):
-            raise BenchError("Refusing an endpoint outside the fixed private bench")
+        home = node_home(node)
         self.node = node
-        self.key = ET.parse(Path(node["home"]) / "config.xml").findtext("gui/apikey")
+        self.key = ET.parse(home / "config.xml").findtext("gui/apikey")
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
     def request(self, path: str, *, method: str = "GET", wrong_key: bool = False) -> dict:
+        node_home(self.node)
         if (
             method not in {"GET", "POST"}
             or not path.startswith("/rest/")
@@ -365,6 +402,7 @@ class BenchClient:
 
 
 def stop(state: dict | None = None) -> dict:
+    check_layout()
     state = state or read_state()
     stopped = []
     for node in state["nodes"]:
@@ -404,6 +442,7 @@ def stop(state: dict | None = None) -> dict:
 
 
 def start() -> dict:
+    check_layout()
     state = read_state()
     running = [node for node in state["nodes"] if owned(node)]
     if running:
@@ -419,13 +458,13 @@ def start() -> dict:
                 raise BenchError(
                     "A reserved bench port is occupied; no existing process was stopped"
                 ) from None
-    binary = prepare()
+    binary = binary_path(prepare())
     if release()["version"] not in native(binary, "--version").split():
         raise BenchError("Executable version differs from the pinned release")
     state = configure(binary, state)
     try:
         for node in state["nodes"]:
-            with (Path(node["home"]) / "process.log").open("ab") as log:
+            with runtime_path(RUNTIME, Path(node["home"]) / "process.log").open("ab") as log:
                 process = subprocess.Popen(
                     [
                         str(binary),
@@ -558,8 +597,10 @@ def verify(export: bool) -> dict:
             if client.get("/rest/config/restart-required").get("requiresRestart") is not False:
                 raise BenchError("Initial configuration is not fully applied")
         payload = f"SCC A1.1 disposable probe {uuid4()}\n".encode()
-        source = Path(sender["home"]) / "data" / FOLDERS[0] / "a11-probe.txt"
-        destination = Path(receiver["home"]) / "data" / FOLDERS[0] / source.name
+        source = runtime_path(RUNTIME, Path(sender["home"]) / "data" / FOLDERS[0] / "a11-probe.txt")
+        destination = runtime_path(
+            RUNTIME, Path(receiver["home"]) / "data" / FOLDERS[0] / source.name
+        )
         source.write_bytes(payload)
         scan = BenchClient(sender).request(f"/rest/db/scan?folder={FOLDERS[0]}", method="POST")
         if scan["status_code"] != 200:

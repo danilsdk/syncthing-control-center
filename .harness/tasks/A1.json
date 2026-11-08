@@ -1,0 +1,25 @@
+{
+  "id": "A1",
+  "role": "A",
+  "title": "Адаптер Syncthing",
+  "branch": "codex/a01-adapter",
+  "depends_on": [
+    "A0"
+  ],
+  "allow": [
+    "backend/app/syncthing_adapter/**",
+    "tests/contract/syncthing_adapter/**",
+    "tests/integration/syncthing_adapter/**",
+    "deploy/syncthing/**",
+    "docs/design/a/syncthing-api.md",
+    ".harness/tasks/A1.json",
+    "docs/agent-log/a/A1.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#a1",
+  "acceptance": [
+    "Зафиксирована версия Syncthing и реальные обезличенные ответы.",
+    "Проверены чтение, смена паузы и проверка результата на демонстрационном стенде.",
+    "Покрыты таймаут, неверный ключ и некорректный ответ."
+  ]
+}

@@ -1,251 +1,637 @@
 {
-  "stage": "A1 + D01 + A6/A7 + A8; A9 review preparation",
-  "date": "2026-10-27",
+  "stage": "A1 bench path guards after review 5701742217",
+  "date": "2026-10-29",
   "timezone": "Europe/Moscow",
   "status": "verification_complete_review_pending",
-  "branch": "codex/a01-review-ready",
-  "source_commit": "6ee2e6fa9c3dc83fba0f8a4a583abafc44c57668",
-  "source_commit_note": "A8 transferred to A1; later A0 merge and evidence/docs changes preserve tested product sources.",
-  "tested_source_sha256_lf": {
-    "backend/app/syncthing_adapter/transport.py": "5d8174d9b1b3d4e75ecdd55d3401ccc2f51c320e845a7bd30f6530156f6aaf2c",
-    "tests/contract/syncthing_adapter/test_transport.py": "8b4cfe861b2daa2d57b375fdf8d54b216e01981c4092c2b639639f30644417c1",
-    "deploy/syncthing/bench.py": "dd9ed56728ef77807cb357281335029b6a57335735b01dc9bcd9a411f1a9df38",
-    "tests/integration/syncthing_adapter/check_live.py": "824426db0d406c1f87044daf78dbf5854fa36cf0ce4716accb570aa3de6f6a4f",
-    "tests/integration/syncthing_adapter/check_d01.py": "e0960c5a5a6e487b914305dd2db7253a0c7f46b5402248fe512c31508583140e"
+  "branch": "codex/a01-adapter",
+  "source_commit": "0657bc413d28e4545f097cc79c14f51800cf6b73",
+  "accepted_main": "1901551067cecb6905f78b0c330ee78c5f5e977a",
+  "main_merge_commit": "33b4bfb35774a7894e2bfb625a2c48b4ea8bfb93",
+  "shared_dependency": {
+    "pr": 9,
+    "head": "cb5d983102189b19b35f8be8387b162d4dfcd072",
+    "accepted": true,
+    "accepted_commit": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2"
   },
+  "final_pr_diff_files": 43,
+  "tested_source_sha256_lf": {
+    "backend/app/__init__.py": "96b0ef7b174044117a873a43f91759a9dc4695bd28e43c5f6c6a92e904161297",
+    "backend/app/api/__init__.py": "948cc602ed07a139c9342794636a9185701615a8cbc4acc577e7a17a92c659ce",
+    "backend/app/api/auth.py": "02d514e036fd3f7819f9a67be8d22e61eb973ad3be4ab92fa44e9f9c66646df6",
+    "backend/app/api/dependencies.py": "37d1a7f1e4be001cdaf1d69ffb25df38d8f4ad7e88bbb54b4fba7ee3212f5b9c",
+    "backend/app/config.py": "023c6afb717285768dce12d177598e6eb153c9744b8b01979080d6fca6f29bc3",
+    "backend/app/contracts/__init__.py": "9363eded14c2da79891e83dc99ba2cf3085a1fc9e45163fe8538a2e38125827b",
+    "backend/app/contracts/dto.py": "dd777fe9a9424264dd8dcac3e706417b9604b154ec89acba097c7acac8b90266",
+    "backend/app/contracts/errors.py": "f52ccb515fe9a201b06892e1a5f1a6ded079dd26a44a9f1012383e0514c58d5c",
+    "backend/app/contracts/interfaces.py": "48d4b443eb81afbc5e6a7a83c06ec26ba94071fe67b53a5ebeeec80bc79d6e67",
+    "backend/app/contracts/locks.py": "8cb3935e2d731b027202a5e14c339ee4e0386f7d8ca6082ab99d0ac8b6799479",
+    "backend/app/contracts/types.py": "c3ddf86b0b15e6ca15e7973b6ca644b3fa385b1801cf524fbb367702fedd34c1",
+    "backend/app/contracts/worker.py": "6f1399fa054b69980f2713f47c45a72ed0cb024ae3ddaab11738e34a16262dfe",
+    "backend/app/db.py": "4025d398681d6de861ad3e35067822ac474e140868f45baa580e43e656eb50e3",
+    "backend/app/main.py": "333dc09e38e37c17cb057e2b284d62cec351dc67a8321307bd71d56827b0623a",
+    "backend/app/models/__init__.py": "a408f7427f77be0853bba2e01558375b95e69740fa69e401adf048a3d5208f10",
+    "backend/app/models/base.py": "22101d5b946399bad40b0deeb5cb26c46d7c93b0532080053132fd26972dd450",
+    "backend/app/models/entities.py": "af6cc2cab260cfb72c158cd96667ff897b072403db386c403a2fcee263f60506",
+    "backend/app/syncthing_adapter/__init__.py": "8aa163bc526a70663e2ebbd554b39a34b39f906074aa7f33f5e83c7e22affa06",
+    "backend/app/syncthing_adapter/client.py": "4b1be98076be6042d868b973e1356b653dc759b218da8045c23fecae9856be27",
+    "backend/app/syncthing_adapter/factory.py": "a8dbbfcda4acb47137f22d01b1f1c26135364e174098a6490e7354aa8eeea19c",
+    "backend/app/syncthing_adapter/transport.py": "5d8174d9b1b3d4e75ecdd55d3401ccc2f51c320e845a7bd30f6530156f6aaf2c",
+    "backend/migrations/env.py": "640233de7fba7e14f099f0a9b34d7246d3392f7b9de51e90a0e935da91378489",
+    "backend/migrations/versions/a003_initial_schema.py": "7bec6790402c8df0989a47cc492383bb2d30d1133420e945db07f469074e9a2b",
+    "backend/migrations/versions/a101_stream_anchor.py": "db4edb07e665c04a03cf768ab0522e934ee6b50c8da1a98c83a5bee3007b7fa8",
+    "deploy/syncthing/bench.py": "d1c33c643fd05c9f1fd5f49b0cfdf53f7a6537382b6b0843e54794798c85e31b",
+    "deploy/syncthing/capture.py": "41bbd8818bcc315db447378d9f31c5854c59fe0a83504850265a705a36f3ad5c",
+    "deploy/syncthing/prepare.py": "8f9c2ea301596dcc4e5f6636fb298ef6b92fe25cbac78cad89af5b4bfc61a83d",
+    "tests/contract/shared/conftest.py": "493738eadad0d7fd270c854e533bf90e8d3da4371e88fa747819f3c34ea71a18",
+    "tests/contract/shared/test_d01_migration.py": "fbbee7bb77b5f6a5c9fe6e3dbf383de9f078e36242f8c4f1969ea4852096d97e",
+    "tests/contract/shared/test_dto.py": "a44abbe706dd77e7497bd8eb98d11354133118e2f5ffafdf5e593f623d285699",
+    "tests/contract/shared/test_interfaces.py": "a0acede88e8018bc6fb60a04d334372b63a3a0ce087e81b80f7a0763f34a570f",
+    "tests/contract/shared/test_postgres_locks.py": "b3e80c085499d8fdf93f556186720ed4e916804cd3edcaa4eaff29ed0113e863",
+    "tests/contract/shared/test_postgres_schema.py": "7554d4c47bb026af815639d5c96bf5b0af6723259329c72ae4595e5943f745a3",
+    "tests/contract/syncthing_adapter/test_api_resolution.py": "ba0fb65b969910580e60ebae4c76ce136696f04de1a3ce89a31f151e38df2c8f",
+    "tests/contract/syncthing_adapter/test_bench.py": "868de4f51aa4f727228904abfb0490140a3478a0ec4dee190238d77ec82eba67",
+    "tests/contract/syncthing_adapter/test_client.py": "10a8d7bce5aea31b02ae70786d9a68d8c57779c7f124260eefe666c787f9413c",
+    "tests/contract/syncthing_adapter/test_real_fixtures.py": "651cda63b6ec64390e49b4539ac569d2bb92dd5202511ed64c761e2d9e8127ca",
+    "tests/contract/syncthing_adapter/test_transport.py": "8b4cfe861b2daa2d57b375fdf8d54b216e01981c4092c2b639639f30644417c1",
+    "tests/integration/syncthing_adapter/check_d01.py": "e0960c5a5a6e487b914305dd2db7253a0c7f46b5402248fe512c31508583140e",
+    "tests/integration/syncthing_adapter/check_live.py": "771a70751b9e7b77497a7647d486a050eb59fc019b4852528cb70018264b8f32",
+    "tests/unit/bootstrap/conftest.py": "f1acf443fc0ac62dcdc3027f86fec9e6b76546e88c503e91d327726844c142de",
+    "tests/unit/bootstrap/test_app.py": "9373200c5e8de1817d11dd21217eadb28ba3169974ba6e9520a24204035d2265",
+    "tests/unit/bootstrap/test_composition.py": "bd6c974674bea49c75dda1f45a83f93163970f838d99e854151d328ad1b858f1",
+    "tests/unit/bootstrap/test_config.py": "4dce877596a28012f095e6e1c9de1a451c843e09db6a1f41e261c5ea0add2ea4",
+    "tests/unit/bootstrap/test_db.py": "843c33b409657c590389400ef53fd6520ed14c14a4db065c3b7e96b2c823b86f",
+    "tests/unit/bootstrap/test_locks.py": "a5492082289167ee18263502f363f1ee825716673747db73db651713a9a1279a",
+    "tests/unit/bootstrap/test_migrations.py": "5ae7194af196c680713b3fd4892945552880e9c841f61a08e420573dbde532fa"
+  },
+  "changed_python_paths": [
+    "deploy/syncthing/bench.py",
+    "deploy/syncthing/prepare.py",
+    "tests/contract/syncthing_adapter/test_bench.py",
+    "tests/integration/syncthing_adapter/check_live.py"
+  ],
   "versions": {
     "python": "3.12.14",
     "syncthing": "v2.1.7"
   },
   "checks": {
-    "unit_contract": {
-      "passed": 303,
-      "postgres_deselected": 85,
-      "errors": 0,
-      "failures": 0,
-      "skipped": 0
+    "full_validate": {
+      "result": "passed",
+      "harness_self_tests": 32,
+      "backend_passed": 329,
+      "postgres_skipped": 99,
+      "contract_documents": 12,
+      "scope_files": 43,
+      "comparison_base": "1901551067cecb6905f78b0c330ee78c5f5e977a"
+    },
+    "path_guard_regression": {
+      "initial_before_cases": 14,
+      "before_failed": 12,
+      "before_already_rejected": 2,
+      "final_guard_cases": 15,
+      "guard_cases_passed": 15,
+      "all_bench_cases_passed": 32,
+      "platform": "Windows amd64; real NTFS junctions",
+      "coverage": [
+        "runtime",
+        "nodes",
+        "node home",
+        "runtime/bin",
+        "nested binary parent",
+        "lexical and resolved state paths",
+        "prepare before writes",
+        "HTTP recheck after client creation"
+      ]
     },
     "live_adapter": {
       "result": "passed",
-      "started_at": "2026-10-27T04:48:07.900731Z",
-      "completed_at": "2026-10-27T04:48:29.699414Z",
-      "origin": "Full check_live.run(False) called by check_d01.py; original public export guard"
+      "started_at": "2026-10-29T17:20:21.154482Z",
+      "completed_at": "2026-10-29T17:20:41.473104Z"
     },
     "d01": {
       "result": "passed",
-      "started_at": "2026-10-27T04:48:07.900731Z",
-      "completed_at": "2026-10-27T04:48:42.548852Z",
-      "checkpoint_recreation": "passed",
-      "old_cursor_rejected": true,
-      "coarse_time_collision": "Frozen status startTime/uptime over real source events; not a native same-second restart"
+      "started_at": "2026-10-29T17:20:21.153485Z",
+      "completed_at": "2026-10-29T17:20:54.482161Z",
+      "native_same_second_restart_claimed": false
     },
-    "postgres": "Not rerun here; schema unchanged. Prior 85-PG evidence retained below; full core CI repeated in A4.",
-    "full_h0_validate": "Not run: H0 and accepted combined base policy still pending."
+    "postgres": {
+      "rerun_for_this_change": false,
+      "prior_passed": 99,
+      "source": "accepted A0 follow-up #9 on 2026-10-29",
+      "schema_migrations_and_SQL_tests_unchanged": true
+    },
+    "human_demo_configuration": {
+      "prior_confirmation": "https://github.com/danilsdk/syncthing-control-center/pull/10#issuecomment-6502253704",
+      "new_human_check_claimed": false,
+      "pause_command_payload_unchanged": true
+    }
+  },
+  "canonical_json_sha256": {
+    "evidence-adapter-v2.1.7.json": "90ea77e0e51c32d9254748dbcfc09a289585c99f1df2bd1c78b80a612f4b544f",
+    "evidence-d01-v2.1.7.json": "dd2f7922bd8c7ee7cd659793001043890e7072cfbf5a79cb8158c6944c14432b"
   },
   "cleanup": {
     "native_running": [],
     "independent_os_inventory": {
-      "verified": true,
-      "ports": [
-        18384,
-        28384,
-        22101,
-        22102
-      ],
-      "listeners": 0,
-      "native_processes": 0
+      "checked_at": "2026-10-29T17:22:48.1410126Z",
+      "own_native_processes": [],
+      "reserved_listeners": []
     }
   },
-  "canonical_json_sha256": {
-    "evidence-adapter-v2.1.7.json": "386e0dd8f2fa6c06c0e647c8865f6945fc605011985335cecec53970f9928e0a",
-    "evidence-d01-v2.1.7.json": "26932c2d556551c37b0f966c9eb1cd1d300e17ff3e5fcf3d1d8b0f7f7d65f3d3"
-  },
-  "canonical_json_note": "UTF-8; json.dumps(sort_keys=True, ensure_ascii=False, separators=(comma,colon)).",
   "previous_acceptance": {
-    "stage": "A1.5 + A6 audit fixes + A7 final D01 verification",
-    "date": "2026-10-25",
+    "stage": "A1 on accepted main after PR9 merge",
+    "date": "2026-10-29",
     "timezone": "Europe/Moscow",
-    "status": "verification_complete_review_requested",
-    "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
-    "source_commit_note": "R1-R4 at 796f308; direct bench worker ownership and regression at source_commit; later changes only documentation/evidence.",
-    "branch": "codex/a01-review-ready",
+    "status": "verification_complete_review_pending",
+    "branch": "codex/a01-adapter",
+    "source_commit": "9ee07dde82819edfc8b7a9d0bdafc27fd3570941",
+    "shared_dependency": {
+      "pr": 9,
+      "head": "cb5d983102189b19b35f8be8387b162d4dfcd072",
+      "accepted": true,
+      "accepted_commit": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2"
+    },
+    "accepted_main": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2",
+    "final_pr_diff_files": 43,
+    "tested_source_sha256_lf": {
+      "backend/app/__init__.py": "96b0ef7b174044117a873a43f91759a9dc4695bd28e43c5f6c6a92e904161297",
+      "backend/app/api/__init__.py": "948cc602ed07a139c9342794636a9185701615a8cbc4acc577e7a17a92c659ce",
+      "backend/app/api/auth.py": "02d514e036fd3f7819f9a67be8d22e61eb973ad3be4ab92fa44e9f9c66646df6",
+      "backend/app/api/dependencies.py": "37d1a7f1e4be001cdaf1d69ffb25df38d8f4ad7e88bbb54b4fba7ee3212f5b9c",
+      "backend/app/config.py": "023c6afb717285768dce12d177598e6eb153c9744b8b01979080d6fca6f29bc3",
+      "backend/app/contracts/__init__.py": "9363eded14c2da79891e83dc99ba2cf3085a1fc9e45163fe8538a2e38125827b",
+      "backend/app/contracts/dto.py": "dd777fe9a9424264dd8dcac3e706417b9604b154ec89acba097c7acac8b90266",
+      "backend/app/contracts/errors.py": "f52ccb515fe9a201b06892e1a5f1a6ded079dd26a44a9f1012383e0514c58d5c",
+      "backend/app/contracts/interfaces.py": "48d4b443eb81afbc5e6a7a83c06ec26ba94071fe67b53a5ebeeec80bc79d6e67",
+      "backend/app/contracts/locks.py": "8cb3935e2d731b027202a5e14c339ee4e0386f7d8ca6082ab99d0ac8b6799479",
+      "backend/app/contracts/types.py": "c3ddf86b0b15e6ca15e7973b6ca644b3fa385b1801cf524fbb367702fedd34c1",
+      "backend/app/contracts/worker.py": "6f1399fa054b69980f2713f47c45a72ed0cb024ae3ddaab11738e34a16262dfe",
+      "backend/app/db.py": "4025d398681d6de861ad3e35067822ac474e140868f45baa580e43e656eb50e3",
+      "backend/app/main.py": "333dc09e38e37c17cb057e2b284d62cec351dc67a8321307bd71d56827b0623a",
+      "backend/app/models/__init__.py": "a408f7427f77be0853bba2e01558375b95e69740fa69e401adf048a3d5208f10",
+      "backend/app/models/base.py": "22101d5b946399bad40b0deeb5cb26c46d7c93b0532080053132fd26972dd450",
+      "backend/app/models/entities.py": "af6cc2cab260cfb72c158cd96667ff897b072403db386c403a2fcee263f60506",
+      "backend/app/syncthing_adapter/__init__.py": "8aa163bc526a70663e2ebbd554b39a34b39f906074aa7f33f5e83c7e22affa06",
+      "backend/app/syncthing_adapter/client.py": "4b1be98076be6042d868b973e1356b653dc759b218da8045c23fecae9856be27",
+      "backend/app/syncthing_adapter/factory.py": "a8dbbfcda4acb47137f22d01b1f1c26135364e174098a6490e7354aa8eeea19c",
+      "backend/app/syncthing_adapter/transport.py": "5d8174d9b1b3d4e75ecdd55d3401ccc2f51c320e845a7bd30f6530156f6aaf2c",
+      "backend/migrations/env.py": "640233de7fba7e14f099f0a9b34d7246d3392f7b9de51e90a0e935da91378489",
+      "backend/migrations/versions/a003_initial_schema.py": "7bec6790402c8df0989a47cc492383bb2d30d1133420e945db07f469074e9a2b",
+      "backend/migrations/versions/a101_stream_anchor.py": "db4edb07e665c04a03cf768ab0522e934ee6b50c8da1a98c83a5bee3007b7fa8",
+      "deploy/syncthing/bench.py": "dd9ed56728ef77807cb357281335029b6a57335735b01dc9bcd9a411f1a9df38",
+      "deploy/syncthing/capture.py": "41bbd8818bcc315db447378d9f31c5854c59fe0a83504850265a705a36f3ad5c",
+      "deploy/syncthing/prepare.py": "245108c467ba979fa8c48f6b590727e1b6feea727fd316401ec05117f266f5c0",
+      "tests/contract/shared/conftest.py": "493738eadad0d7fd270c854e533bf90e8d3da4371e88fa747819f3c34ea71a18",
+      "tests/contract/shared/test_d01_migration.py": "fbbee7bb77b5f6a5c9fe6e3dbf383de9f078e36242f8c4f1969ea4852096d97e",
+      "tests/contract/shared/test_dto.py": "a44abbe706dd77e7497bd8eb98d11354133118e2f5ffafdf5e593f623d285699",
+      "tests/contract/shared/test_interfaces.py": "a0acede88e8018bc6fb60a04d334372b63a3a0ce087e81b80f7a0763f34a570f",
+      "tests/contract/shared/test_postgres_locks.py": "b3e80c085499d8fdf93f556186720ed4e916804cd3edcaa4eaff29ed0113e863",
+      "tests/contract/shared/test_postgres_schema.py": "7554d4c47bb026af815639d5c96bf5b0af6723259329c72ae4595e5943f745a3",
+      "tests/contract/syncthing_adapter/test_api_resolution.py": "ba0fb65b969910580e60ebae4c76ce136696f04de1a3ce89a31f151e38df2c8f",
+      "tests/contract/syncthing_adapter/test_bench.py": "ad7e24151323d9ef8ae4f31b6dfc0e1e04cb78f864b569927cddc60a4d1eb8be",
+      "tests/contract/syncthing_adapter/test_client.py": "10a8d7bce5aea31b02ae70786d9a68d8c57779c7f124260eefe666c787f9413c",
+      "tests/contract/syncthing_adapter/test_real_fixtures.py": "651cda63b6ec64390e49b4539ac569d2bb92dd5202511ed64c761e2d9e8127ca",
+      "tests/contract/syncthing_adapter/test_transport.py": "8b4cfe861b2daa2d57b375fdf8d54b216e01981c4092c2b639639f30644417c1",
+      "tests/integration/syncthing_adapter/check_d01.py": "e0960c5a5a6e487b914305dd2db7253a0c7f46b5402248fe512c31508583140e",
+      "tests/integration/syncthing_adapter/check_live.py": "824426db0d406c1f87044daf78dbf5854fa36cf0ce4716accb570aa3de6f6a4f",
+      "tests/unit/bootstrap/conftest.py": "f1acf443fc0ac62dcdc3027f86fec9e6b76546e88c503e91d327726844c142de",
+      "tests/unit/bootstrap/test_app.py": "9373200c5e8de1817d11dd21217eadb28ba3169974ba6e9520a24204035d2265",
+      "tests/unit/bootstrap/test_composition.py": "bd6c974674bea49c75dda1f45a83f93163970f838d99e854151d328ad1b858f1",
+      "tests/unit/bootstrap/test_config.py": "4dce877596a28012f095e6e1c9de1a451c843e09db6a1f41e261c5ea0add2ea4",
+      "tests/unit/bootstrap/test_db.py": "843c33b409657c590389400ef53fd6520ed14c14a4db065c3b7e96b2c823b86f",
+      "tests/unit/bootstrap/test_locks.py": "a5492082289167ee18263502f363f1ee825716673747db73db651713a9a1279a",
+      "tests/unit/bootstrap/test_migrations.py": "5ae7194af196c680713b3fd4892945552880e9c841f61a08e420573dbde532fa"
+    },
     "versions": {
       "python": "3.12.14",
-      "syncthing": "v2.1.7",
-      "postgresql_private_runner": "18.6"
+      "syncthing": "v2.1.7"
     },
-    "contract": "0.1.0-draft, D-01 revision 2",
     "checks": {
-      "unit_contract": {
-        "passed": 301,
-        "skipped": 85,
-        "origin": "A7 full unit/contract suite; 19 A6 regressions and one worker-ownership regression"
+      "full_validate": {
+        "result": "passed",
+        "harness_self_tests": 32,
+        "backend_passed": 314,
+        "postgres_skipped": 99,
+        "contract_documents": 12,
+        "scope_files": 43,
+        "comparison_base": "dac41de585ba36a6fd5a75f132342fcfd0d5afb2"
       },
       "postgres": {
-        "passed": 85,
-        "origin": "85 passed during D01 on unchanged schema/migrations/locking; not rerun for A6/A7"
-      },
-      "live_adapter": {
         "result": "passed",
-        "started_at": "2026-10-25T13:47:01.129001Z",
-        "completed_at": "2026-10-25T13:47:20.996929Z",
-        "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
-        "origin": "A7 full check_live.run(False) invoked by check_d01.py; exported through original assert_public guard"
+        "cases": 99,
+        "deselected": 114,
+        "source": "fresh PR9 run",
+        "schema_migrations_and_SQL_tests_identical": true,
+        "A1_separate_SQL_rerun": false
       },
-      "report_dto_compatibility": "Both nodes validated against current SystemObservation, FolderConfig and FolderRuntime",
-      "lint_format": "passed for changed bench Python files; full applicable backend/adapter lint checked before publication",
-      "full_harness_validate_ci": "not run: H0 not merged; combined A1/D01 scope not yet accepted in base policy",
-      "audit_probes": {
-        "passed": 5,
-        "origin": "The five original review probes pass against the corrected source"
-      },
-      "previous_incomplete_d01_attempt": {
-        "result": "blocked",
-        "started_at": "2026-10-24T23:08:55.850410Z",
-        "completed_at": "2026-10-24T23:09:29.024774Z",
-        "phase": "Native restart before coarse-time collision; full adapter regression and backend recreation passed",
-        "reason": "Syncthing home lock could not be acquired during rapid restart",
-        "prior_evidence": "D01 evidence remains the previous successful run from source 45fd496; fresh full D01 success is not claimed",
-        "cleanup": {
-          "stopped": [
-            "node-a",
-            "node-b"
-          ],
-          "running": []
-        },
-        "completed_phases": [
-          "full_adapter_regression",
-          "backend_process_recreation"
-        ],
-        "backend_process_recreation": {
-          "epoch_preserved": true,
-          "native_processes_unchanged": true,
-          "checkpoint": {
-            "node_id": "00000000-0000-0000-0000-000000000001",
-            "start_time_raw": "2026-10-25T02:09:16+03:00",
-            "source_session_id": "9b1a06d3051daecf5e688d3ff1510cfacab75797ef04d8ebd4e8aad37e8c4102",
-            "anchor": {
-              "id": 15,
-              "time_raw": "2026-10-25T02:09:16.9506801+03:00",
-              "fingerprint": "27a89a4a09b0cbbf9ede83ac801e438a7d9e5b4b46ebdfb0575356bbc779c44b"
-            }
-          }
-        }
-      },
-      "fresh_d01_attempt": {
-        "result": "passed",
-        "started_at": "2026-10-25T13:47:01.127998Z",
-        "completed_at": "2026-10-25T13:47:34.063158Z",
-        "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
-        "completed_phases": [
-          "full_adapter_regression",
-          "backend_process_recreation",
-          "coarse_time_collision"
-        ],
-        "backend_process_recreation": {
-          "epoch_preserved": true,
-          "native_processes_unchanged": true,
-          "checkpoint": {
-            "node_id": "00000000-0000-0000-0000-000000000001",
-            "start_time_raw": "2026-10-25T16:47:21+03:00",
-            "source_session_id": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
-            "anchor": {
-              "id": 14,
-              "time_raw": "2026-10-25T16:47:21.6352297+03:00",
-              "fingerprint": "2ebf043b20d0bdebe790279d98c692bdaa04de2ed4494bb04771a7503c28bb3e"
-            }
-          }
-        },
-        "coarse_time_collision": {
-          "mode": "test transport freezes startTime and uptime; real source events and restart",
-          "native_same_second_restart_claimed": false,
-          "actual_native_start_times": [
-            "2026-10-25T16:47:21+03:00",
-            "2026-10-25T16:47:24+03:00"
-          ],
-          "status_start_time_before_after": "2026-10-25T16:47:21+03:00",
-          "old_anchor_id": 15,
-          "new_tail_before_read": 17,
-          "old_cursor_rejected": true,
-          "old_epoch": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
-          "new_epoch": "42a2c4d4477099232d2abbf1cda05fb19b36e8fece102d379abf405551180264",
-          "first_rebased_event_id": 1
-        },
-        "cleanup": {
-          "stopped": [
-            "node-a",
-            "node-b"
-          ],
-          "running": []
-        }
-      },
-      "bench_lifecycle": {
-        "result": "passed",
-        "before_fix": "With simulated unavailable shutdown, stop reported running=[] but two real child workers remained",
-        "after_fix": "One directly owned worker per node; the same fallback leaves no child/worker processes",
-        "mode": "Pinned Syncthing v2.1.7 STMONITORED=yes only for serve; recheck on version upgrades"
+      "live": {
+        "rerun": false,
+        "evidence_date": "2026-10-29",
+        "result": "previous full A1/D01 passed",
+        "reason": "Only Event boundary validation and SQL anchor bound changed; adapter, internal observation interfaces, bench and live drivers unchanged."
       }
     },
-    "evidence": [
-      {
-        "path": "tests/integration/syncthing_adapter/evidence-v2.1.7.json",
-        "sha256_canonical_json": "ea5f705ab51dc9df1bccfae4a80d3f0667030eb26965ccef90ed2ee55b04f2b9"
-      },
-      {
-        "path": "tests/integration/syncthing_adapter/evidence-adapter-v2.1.7.json",
-        "sha256_canonical_json": "bca1f8e01b469217cd895f29cbf272e468b66ce9db048dd9ceb203b95a506d93"
-      },
-      {
-        "path": "tests/integration/syncthing_adapter/evidence-d01-v2.1.7.json",
-        "sha256_canonical_json": "1c0bd59eb0b4fb6ee15b661d69f2583d091b19c10a7e3da4fef899840339f744"
-      },
-      {
-        "path": "tests/contract/syncthing_adapter/fixtures/v2.1.7/manifest.json",
-        "sha256_canonical_json": "be81ffe8df54d4e89370da0148eed1f120aee4eed75b7b1b42769ded62d17db7"
+    "canonical_json_sha256": {
+      "evidence-adapter-v2.1.7.json": "32e7fccda898661ef372d417eb702c682bb5183823d1a6ffd4b3eba0ed7434ff",
+      "evidence-d01-v2.1.7.json": "5646f758a6a83f6385dd2ff94b2e7cf8a8140965f8002f4afe23d44bbc460d31"
+    },
+    "cleanup": {
+      "native_running": [],
+      "independent_os_inventory": {
+        "verified": true,
+        "ports": [
+          18384,
+          28384,
+          22101,
+          22102
+        ],
+        "listeners": 0,
+        "native_processes": 0
       }
-    ],
-    "same_second_restart": {
-      "native_claimed": false,
-      "tested": "Frozen startTime/uptime over real restarted source events; see D01 evidence"
     },
-    "manual_configuration_review": "pending before merge",
-    "external_dependencies": {
-      "H0": {
-        "pr": 1,
-        "state": "open",
-        "head": "00c2bf63cd628e764af7f1c237514808eed5b576"
+    "live_evidence_source_acceptance": {
+      "stage": "A1 adapter on separated A0/D-01 follow-up",
+      "date": "2026-10-29",
+      "timezone": "Europe/Moscow",
+      "status": "verification_complete_dependency_review_pending",
+      "branch": "codex/a01-adapter",
+      "source_commit": "73715555c038897be76896a66111893b75f40786",
+      "source_commit_note": "Merge source before evidence/test-location/document changes; tested Python hashes identify the actual working tree.",
+      "accepted_main": "bf5b8a4ce97f1db7f285001003129fb6ce4e8adf",
+      "shared_dependency": {
+        "head": "9b46d2bf38398db0d3e794e3999fd01d7e199509",
+        "pr": 9,
+        "accepted": false
       },
-      "A0": {
-        "pr": 2,
-        "state": "open",
-        "head": "15088e2c12088a9987944367a3bf358fdf4f06a4"
+      "tested_source_sha256_lf": {
+        "backend/app/__init__.py": "96b0ef7b174044117a873a43f91759a9dc4695bd28e43c5f6c6a92e904161297",
+        "backend/app/api/__init__.py": "948cc602ed07a139c9342794636a9185701615a8cbc4acc577e7a17a92c659ce",
+        "backend/app/api/auth.py": "02d514e036fd3f7819f9a67be8d22e61eb973ad3be4ab92fa44e9f9c66646df6",
+        "backend/app/api/dependencies.py": "37d1a7f1e4be001cdaf1d69ffb25df38d8f4ad7e88bbb54b4fba7ee3212f5b9c",
+        "backend/app/config.py": "023c6afb717285768dce12d177598e6eb153c9744b8b01979080d6fca6f29bc3",
+        "backend/app/contracts/__init__.py": "9363eded14c2da79891e83dc99ba2cf3085a1fc9e45163fe8538a2e38125827b",
+        "backend/app/contracts/dto.py": "4ae4be2d5f8935cf1fe355955491ac959012e3a5810487c1e7c509c47efa621b",
+        "backend/app/contracts/errors.py": "f52ccb515fe9a201b06892e1a5f1a6ded079dd26a44a9f1012383e0514c58d5c",
+        "backend/app/contracts/interfaces.py": "48d4b443eb81afbc5e6a7a83c06ec26ba94071fe67b53a5ebeeec80bc79d6e67",
+        "backend/app/contracts/locks.py": "8cb3935e2d731b027202a5e14c339ee4e0386f7d8ca6082ab99d0ac8b6799479",
+        "backend/app/contracts/types.py": "c3ddf86b0b15e6ca15e7973b6ca644b3fa385b1801cf524fbb367702fedd34c1",
+        "backend/app/contracts/worker.py": "6f1399fa054b69980f2713f47c45a72ed0cb024ae3ddaab11738e34a16262dfe",
+        "backend/app/db.py": "4025d398681d6de861ad3e35067822ac474e140868f45baa580e43e656eb50e3",
+        "backend/app/main.py": "333dc09e38e37c17cb057e2b284d62cec351dc67a8321307bd71d56827b0623a",
+        "backend/app/models/__init__.py": "a408f7427f77be0853bba2e01558375b95e69740fa69e401adf048a3d5208f10",
+        "backend/app/models/base.py": "22101d5b946399bad40b0deeb5cb26c46d7c93b0532080053132fd26972dd450",
+        "backend/app/models/entities.py": "a41dc67fdc1221e3d7e9bf9374a31e9096f5018529663ba76d677466c47f943f",
+        "backend/app/syncthing_adapter/__init__.py": "8aa163bc526a70663e2ebbd554b39a34b39f906074aa7f33f5e83c7e22affa06",
+        "backend/app/syncthing_adapter/client.py": "4b1be98076be6042d868b973e1356b653dc759b218da8045c23fecae9856be27",
+        "backend/app/syncthing_adapter/factory.py": "a8dbbfcda4acb47137f22d01b1f1c26135364e174098a6490e7354aa8eeea19c",
+        "backend/app/syncthing_adapter/transport.py": "5d8174d9b1b3d4e75ecdd55d3401ccc2f51c320e845a7bd30f6530156f6aaf2c",
+        "backend/migrations/env.py": "640233de7fba7e14f099f0a9b34d7246d3392f7b9de51e90a0e935da91378489",
+        "backend/migrations/versions/a003_initial_schema.py": "7bec6790402c8df0989a47cc492383bb2d30d1133420e945db07f469074e9a2b",
+        "backend/migrations/versions/a101_stream_anchor.py": "b5e9d8866eccc57f7131169ac16ea03e32ead81b39025280577add9fe37c0146",
+        "deploy/syncthing/bench.py": "dd9ed56728ef77807cb357281335029b6a57335735b01dc9bcd9a411f1a9df38",
+        "deploy/syncthing/capture.py": "41bbd8818bcc315db447378d9f31c5854c59fe0a83504850265a705a36f3ad5c",
+        "deploy/syncthing/prepare.py": "245108c467ba979fa8c48f6b590727e1b6feea727fd316401ec05117f266f5c0",
+        "tests/contract/shared/conftest.py": "493738eadad0d7fd270c854e533bf90e8d3da4371e88fa747819f3c34ea71a18",
+        "tests/contract/shared/test_d01_migration.py": "c998c16581183d636a562cc619d4459993e30f6508f053d9dfe25c48c4e58f85",
+        "tests/contract/shared/test_dto.py": "4ef7d9be1409d7cfa6d1a1cb35963f32766973794265cd8c813ade1e53ab3dd8",
+        "tests/contract/shared/test_interfaces.py": "a0acede88e8018bc6fb60a04d334372b63a3a0ce087e81b80f7a0763f34a570f",
+        "tests/contract/shared/test_postgres_locks.py": "b3e80c085499d8fdf93f556186720ed4e916804cd3edcaa4eaff29ed0113e863",
+        "tests/contract/shared/test_postgres_schema.py": "7554d4c47bb026af815639d5c96bf5b0af6723259329c72ae4595e5943f745a3",
+        "tests/contract/syncthing_adapter/test_api_resolution.py": "ba0fb65b969910580e60ebae4c76ce136696f04de1a3ce89a31f151e38df2c8f",
+        "tests/contract/syncthing_adapter/test_bench.py": "ad7e24151323d9ef8ae4f31b6dfc0e1e04cb78f864b569927cddc60a4d1eb8be",
+        "tests/contract/syncthing_adapter/test_client.py": "10a8d7bce5aea31b02ae70786d9a68d8c57779c7f124260eefe666c787f9413c",
+        "tests/contract/syncthing_adapter/test_real_fixtures.py": "651cda63b6ec64390e49b4539ac569d2bb92dd5202511ed64c761e2d9e8127ca",
+        "tests/contract/syncthing_adapter/test_transport.py": "8b4cfe861b2daa2d57b375fdf8d54b216e01981c4092c2b639639f30644417c1",
+        "tests/integration/syncthing_adapter/check_d01.py": "e0960c5a5a6e487b914305dd2db7253a0c7f46b5402248fe512c31508583140e",
+        "tests/integration/syncthing_adapter/check_live.py": "824426db0d406c1f87044daf78dbf5854fa36cf0ce4716accb570aa3de6f6a4f",
+        "tests/unit/bootstrap/conftest.py": "f1acf443fc0ac62dcdc3027f86fec9e6b76546e88c503e91d327726844c142de",
+        "tests/unit/bootstrap/test_app.py": "9373200c5e8de1817d11dd21217eadb28ba3169974ba6e9520a24204035d2265",
+        "tests/unit/bootstrap/test_composition.py": "bd6c974674bea49c75dda1f45a83f93163970f838d99e854151d328ad1b858f1",
+        "tests/unit/bootstrap/test_config.py": "4dce877596a28012f095e6e1c9de1a451c843e09db6a1f41e261c5ea0add2ea4",
+        "tests/unit/bootstrap/test_db.py": "843c33b409657c590389400ef53fd6520ed14c14a4db065c3b7e96b2c823b86f",
+        "tests/unit/bootstrap/test_locks.py": "a5492082289167ee18263502f363f1ee825716673747db73db651713a9a1279a",
+        "tests/unit/bootstrap/test_migrations.py": "5ae7194af196c680713b3fd4892945552880e9c841f61a08e420573dbde532fa"
       },
-      "D01_contract_review": "B0/danilsdk pending"
-    },
-    "merge_readiness": false,
-    "publication": {
-      "url": "https://github.com/danilsdk/syncthing-control-center/pull/4",
-      "state": "open",
-      "draft": false,
-      "base_branch": "codex/a00-foundation",
-      "base_sha": "15088e2c12088a9987944367a3bf358fdf4f06a4",
-      "review_requested": [
-        "danilsdk"
+      "versions": {
+        "python": "3.12.14",
+        "syncthing": "v2.1.7"
+      },
+      "checks": {
+        "full_validate": {
+          "result": "passed",
+          "scope_files": 45,
+          "policy": "bf5b8a4ce97f1db7f285001003129fb6ce4e8adf",
+          "comparison_base": "9b46d2bf38398db0d3e794e3999fd01d7e199509",
+          "harness_self_tests": 32,
+          "backend_passed": 310,
+          "postgres_skipped": 85,
+          "contract_documents": 12,
+          "working_scope_note": "45 checked working paths included restoration of unchanged A1 card and adapter AGENTS; final committed PR diff has 43 paths."
+        },
+        "live_adapter": {
+          "result": "passed",
+          "started_at": "2026-10-29T05:28:42.937251Z",
+          "completed_at": "2026-10-29T05:29:03.159733Z",
+          "origin": "Full check_live.run(False) called by check_d01.py; original public guard applied on export"
+        },
+        "d01": {
+          "result": "passed",
+          "started_at": "2026-10-29T05:28:42.937251Z",
+          "completed_at": "2026-10-29T05:29:15.997201Z",
+          "coarse_time_collision": "Frozen status startTime/uptime over real events; not a native same-second restart"
+        },
+        "postgres": {
+          "fresh_run": "A0 follow-up on 2026-10-29",
+          "passed": 85,
+          "deselected": 110,
+          "schema_model_migration_and_SQL_tests_identical_to_A1": true,
+          "separate_A1_SQL_rerun": false
+        },
+        "post_format_targeted_test": {
+          "passed": 9,
+          "scope": "tests/contract/syncthing_adapter/test_api_resolution.py"
+        }
+      },
+      "cleanup": {
+        "native_running": [],
+        "independent_os_inventory": {
+          "verified": true,
+          "ports": [
+            18384,
+            28384,
+            22101,
+            22102
+          ],
+          "listeners": 0,
+          "native_processes": 0
+        }
+      },
+      "canonical_json_sha256": {
+        "evidence-adapter-v2.1.7.json": "32e7fccda898661ef372d417eb702c682bb5183823d1a6ffd4b3eba0ed7434ff",
+        "evidence-d01-v2.1.7.json": "5646f758a6a83f6385dd2ff94b2e7cf8a8140965f8002f4afe23d44bbc460d31"
+      },
+      "canonical_json_note": "UTF-8; json.dumps(sort_keys=True, ensure_ascii=False, separators=(comma,colon)).",
+      "previous_acceptance": {
+        "stage": "A1 + D01 + A6/A7 + A8; A9 review preparation",
+        "date": "2026-10-27",
+        "timezone": "Europe/Moscow",
+        "status": "verification_complete_review_pending",
+        "branch": "codex/a01-review-ready",
+        "source_commit": "6ee2e6fa9c3dc83fba0f8a4a583abafc44c57668",
+        "source_commit_note": "A8 transferred to A1; later A0 merge and evidence/docs changes preserve tested product sources.",
+        "tested_source_sha256_lf": {
+          "backend/app/syncthing_adapter/transport.py": "5d8174d9b1b3d4e75ecdd55d3401ccc2f51c320e845a7bd30f6530156f6aaf2c",
+          "tests/contract/syncthing_adapter/test_transport.py": "8b4cfe861b2daa2d57b375fdf8d54b216e01981c4092c2b639639f30644417c1",
+          "deploy/syncthing/bench.py": "dd9ed56728ef77807cb357281335029b6a57335735b01dc9bcd9a411f1a9df38",
+          "tests/integration/syncthing_adapter/check_live.py": "824426db0d406c1f87044daf78dbf5854fa36cf0ce4716accb570aa3de6f6a4f",
+          "tests/integration/syncthing_adapter/check_d01.py": "e0960c5a5a6e487b914305dd2db7253a0c7f46b5402248fe512c31508583140e"
+        },
+        "versions": {
+          "python": "3.12.14",
+          "syncthing": "v2.1.7"
+        },
+        "checks": {
+          "unit_contract": {
+            "passed": 303,
+            "postgres_deselected": 85,
+            "errors": 0,
+            "failures": 0,
+            "skipped": 0
+          },
+          "live_adapter": {
+            "result": "passed",
+            "started_at": "2026-10-27T04:48:07.900731Z",
+            "completed_at": "2026-10-27T04:48:29.699414Z",
+            "origin": "Full check_live.run(False) called by check_d01.py; original public export guard"
+          },
+          "d01": {
+            "result": "passed",
+            "started_at": "2026-10-27T04:48:07.900731Z",
+            "completed_at": "2026-10-27T04:48:42.548852Z",
+            "checkpoint_recreation": "passed",
+            "old_cursor_rejected": true,
+            "coarse_time_collision": "Frozen status startTime/uptime over real source events; not a native same-second restart"
+          },
+          "postgres": "Not rerun here; schema unchanged. Prior 85-PG evidence retained below; full core CI repeated in A4.",
+          "full_h0_validate": "Not run: H0 and accepted combined base policy still pending."
+        },
+        "cleanup": {
+          "native_running": [],
+          "independent_os_inventory": {
+            "verified": true,
+            "ports": [
+              18384,
+              28384,
+              22101,
+              22102
+            ],
+            "listeners": 0,
+            "native_processes": 0
+          }
+        },
+        "canonical_json_sha256": {
+          "evidence-adapter-v2.1.7.json": "386e0dd8f2fa6c06c0e647c8865f6945fc605011985335cecec53970f9928e0a",
+          "evidence-d01-v2.1.7.json": "26932c2d556551c37b0f966c9eb1cd1d300e17ff3e5fcf3d1d8b0f7f7d65f3d3"
+        },
+        "canonical_json_note": "UTF-8; json.dumps(sort_keys=True, ensure_ascii=False, separators=(comma,colon)).",
+        "previous_acceptance": {
+          "stage": "A1.5 + A6 audit fixes + A7 final D01 verification",
+          "date": "2026-10-25",
+          "timezone": "Europe/Moscow",
+          "status": "verification_complete_review_requested",
+          "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
+          "source_commit_note": "R1-R4 at 796f308; direct bench worker ownership and regression at source_commit; later changes only documentation/evidence.",
+          "branch": "codex/a01-review-ready",
+          "versions": {
+            "python": "3.12.14",
+            "syncthing": "v2.1.7",
+            "postgresql_private_runner": "18.6"
+          },
+          "contract": "0.1.0-draft, D-01 revision 2",
+          "checks": {
+            "unit_contract": {
+              "passed": 301,
+              "skipped": 85,
+              "origin": "A7 full unit/contract suite; 19 A6 regressions and one worker-ownership regression"
+            },
+            "postgres": {
+              "passed": 85,
+              "origin": "85 passed during D01 on unchanged schema/migrations/locking; not rerun for A6/A7"
+            },
+            "live_adapter": {
+              "result": "passed",
+              "started_at": "2026-10-25T13:47:01.129001Z",
+              "completed_at": "2026-10-25T13:47:20.996929Z",
+              "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
+              "origin": "A7 full check_live.run(False) invoked by check_d01.py; exported through original assert_public guard"
+            },
+            "report_dto_compatibility": "Both nodes validated against current SystemObservation, FolderConfig and FolderRuntime",
+            "lint_format": "passed for changed bench Python files; full applicable backend/adapter lint checked before publication",
+            "full_harness_validate_ci": "not run: H0 not merged; combined A1/D01 scope not yet accepted in base policy",
+            "audit_probes": {
+              "passed": 5,
+              "origin": "The five original review probes pass against the corrected source"
+            },
+            "previous_incomplete_d01_attempt": {
+              "result": "blocked",
+              "started_at": "2026-10-24T23:08:55.850410Z",
+              "completed_at": "2026-10-24T23:09:29.024774Z",
+              "phase": "Native restart before coarse-time collision; full adapter regression and backend recreation passed",
+              "reason": "Syncthing home lock could not be acquired during rapid restart",
+              "prior_evidence": "D01 evidence remains the previous successful run from source 45fd496; fresh full D01 success is not claimed",
+              "cleanup": {
+                "stopped": [
+                  "node-a",
+                  "node-b"
+                ],
+                "running": []
+              },
+              "completed_phases": [
+                "full_adapter_regression",
+                "backend_process_recreation"
+              ],
+              "backend_process_recreation": {
+                "epoch_preserved": true,
+                "native_processes_unchanged": true,
+                "checkpoint": {
+                  "node_id": "00000000-0000-0000-0000-000000000001",
+                  "start_time_raw": "2026-10-25T02:09:16+03:00",
+                  "source_session_id": "9b1a06d3051daecf5e688d3ff1510cfacab75797ef04d8ebd4e8aad37e8c4102",
+                  "anchor": {
+                    "id": 15,
+                    "time_raw": "2026-10-25T02:09:16.9506801+03:00",
+                    "fingerprint": "27a89a4a09b0cbbf9ede83ac801e438a7d9e5b4b46ebdfb0575356bbc779c44b"
+                  }
+                }
+              }
+            },
+            "fresh_d01_attempt": {
+              "result": "passed",
+              "started_at": "2026-10-25T13:47:01.127998Z",
+              "completed_at": "2026-10-25T13:47:34.063158Z",
+              "source_commit": "9bfdedcdc4febd81e3030d15fd9e7629b28e5d5e",
+              "completed_phases": [
+                "full_adapter_regression",
+                "backend_process_recreation",
+                "coarse_time_collision"
+              ],
+              "backend_process_recreation": {
+                "epoch_preserved": true,
+                "native_processes_unchanged": true,
+                "checkpoint": {
+                  "node_id": "00000000-0000-0000-0000-000000000001",
+                  "start_time_raw": "2026-10-25T16:47:21+03:00",
+                  "source_session_id": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
+                  "anchor": {
+                    "id": 14,
+                    "time_raw": "2026-10-25T16:47:21.6352297+03:00",
+                    "fingerprint": "2ebf043b20d0bdebe790279d98c692bdaa04de2ed4494bb04771a7503c28bb3e"
+                  }
+                }
+              },
+              "coarse_time_collision": {
+                "mode": "test transport freezes startTime and uptime; real source events and restart",
+                "native_same_second_restart_claimed": false,
+                "actual_native_start_times": [
+                  "2026-10-25T16:47:21+03:00",
+                  "2026-10-25T16:47:24+03:00"
+                ],
+                "status_start_time_before_after": "2026-10-25T16:47:21+03:00",
+                "old_anchor_id": 15,
+                "new_tail_before_read": 17,
+                "old_cursor_rejected": true,
+                "old_epoch": "ade7ebd5d58fc3a24ce3cf6a6c8e66ef8a2f37781be568647c76c4d4301f14b6",
+                "new_epoch": "42a2c4d4477099232d2abbf1cda05fb19b36e8fece102d379abf405551180264",
+                "first_rebased_event_id": 1
+              },
+              "cleanup": {
+                "stopped": [
+                  "node-a",
+                  "node-b"
+                ],
+                "running": []
+              }
+            },
+            "bench_lifecycle": {
+              "result": "passed",
+              "before_fix": "With simulated unavailable shutdown, stop reported running=[] but two real child workers remained",
+              "after_fix": "One directly owned worker per node; the same fallback leaves no child/worker processes",
+              "mode": "Pinned Syncthing v2.1.7 STMONITORED=yes only for serve; recheck on version upgrades"
+            }
+          },
+          "evidence": [
+            {
+              "path": "tests/integration/syncthing_adapter/evidence-v2.1.7.json",
+              "sha256_canonical_json": "ea5f705ab51dc9df1bccfae4a80d3f0667030eb26965ccef90ed2ee55b04f2b9"
+            },
+            {
+              "path": "tests/integration/syncthing_adapter/evidence-adapter-v2.1.7.json",
+              "sha256_canonical_json": "bca1f8e01b469217cd895f29cbf272e468b66ce9db048dd9ceb203b95a506d93"
+            },
+            {
+              "path": "tests/integration/syncthing_adapter/evidence-d01-v2.1.7.json",
+              "sha256_canonical_json": "1c0bd59eb0b4fb6ee15b661d69f2583d091b19c10a7e3da4fef899840339f744"
+            },
+            {
+              "path": "tests/contract/syncthing_adapter/fixtures/v2.1.7/manifest.json",
+              "sha256_canonical_json": "be81ffe8df54d4e89370da0148eed1f120aee4eed75b7b1b42769ded62d17db7"
+            }
+          ],
+          "same_second_restart": {
+            "native_claimed": false,
+            "tested": "Frozen startTime/uptime over real restarted source events; see D01 evidence"
+          },
+          "manual_configuration_review": "pending before merge",
+          "external_dependencies": {
+            "H0": {
+              "pr": 1,
+              "state": "open",
+              "head": "00c2bf63cd628e764af7f1c237514808eed5b576"
+            },
+            "A0": {
+              "pr": 2,
+              "state": "open",
+              "head": "15088e2c12088a9987944367a3bf358fdf4f06a4"
+            },
+            "D01_contract_review": "B0/danilsdk pending"
+          },
+          "merge_readiness": false,
+          "publication": {
+            "url": "https://github.com/danilsdk/syncthing-control-center/pull/4",
+            "state": "open",
+            "draft": false,
+            "base_branch": "codex/a00-foundation",
+            "base_sha": "15088e2c12088a9987944367a3bf358fdf4f06a4",
+            "review_requested": [
+              "danilsdk"
+            ],
+            "approval_merge_performed": false
+          },
+          "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)",
+          "audit_fixes": {
+            "task": "A6",
+            "R1": "No request starts after owner close during connect; pending reads retain socket deadline",
+            "R2": "Resolver not_found maps to 404; other expected resolver errors map to safe 503",
+            "R3": "SourceEvent.id and StreamAnchor.id share the signed bigint bound",
+            "R4": "ConnectionSettings shares DisplayName with the public DTO"
+          }
+        },
+        "review_limits": [
+          "Independent review and B0/D01 agreement still required.",
+          "A human must inspect changed_config_fields, non-target folder restoration and transfer_after_resume before merge.",
+          "No scheduler/worker, UI or VPS acceptance is claimed."
+        ]
+      },
+      "review_limits": [
+        "Shared A0/D-01 PR #9 must be accepted before A1 can target main and be merged.",
+        "Independent adapter review and human inspection of demo config/restoration/transfer evidence remain required.",
+        "No scheduler/worker, UI or VPS acceptance is claimed."
       ],
-      "approval_merge_performed": false
+      "final_pr_diff_files": 43
     },
-    "evidence_hashing": "SHA-256 of UTF-8 json.dumps(value, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)",
-    "audit_fixes": {
-      "task": "A6",
-      "R1": "No request starts after owner close during connect; pending reads retain socket deadline",
-      "R2": "Resolver not_found maps to 404; other expected resolver errors map to safe 503",
-      "R3": "SourceEvent.id and StreamAnchor.id share the signed bigint bound",
-      "R4": "ConnectionSettings shares DisplayName with the public DTO"
-    }
-  },
-  "review_limits": [
-    "Independent review and B0/D01 agreement still required.",
-    "A human must inspect changed_config_fields, non-target folder restoration and transfer_after_resume before merge.",
-    "No scheduler/worker, UI or VPS acceptance is claimed."
-  ]
+    "review_limits": [
+      "Independent A1 review and human inspection of demo config evidence required before merge.",
+      "Exact head/base CI must be green; author does not approve or merge own PR."
+    ],
+    "source_commit_note": "Ordinary merge of accepted main; entire tree identical to a46b58c before status/evidence-only updates."
+  }
 }

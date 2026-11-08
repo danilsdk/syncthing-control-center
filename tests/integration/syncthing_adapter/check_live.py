@@ -186,8 +186,12 @@ def run(export):
 
         probe_name = f"a14-probe-{uuid4()}.txt"
         payload = f"SCC A1.4 disposable probe {uuid4()}\n".encode()
-        sender = Path(state["nodes"][1]["home"]) / "data" / SHARED / probe_name
-        receiver = Path(state["nodes"][0]["home"]) / "data" / SHARED / probe_name
+        sender = bench.runtime_path(
+            bench.RUNTIME, Path(state["nodes"][1]["home"]) / "data" / SHARED / probe_name
+        )
+        receiver = bench.runtime_path(
+            bench.RUNTIME, Path(state["nodes"][0]["home"]) / "data" / SHARED / probe_name
+        )
         sender.write_bytes(payload)
         scan = raw_second.request(f"/rest/db/scan?folder={SHARED}", method="POST")
         require(scan["status_code"] == 200, "Sender scan was not accepted")
