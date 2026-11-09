@@ -156,10 +156,17 @@ export class ApiProvider implements Provider {
     });
   }
   updateRule(rule: Rule, input: RuleInput) {
-    const { folder_id: _folder, ...fields } = input;
+    const { timezone, days_of_week, start_time, end_time, enabled } = input;
     return this.request<Rule>(`/api/rules/${rule.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ ...fields, expected_version: rule.version }),
+      body: JSON.stringify({
+        timezone,
+        days_of_week,
+        start_time,
+        end_time,
+        enabled,
+        expected_version: rule.version,
+      }),
     });
   }
   deleteRule(rule: Rule) {

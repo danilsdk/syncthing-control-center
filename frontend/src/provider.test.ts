@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiProvider } from "./provider";
 import { MockProvider } from "./mock";
-import type { Rule } from "./types";
+import type { Rule, RuleInput } from "./types";
 const session = {
   user: { id: "admin-id", login: "admin" },
   csrf_token: "test-csrf",
@@ -114,6 +114,34 @@ describe("API boundary", () => {
     await expect(
       new ApiProvider().setRuleEnabled({ id: "r", version: 1 } as Rule, false),
     ).rejects.toMatchObject({ code: "version_conflict", status: 409 });
+  });
+  it("sends only RulePatch fields when editing a response DTO", async () => {
+    const fetch = vi.fn().mockResolvedValue(json({ version: 4 }));
+    vi.stubGlobal("fetch", fetch);
+    const provider = new ApiProvider();
+    const input = {
+      folder_id: "folder-id",
+      timezone: "Europe/Moscow",
+      days_of_week: [1, 2, 3, 4, 5],
+      start_time: "10:00",
+      end_time: "18:00",
+      enabled: true,
+      id: "response-only-field",
+      version: 3,
+      created_at: "response-only-field",
+      updated_at: "response-only-field",
+    } as unknown as RuleInput;
+
+    await provider.updateRule({ id: "rule-id", version: 3 } as Rule, input);
+
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      timezone: "Europe/Moscow",
+      days_of_week: [1, 2, 3, 4, 5],
+      start_time: "10:00",
+      end_time: "18:00",
+      enabled: true,
+      expected_version: 3,
+    });
   });
 });
 describe("isolated demo provider", () => {
