@@ -1,0 +1,28 @@
+{
+  "id": "B6",
+  "role": "B",
+  "title": "Обязательные проверки Windows, Linux и macOS в CI",
+  "branch": "codex/b06-platform-ci",
+  "depends_on": [
+    "H0",
+    "A10"
+  ],
+  "allow": [
+    ".github/workflows/harness.yml",
+    "scripts/check_platform.py",
+    "scripts/tests/test_check_platform.py",
+    "docs/harness.md",
+    ".harness/tasks/B6.json",
+    "docs/agent-log/b/B6.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b6",
+  "acceptance": [
+    "CI проверяет Python 3.12 на Windows amd64, Linux amd64 и нативном macOS ARM64; фактические ОС, архитектура Python и версии попадают в отчёт.",
+    "Стабильный обязательный check validate агрегирует все обязательные платформы и нативную Mac-интеграцию; падение, отмена или пропуск обязательной проверки не дают зелёный итог.",
+    "На macOS реальные PostgreSQL и два Syncthing проверяют принятый нативный стенд и применимые SQL/API-сценарии без зависимости от Docker hosted runner.",
+    "Сохраняются доверенный harness и scope из принятой базы, роли и независимое review; macOS-сбои не скрываются continue-on-error или искусственными skip/xfail.",
+    "Описаны повторение проверок и ограничения runner: macos-26 ARM64 не гарантирует patch 26.1, поэтому приёмочный прогон на Mac 26.1 остаётся отдельным доказательством A10.",
+    "A3 не является зависимостью B6; Mac-проверки коллектора добавляются после приёмки A3 и A10. Контейнерные проверки и единственный worker остаются в A4."
+  ]
+}

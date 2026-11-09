@@ -1,0 +1,34 @@
+{
+  "id": "A10",
+  "role": "A",
+  "title": "Нативная совместимость стенда с macOS ARM64",
+  "branch": "codex/a10-macos-compatibility",
+  "depends_on": [
+    "A0",
+    "A1",
+    "A2"
+  ],
+  "allow": [
+    "deploy/syncthing/prepare.py",
+    "deploy/syncthing/release.json",
+    "deploy/syncthing/bench.py",
+    "deploy/syncthing/processes.py",
+    "deploy/syncthing/README.md",
+    "tests/contract/syncthing_adapter/test_bench.py",
+    "tests/contract/syncthing_adapter/test_platforms.py",
+    "tests/integration/syncthing_adapter/**",
+    "docs/design/a/macos-development.md",
+    ".harness/tasks/A10.json",
+    "docs/agent-log/a/A10.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#a10",
+  "acceptance": [
+    "Python 3.12 и Syncthing 2.1.7 сохранены; macOS 26.1 Apple Silicon ARM64 получает проверенный по SHA-256 официальный ZIP и исполняемый файл syncthing.",
+    "Два собственных узла запускаются и останавливаются на Mac; принадлежность процесса проверяется по PID, времени старта и исполняемому файлу без Linux-only /proc и pidfd.",
+    "Чужой или повторно использованный PID не получает shutdown/сигнал; неуспешная остановка не маскируется удалением runtime. Изменения конфигурации демонстрационного стенда подтверждены человеком до merge.",
+    "Три известных платформенных отказа test_bench.py исправлены без ослабления защитных проверок; Windows amd64 и Linux amd64 не регрессируют.",
+    "Чистая установка, validate, применимые SQL/API-сценарии с PostgreSQL и двумя настоящими Syncthing, передача файлов, pause/resume, restart, restoration и cleanup проверены на Mac; версии, SHA и непройденные проверки записаны отдельно.",
+    "A3 не является условием начала или приёмки A10; совместный Mac-прогон коллектора включается в приёмку второго из A3/A10. Compose и запуск worker остаются в A4, постоянная матрица CI — в B6."
+  ]
+}
