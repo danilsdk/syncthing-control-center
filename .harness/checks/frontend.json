@@ -6,21 +6,29 @@
   "cwd": "frontend",
   "commands": [
     [
+      "{python}",
+      "scripts/run_node.py",
       "npm",
       "run",
       "lint"
     ],
     [
+      "{python}",
+      "scripts/run_node.py",
       "npm",
       "run",
       "test:ci"
     ],
     [
+      "{python}",
+      "scripts/run_node.py",
       "npm",
       "run",
       "build"
     ],
     [
+      "{python}",
+      "scripts/run_node.py",
       "npm",
       "run",
       "test:e2e"
@@ -28,10 +36,14 @@
   ],
   "setup_commands": [
     [
+      "{python}",
+      "scripts/run_node.py",
       "npm",
       "ci"
     ],
     [
+      "{python}",
+      "scripts/run_node.py",
       "npx",
       "playwright",
       "install",

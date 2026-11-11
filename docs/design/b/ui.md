@@ -85,6 +85,12 @@ POST сохраняет idempotency key для повтора в текущей 
 Из `frontend`: `npm ci`, `npx playwright install --with-deps chromium`,
 `npm run lint`, `npm run test:ci`, `npm run build`, `npm run test:e2e`.
 Эти команды установки и проверки включены в `.harness/checks/frontend.json`.
+Harness вызывает их через `frontend/scripts/run_node.py`: он находит установленный
+`npm`/`npx` по PATH, включая Windows `npm.CMD`/`npx.CMD`, запускает полный путь
+без `shell=True` и сохраняет код завершения. На POSIX используются обычные
+исполняемые файлы. Это устраняет отказ Windows `Команда недоступна: npm` без
+изменения общего harness, lock-файла или пропуска frontend-проверок.
+В PowerShell прямые команды можно вызывать как `npm.cmd`/`npx.cmd`.
 Playwright использует собственный Vite на loopback:4173 и отказ при занятом порте,
 не подключается к чужому серверу. Unit проверяют HTTP-клиент, версии, страницы,
 CSRF, потерю ответа записи и независимость demo; browser-тесты перехватывают API.
