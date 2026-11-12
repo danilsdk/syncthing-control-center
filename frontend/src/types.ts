@@ -81,6 +81,17 @@ export interface Execution {
   error_code: string | null;
 }
 
+export interface SyncEvent {
+  id: string;
+  node_id: string;
+  folder_id: string | null;
+  kind: "source" | "gap" | "restart";
+  event_type: string;
+  occurred_at: string | null;
+  received_at: string;
+  payload_summary: { from_id?: number; to_id?: number; state?: string };
+}
+
 export interface Metrics {
   applied: number;
   failed: number;
@@ -130,6 +141,7 @@ export interface Provider {
   updateRule(rule: Rule, input: RuleInput): Promise<Rule>;
   deleteRule(rule: Rule): Promise<void>;
   listExecutions(query?: ExecutionQuery): Promise<Page<Execution>>;
+  listEvents(query?: EventQuery): Promise<Page<SyncEvent>>;
   getExecution(id: string): Promise<Execution>;
   analytics(): Promise<AnalyticsSummary>;
   resume(folderId: string): Promise<Execution>;
@@ -147,11 +159,18 @@ export class ProviderError extends Error {
   }
 }
 
-export interface ExecutionQuery {
+interface HistoryQuery {
   limit?: number;
   offset?: number;
   from?: string;
   to?: string;
-  status?: ExecutionStatus | "";
   node_id?: string;
+}
+
+export interface ExecutionQuery extends HistoryQuery {
+  status?: ExecutionStatus | "";
+}
+
+export interface EventQuery extends HistoryQuery {
+  folder_id?: string;
 }

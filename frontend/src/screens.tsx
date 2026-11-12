@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { View } from "./App";
+import { EventHistory } from "./event-history";
 import type {
   Execution,
   ExecutionQuery,
@@ -14,6 +15,7 @@ import {
   ErrorNotice,
   formatTime,
   PanelHeader,
+  Pagination,
   ResourceNotice,
   StateCard,
   statusLabel,
@@ -256,7 +258,8 @@ export function Folders({
           <span className="eyebrow">Наблюдаемые объекты</span>
           <h2>Папки и их состояние</h2>
           <p className="muted">
-            Отключённое расписание сохраняет текущую паузу папки.
+            Если папка на паузе, её можно возобновить вручную после отключения
+            расписания.
           </p>
         </div>
         <label className="filter-label">
@@ -342,7 +345,7 @@ export function Folders({
                         ? "Нет свежих данных"
                         : folder.actual_paused
                           ? "Приостановлена"
-                          : "Возобновлена"
+                          : "Синхронизация разрешена"
                   }
                 />
               </div>
@@ -363,15 +366,15 @@ export function Folders({
                 </strong>
               </div>
               <div className="state-line">
-                <span>Цель расписания</span>
+                <span>По расписанию сейчас</span>
                 <strong>
                   {folder.desired_paused === null
                     ? active
-                      ? "Неизвестна"
-                      : "Нет активного правила"
+                      ? "Нет данных"
+                      : "Нет активного расписания"
                     : folder.desired_paused
-                      ? "Приостановить"
-                      : "Возобновить"}
+                      ? "Пауза"
+                      : "Синхронизация разрешена"}
                 </strong>
               </div>
               <div className="state-line">
@@ -438,20 +441,36 @@ export function Rules({
   const [deleting, setDeleting] = useState<Rule | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState<{
+    text: string;
+    disabledFolderId?: string;
+  } | null>(null);
+  const disabledFolder = folders.find(
+    (folder) => folder.id === message?.disabledFolderId,
+  );
+  const observedPause =
+    disabledFolder?.present &&
+    !disabledFolder.is_stale &&
+    disabledFolder.config_observed_at
+      ? disabledFolder.actual_paused
+      : null;
   const folderLabel = (id: string) => {
     const folder = folders.find((item) => item.id === id);
     return folder
       ? `${folder.label || folder.syncthing_folder_id} · ${nodes.find((node) => node.id === folder.node_id)?.display_name ?? folder.node_id}`
       : id;
   };
-  const action = async (operation: () => Promise<unknown>, success: string) => {
+  const action = async (
+    operation: () => Promise<unknown>,
+    text: string,
+    disabledFolderId?: string,
+  ) => {
     setBusy(true);
     setError("");
-    setMessage("");
+    setMessage(null);
     try {
       await operation();
-      setMessage(success);
+      setMessage({ text, disabledFolderId });
       onRefresh();
       return true;
     } catch (reason) {
@@ -480,13 +499,17 @@ export function Rules({
       setError("Укажите существующий часовой пояс IANA.");
       return;
     }
+    const disablesSchedule = editing?.enabled && !form.enabled;
     if (
       await action(
         () =>
           editing
             ? provider.updateRule(editing, form)
             : provider.createRule(form),
-        "Расписание сохранено. Применение проверяется отдельно в истории.",
+        disablesSchedule
+          ? "Расписание отключено."
+          : "Расписание сохранено.",
+        disablesSchedule ? form.folder_id : undefined,
       )
     ) {
       setEditing(null);
@@ -500,15 +523,30 @@ export function Rules({
           <span className="eyebrow">Автоматизация</span>
           <h2>Правила синхронизации</h2>
           <p className="muted">
-            Внутри окна синхронизация разрешена. Вне окна — пауза. Отключение
-            правила не возобновляет папку.
+            Отключение расписания прекращает автоматическое управление папкой.
           </p>
         </div>
       </section>
       {error && <ErrorNotice message={error} onRetry={onRefresh} />}
       {message && (
         <div className="notice notice-info" role="status">
-          {message}
+          <div>
+            {message.text}
+            {message.disabledFolderId && (
+              <>
+                <p>
+                  {observedPause === null
+                    ? "Текущее состояние папки неизвестно."
+                    : observedPause
+                      ? "По последнему наблюдению папка на паузе."
+                      : "По последнему наблюдению синхронизация разрешена."}
+                </p>
+                <a className="button button-small" href="#/folders">
+                  Открыть папки
+                </a>
+              </>
+            )}
+          </div>
         </div>
       )}
       <div className="two-column rules-layout">
@@ -547,12 +585,13 @@ export function Rules({
                     void action(
                       () => provider.setRuleEnabled(rule, !rule.enabled),
                       rule.enabled
-                        ? "Правило отключено. Пауза папки сохранена."
+                        ? "Расписание отключено."
                         : "Правило включено. Ожидайте проверки исполнителя.",
+                      rule.enabled ? rule.folder_id : undefined,
                     )
                   }
                 >
-                  {rule.enabled ? "Отключить правило" : "Включить правило"}
+                  {rule.enabled ? "Отключить расписание" : "Включить расписание"}
                 </button>
                 <button
                   className="text-button"
@@ -608,9 +647,9 @@ export function Rules({
                   ))}
               </select>
             </label>
-            <div className="form-grid">
+            <div className="form-grid" role="group" aria-label="Окно синхронизации">
               <label>
-                Начало
+                Начало окна
                 <input
                   type="time"
                   required
@@ -621,7 +660,7 @@ export function Rules({
                 />
               </label>
               <label>
-                Конец
+                Конец окна
                 <input
                   type="time"
                   required
@@ -633,7 +672,9 @@ export function Rules({
               </label>
             </div>
             <p className="muted">
-              Если конец раньше начала, окно продолжается на следующий день.
+              В этом окне расписание разрешает синхронизацию. В остальное время
+              папка ставится на паузу. Если конец раньше начала, окно
+              продолжается на следующий день.
             </p>
             <label>
               Часовой пояс
@@ -778,19 +819,51 @@ function ConfirmDialog({
   );
 }
 
-export function History({
-  provider,
-  nodes,
-  folders,
-  revision,
-  onFailure,
-}: {
+type HistoryProps = {
   provider: Provider;
   nodes: Node[];
   folders: Folder[];
   revision: number;
   onFailure: OnFailure;
-}) {
+  onRefresh: () => void;
+};
+
+export function History(props: HistoryProps) {
+  const [section, setSection] = useState<"commands" | "events">("commands");
+  return (
+    <>
+      <div className="history-sections" role="group" aria-label="Раздел истории">
+        <button
+          className="button button-small"
+          aria-pressed={section === "commands"}
+          onClick={() => setSection("commands")}
+        >
+          Команды
+        </button>
+        <button
+          className="button button-small"
+          aria-pressed={section === "events"}
+          onClick={() => setSection("events")}
+        >
+          События Syncthing
+        </button>
+      </div>
+      {section === "commands" ? (
+        <CommandHistory {...props} />
+      ) : (
+        <EventHistory {...props} />
+      )}
+    </>
+  );
+}
+
+function CommandHistory({
+  provider,
+  nodes,
+  folders,
+  revision,
+  onFailure,
+}: HistoryProps) {
   const [query, setQuery] = useState<ExecutionQuery>({ limit: 20, offset: 0 });
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -963,35 +1036,10 @@ export function History({
               Измените фильтры или дождитесь работы исполнителя.
             </StateCard>
           )}
-          <div className="pagination">
-            <button
-              className="button button-small"
-              disabled={!page.offset}
-              onClick={() =>
-                setQuery({
-                  ...query,
-                  offset: Math.max(0, page.offset - page.limit),
-                })
-              }
-            >
-              Назад
-            </button>
-            <span>
-              {page.total
-                ? `${Math.min(page.offset + 1, page.total)}–${Math.min(page.offset + page.items.length, page.total)}`
-                : "0"}{" "}
-              из {page.total}
-            </span>
-            <button
-              className="button button-small"
-              disabled={page.offset + page.items.length >= page.total}
-              onClick={() =>
-                setQuery({ ...query, offset: page.offset + page.limit })
-              }
-            >
-              Далее
-            </button>
-          </div>
+          <Pagination
+            page={page}
+            onChange={(offset) => setQuery({ ...query, offset })}
+          />
         </section>
       )}
     </>

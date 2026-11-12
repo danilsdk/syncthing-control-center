@@ -148,7 +148,7 @@ def main():
                     {
                         "result": "passed",
                         "transport": (
-                            "Chromium -> Vite proxy -> real A2/B1/B2 HTTP API -> private "
+                            "Chromium -> Vite proxy -> real A2/A3/B1/B2 HTTP API -> private "
                             "PostgreSQL -> singleton worker; Syncthing adapter doubles"
                         ),
                         "syncthing_live": False,

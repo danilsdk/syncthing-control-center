@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { isProviderError } from "./provider";
+import type { Page } from "./types";
 
-export function formatTime(value: string | null | undefined) {
+export function formatTime(
+  value: string | null | undefined,
+  timeStyle: Intl.DateTimeFormatOptions["timeStyle"] = "short",
+) {
   if (!value) return "Нет наблюдения";
-  return `${new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(value))} UTC`;
+  const formatter = new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "medium",
+    timeStyle,
+    timeZone: "UTC",
+  });
+  return `${formatter.format(new Date(value))} UTC`;
 }
 export function statusLabel(value: string) {
   const labels: Record<string, string> = {
@@ -141,6 +150,34 @@ export function PanelHeader({ title }: { title: string }) {
   return (
     <div className="panel-header">
       <h3>{title}</h3>
+    </div>
+  );
+}
+export function Pagination({
+  page: { offset, limit, items, total },
+  onChange,
+}: {
+  page: Page<unknown>;
+  onChange: (offset: number) => void;
+}) {
+  const end = offset + items.length;
+  return (
+    <div className="pagination">
+      <button
+        className="button button-small"
+        disabled={!offset}
+        onClick={() => onChange(Math.max(0, offset - limit))}
+      >
+        Назад
+      </button>
+      <span>{items.length ? `${offset + 1}–${end}` : "0"} из {total}</span>
+      <button
+        className="button button-small"
+        disabled={end >= total}
+        onClick={() => onChange(offset + limit)}
+      >
+        Далее
+      </button>
     </div>
   );
 }

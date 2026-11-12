@@ -1,5 +1,6 @@
 import type {
   AnalyticsSummary,
+  EventQuery,
   Execution,
   ExecutionQuery,
   Folder,
@@ -9,6 +10,7 @@ import type {
   Rule,
   RuleInput,
   Session,
+  SyncEvent,
 } from "./types";
 import { ProviderError } from "./types";
 
@@ -129,11 +131,17 @@ export class ApiProvider implements Provider {
   listRules() {
     return this.all<Rule>("/api/rules");
   }
-  listExecutions(query: ExecutionQuery = {}) {
+  private historyPage<T>(path: string, query: ExecutionQuery | EventQuery) {
     const params = new URLSearchParams({ limit: "20", offset: "0" });
     for (const [key, value] of Object.entries(query))
       if (value !== undefined && value !== "") params.set(key, String(value));
-    return this.request<Page<Execution>>(`/api/executions?${params}`);
+    return this.request<Page<T>>(`${path}?${params}`);
+  }
+  listExecutions(query: ExecutionQuery = {}) {
+    return this.historyPage<Execution>("/api/executions", query);
+  }
+  listEvents(query: EventQuery = {}) {
+    return this.historyPage<SyncEvent>("/api/events", query);
   }
   getExecution(id: string) {
     return this.request<Execution>(

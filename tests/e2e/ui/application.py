@@ -1,4 +1,4 @@
-"""Test-only composition: real A2/B1/B2 and SQL; deterministic adapter doubles.
+"""Test-only composition: real A2/A3/B1/B2 and SQL; deterministic adapter doubles.
 
 Never loaded by the product entry point. No Syncthing or personal files are used.
 """
@@ -6,6 +6,7 @@ Never loaded by the product entry point. No Syncthing or personal files are used
 import threading
 from contextlib import asynccontextmanager
 
+from app.api.events import router as events_router
 from app.api.executions import router as executions_router
 from app.api.rules import router as rules_router
 from app.config import ConnectionSettings, Settings
@@ -20,7 +21,7 @@ from app.contracts.interfaces import (
 from app.contracts.types import mask_to_days, time_to_hhmm
 from app.db import Database
 from app.main import create_app, run_worker
-from app.models import ManagedNode
+from app.models import ManagedNode, SyncEvent
 from app.reconciliation.service import ReconciliationRuntime
 from app.registry.admin import create_administrator
 from app.registry.service import RegistryService
@@ -129,13 +130,29 @@ def create_test_app():
         desired_state=desired,
     )
     for name in ["a", "b"]:
-        registry.register(
+        node = registry.register(
             NodeCreate(connection_ref=f"node-{name}", display_name=f"E2E {name.upper()}")
         )
+        if name == "a":
+            folder = registry.folders(node.id, limit=1, offset=0).items[0]
+            system = factory.for_node(node.id).read_system()
+            with database.session() as session:
+                session.add(
+                    SyncEvent(
+                        node_id=node.id,
+                        folder_id=folder.id,
+                        kind="source",
+                        source_session_id=system.source_session_id,
+                        source_event_id=1,
+                        event_type="ItemFinished",
+                        occurred_at=system.observed_at,
+                    )
+                )
+                session.commit()
     app = create_app(
         settings,
         database,
-        routers=[rules_router, executions_router],
+        routers=[rules_router, executions_router, events_router],
         adapters=factory,
         registry=registry,
     )
