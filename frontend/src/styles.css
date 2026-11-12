@@ -114,6 +114,8 @@ button:disabled { cursor: not-allowed; }
 .text-button { min-height: 36px; font-size: 12px; }
 .spaced { margin-top: 18px; }
 .history-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 20px; align-items: end; }
+.history-sections { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.history-sections .button[aria-pressed="true"] { border-color: #4d7c82; color: var(--cyan); background: #1b3545; }
 .history-filters .button { justify-self: start; }
 .history-table { width: 100%; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 680px; }
@@ -142,6 +144,8 @@ td small { color: var(--muted); margin-top: 6px; }
   .metric-card { min-height: 86px; }
   .metric-card strong { font-size: 22px; }
   .history-filters { grid-template-columns: 1fr; }
+  .event-history-table table { min-width: 0; table-layout: fixed; }
+  .event-history-table th, .event-history-table td { padding-right: 6px; overflow-wrap: anywhere; }
   .topbar { gap: 8px; }
   .topbar h1 { font-size: 24px; }
   .breadcrumb { font-size: 10px; }

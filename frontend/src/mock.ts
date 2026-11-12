@@ -1,5 +1,6 @@
 import type {
   AnalyticsSummary,
+  EventQuery,
   Execution,
   ExecutionQuery,
   Folder,
@@ -9,6 +10,7 @@ import type {
   Rule,
   RuleInput,
   Session,
+  SyncEvent,
 } from "./types";
 import { ProviderError } from "./types";
 const nodeId = "11111111-1111-4111-8111-111111111111",
@@ -83,6 +85,18 @@ export class MockProvider implements Provider {
       error_code: "verification_unavailable",
     },
   ];
+  private events: SyncEvent[] = [
+    {
+      id: "66666666-6666-4666-8666-666666666666",
+      node_id: nodeId,
+      folder_id: folderId,
+      kind: "source",
+      event_type: "ItemFinished",
+      occurred_at: this.now,
+      received_at: this.now,
+      payload_summary: {},
+    },
+  ];
   async currentSession() {
     if (!this.session)
       throw new ProviderError("Нужен вход", "authentication_required", 401);
@@ -129,6 +143,22 @@ export class MockProvider implements Provider {
     const item = this.executions.find((value) => value.id === id);
     if (!item) throw new ProviderError("Попытка не найдена");
     return clone(item);
+  }
+  async listEvents(query: EventQuery = {}): Promise<Page<SyncEvent>> {
+    const { limit = 20, offset = 0 } = query;
+    const items = this.events.filter(
+      (item) =>
+        (!query.node_id || item.node_id === query.node_id) &&
+        (!query.folder_id || item.folder_id === query.folder_id) &&
+        (!query.from || item.received_at >= query.from) &&
+        (!query.to || item.received_at < query.to),
+    );
+    return clone({
+      items: items.slice(offset, offset + limit),
+      total: items.length,
+      limit,
+      offset,
+    });
   }
   async analytics(): Promise<AnalyticsSummary> {
     return {

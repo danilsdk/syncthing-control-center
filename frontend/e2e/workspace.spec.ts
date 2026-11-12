@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import type { SyncEvent } from "../src/types";
 const nodeId = "11111111-1111-4111-8111-111111111111",
   folderId = "22222222-2222-4222-8222-222222222222",
   ruleId = "33333333-3333-4333-8333-333333333333";
@@ -67,6 +68,8 @@ async function backend(page: Page) {
     mutationStatus: 200,
     logoutStatus: 204,
     history: [] as object[],
+    events: [] as SyncEvent[],
+    eventsStatus: 200,
     requests: [] as string[],
     writes: [] as object[],
   };
@@ -126,6 +129,9 @@ async function backend(page: Page) {
             ...folder,
             actual_paused: state.paused,
             is_stale: state.stale,
+            desired_paused: state.rules.some((item) => item.enabled)
+              ? false
+              : null,
             active_rule_id:
               state.rules.find((item) => item.enabled)?.id ?? null,
           },
@@ -170,6 +176,18 @@ async function backend(page: Page) {
         verified_at: now,
       });
     if (path === "/api/executions") return send(pageOf(state.history));
+    if (path === "/api/events") {
+      if (state.eventsStatus !== 200)
+        return fail(state.eventsStatus, "service_unavailable");
+      const folder = url.searchParams.get("folder_id");
+      const node = url.searchParams.get("node_id");
+      const events = state.events.filter(
+        (event) =>
+          (!folder || folder === event.folder_id) &&
+          (!node || node === event.node_id),
+      );
+      return send(pageOf(events));
+    }
     return fail(404, "not_found");
   });
   return state;
@@ -216,11 +234,11 @@ test("login, create, conflict recovery and disable use the API and exact version
     .getByRole("button", { name: "Создать правило", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Отключить правило", exact: true }),
+    page.getByRole("button", { name: "Отключить расписание", exact: true }),
   ).toBeEnabled();
   state.mutationStatus = 409;
   await page
-    .getByRole("button", { name: "Отключить правило", exact: true })
+    .getByRole("button", { name: "Отключить расписание", exact: true })
     .click();
   await expect(page.getByRole("alert")).toContainText("Правило уже изменено");
   expect(state.writes.at(-1)).toEqual({ expected_version: 1, enabled: false });
@@ -229,13 +247,49 @@ test("login, create, conflict recovery and disable use the API and exact version
     .getByRole("button", { name: "Перечитать данные", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Отключить правило", exact: true })
+    .getByRole("button", { name: "Отключить расписание", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Включить правило", exact: true }),
+    page.getByRole("button", { name: "Включить расписание", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("status")).toContainText("Пауза папки сохранена");
+  const result = page
+    .getByRole("status")
+    .filter({ hasText: "Расписание отключено." });
+  await expect(result).toContainText("По последнему наблюдению папка на паузе.");
+  await result.getByRole("link", { name: "Открыть папки" }).click();
+  await expect(
+    page.getByRole("button", { name: "Возобновить", exact: true }),
+  ).toBeEnabled();
+  expect(state.requests).not.toContain("POST /api/executions/resume");
 });
+
+for (const { stale, expected } of [
+  { stale: false, expected: "По последнему наблюдению синхронизация разрешена." },
+  { stale: true, expected: "Текущее состояние папки неизвестно." },
+]) {
+  test(`disabling a schedule reports ${stale ? "unknown" : "unpaused"} folder state`, async ({ page }) => {
+    const state = await backend(page);
+    state.rules = [{ ...rule }];
+    state.paused = false;
+    state.stale = stale;
+    await page.goto("/#/folders");
+    await expect(
+      page.getByText("По расписанию сейчас", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Правила", exact: true }).click();
+    await expect(
+      page.getByText(/В этом окне расписание разрешает синхронизацию/),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Отключить расписание", exact: true })
+      .click();
+    const result = page
+      .getByRole("status")
+      .filter({ hasText: "Расписание отключено." });
+    await expect(result).toContainText(expected);
+    expect(state.requests).not.toContain("POST /api/executions/resume");
+  });
+}
 test("auth loss on a mutation returns to login and removes private data", async ({
   page,
 }) => {
@@ -244,7 +298,7 @@ test("auth loss on a mutation returns to login and removes private data", async 
   state.mutationStatus = 401;
   await page.goto("/#/rules");
   await page
-    .getByRole("button", { name: "Отключить правило", exact: true })
+    .getByRole("button", { name: "Отключить расписание", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Войти в систему" }),
@@ -383,6 +437,61 @@ test("history has server pagination and UTC filters", async ({ page }) => {
   expect(state.requests.some((url) => url.includes("offset=20"))).toBe(true);
   await expect(page.getByRole("table")).not.toContainText("Подтверждено");
 });
+test("event history shows item activity and gaps with separate filters and error state", async ({ page }) => {
+  const state = await backend(page);
+  const item: SyncEvent = {
+    id: "event-file",
+    node_id: nodeId,
+    folder_id: folderId,
+    kind: "source",
+    event_type: "ItemFinished",
+    occurred_at: now,
+    received_at: now,
+    payload_summary: {},
+  };
+  state.history = [{ ...execution, status: "applied" }];
+  state.events = [
+    item,
+    ...Array.from({ length: 19 }, (_, i) => ({ ...item, id: `event-${i}` })),
+    {
+      ...item,
+      id: "event-gap",
+      kind: "gap",
+      event_type: "HistoryGap",
+      folder_id: null,
+      occurred_at: null,
+      payload_summary: { from_id: 15, to_id: 18 },
+    },
+  ];
+  await page.goto("/#/history");
+  await expect(page.getByRole("table")).toContainText("Подтверждено");
+  await page.getByRole("button", { name: "События Syncthing" }).click();
+  await expect(page.getByRole("table")).toContainText("Обработка элемента завершена");
+  await expect(page.getByRole("table")).toContainText(folder.label);
+  await expect(page.getByRole("table")).not.toContainText("Подтверждено");
+  await page.getByRole("button", { name: "Далее", exact: true }).click();
+  await expect(page.getByRole("table")).toContainText("Пропущены события 15–18");
+  await page
+    .getByRole("combobox", { name: "Папка", exact: true })
+    .selectOption(folderId);
+  await expect(page.getByText("1–20 из 20", { exact: true })).toBeVisible();
+  expect(state.requests).toContain(`GET /api/events?limit=20&offset=0&folder_id=${folderId}`);
+  await page.screenshot({ path: "test-results/events-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 360, height: 780 });
+  await expect(page.getByRole("button", { name: "События Syncthing" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(360);
+  const eventTable = page.getByLabel("Прокручиваемый журнал событий");
+  expect(await eventTable.evaluate((table) => table.scrollWidth)).toBe(
+    await eventTable.evaluate((table) => table.clientWidth),
+  );
+  await page.screenshot({ path: "test-results/events-mobile.png", fullPage: true });
+
+  state.eventsStatus = 503;
+  await page.getByRole("button", { name: "Обновить", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("Сервер временно недоступен");
+  await page.getByRole("button", { name: "Команды", exact: true }).click();
+  await expect(page.getByRole("table")).toContainText("Подтверждено");
+});
 test("failed logout is visible and does not claim a terminated server session", async ({
   page,
 }) => {
@@ -410,7 +519,7 @@ test("editing preserves the version; deleting needs a cancellable confirmation",
   state.rules = [{ ...rule }];
   await page.goto("/#/rules");
   await page.getByRole("button", { name: "Изменить", exact: true }).click();
-  await page.getByLabel("Начало", { exact: true }).fill("10:00");
+  await page.getByLabel("Начало окна", { exact: true }).fill("10:00");
   await page
     .getByRole("button", { name: "Сохранить изменения", exact: true })
     .click();
@@ -449,7 +558,7 @@ test("empty weekdays and an equal window are rejected before sending a write", a
     .click();
   await expect(page.getByRole("alert")).toContainText("хотя бы один день");
   await page.getByRole("button", { name: "Пн", exact: true }).click();
-  await page.getByLabel("Конец", { exact: true }).fill("09:00");
+  await page.getByLabel("Конец окна", { exact: true }).fill("09:00");
   await page
     .getByRole("button", { name: "Создать правило", exact: true })
     .click();

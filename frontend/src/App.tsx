@@ -438,6 +438,7 @@ function Workspace({
               folders={folderItems}
               revision={revision}
               onFailure={onFailure}
+              onRefresh={reload}
             />
           )}
           {view === "analytics" && (
