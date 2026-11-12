@@ -63,6 +63,7 @@ async function backend(page: Page) {
     loggedIn: true,
     rules: [] as (typeof rule)[],
     stale: false,
+    paused: true,
     mutationStatus: 200,
     logoutStatus: 204,
     history: [] as object[],
@@ -123,6 +124,7 @@ async function backend(page: Page) {
         pageOf([
           {
             ...folder,
+            actual_paused: state.paused,
             is_stale: state.stale,
             active_rule_id:
               state.rules.find((item) => item.enabled)?.id ?? null,
@@ -298,6 +300,62 @@ test("resume remains pending until a separate GET confirms it", async ({
   ).toContainText("Подтверждено", {
     timeout: 8000,
   });
+});
+test("a new pause after navigation gets a new resume attempt", async ({
+  page,
+}) => {
+  const state = await backend(page);
+  const first = { ...execution };
+  const second = { ...execution, id: "55555555-5555-4555-8555-555555555555" };
+  const confirmed = (attempt: typeof execution) => ({
+    ...attempt,
+    status: "applied",
+    observed_paused: false,
+    completed_at: now,
+    verified_at: now,
+  });
+  const keys: string[] = [];
+  let firstResult: object = first;
+  let readSecond = false;
+  await page.route(`**/api/executions/${first.id}`, (route) =>
+    route.fulfill({ json: firstResult }),
+  );
+  await page.route(`**/api/executions/${second.id}`, (route) => {
+    readSecond = true;
+    return route.fulfill({ json: confirmed(second) });
+  });
+  await page.route("**/api/executions/resume", (route) => {
+    const key: string = route.request().postDataJSON().idempotency_key;
+    const isFirst = keys.length === 0;
+    const isReplay = keys.includes(key);
+    keys.push(key);
+    if (isReplay) return route.fulfill({ status: 200, json: firstResult });
+    return route.fulfill({ status: 202, json: isFirst ? first : second });
+  });
+
+  await page.goto("/#/folders");
+  const resume = page.getByRole("button", { name: "Возобновить", exact: true });
+  const result = page.getByRole("status", { name: "Результат команды" });
+  await resume.click();
+  await expect(result).toContainText("Ожидаем отдельной проверки");
+  await page.getByRole("button", { name: "Обзор", exact: true }).click();
+  await expect(result).toHaveCount(0);
+
+  firstResult = confirmed(first);
+  state.history = [firstResult];
+  state.paused = false;
+  await page.getByRole("button", { name: "История", exact: true }).click();
+  await expect(page.getByRole("table")).toContainText("Подтверждено");
+  state.paused = true;
+  await page.getByRole("button", { name: "Папки", exact: true }).click();
+  await page.getByRole("button", { name: "Обновить", exact: true }).click();
+
+  await resume.click();
+  await expect.poll(() => keys.length).toBe(2);
+  expect(keys[1]).not.toBe(keys[0]);
+  await expect(result).toContainText("Ожидаем отдельной проверки");
+  await expect(result).toContainText("Подтверждено");
+  expect(readSecond).toBe(true);
 });
 test("history has server pagination and UTC filters", async ({ page }) => {
   const state = await backend(page);

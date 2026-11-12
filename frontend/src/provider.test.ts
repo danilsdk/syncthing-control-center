@@ -59,11 +59,16 @@ describe("API boundary", () => {
     expect(url.searchParams.get("status")).toBe("unknown");
     expect(url.searchParams.get("from")).toBe("2026-11-01T00:00:00Z");
   });
-  it("keeps the idempotency key after a lost write response", async () => {
+  it("retries a lost write with the same key and releases it on acknowledgement", async () => {
     const fetch = vi
       .fn()
       .mockRejectedValueOnce(new TypeError("raw private URL"))
-      .mockResolvedValueOnce(json({ id: "execution-id", status: "pending" }));
+      .mockResolvedValueOnce(
+        json({ id: "execution-id", folder_id: "folder-id", status: "applied" }),
+      )
+      .mockResolvedValueOnce(
+        json({ id: "new-id", folder_id: "folder-id", status: "pending" }, 202),
+      );
     vi.stubGlobal("fetch", fetch);
     const provider = new ApiProvider();
     await expect(provider.resume("folder-id")).rejects.toMatchObject({
@@ -72,6 +77,12 @@ describe("API boundary", () => {
     await provider.resume("folder-id");
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual(
       JSON.parse(fetch.mock.calls[1][1].body),
+    );
+    await expect(provider.resume("folder-id")).resolves.toMatchObject({
+      id: "new-id",
+    });
+    expect(JSON.parse(fetch.mock.calls[2][1].body).idempotency_key).not.toBe(
+      JSON.parse(fetch.mock.calls[1][1].body).idempotency_key,
     );
   });
   it("clears CSRF on auth loss and never shows an upstream error body", async () => {

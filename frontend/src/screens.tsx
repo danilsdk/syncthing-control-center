@@ -194,18 +194,27 @@ export function Folders({
   const [nodeFilter, setNodeFilter] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [attempt, setAttempt] = useState<Execution | null>(null);
+  const [attempt, setAttempt] = useState<{
+    id: string;
+    folderId: string;
+    result?: Execution;
+  } | null>(null);
+  const result = attempt?.result;
+  const status = result?.status ?? "pending";
   useEffect(() => {
-    if (attempt?.status !== "pending") return;
+    if (!attempt || status !== "pending") return;
+    let current = true;
     const timer = setTimeout(() => {
       provider
         .getExecution(attempt.id)
         .then((value) => {
-          setAttempt(value);
+          if (!current) return;
+          setAttempt({ ...attempt, result: value });
           setError("");
           if (value.status !== "pending") onRefresh();
         })
         .catch((reason) => {
+          if (!current) return;
           onFailure(reason);
           setError(
             reason instanceof Error
@@ -214,13 +223,17 @@ export function Folders({
           );
         });
     }, 1500);
-    return () => clearTimeout(timer);
-  }, [attempt, provider, onFailure, onRefresh]);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [attempt, status, provider, onFailure, onRefresh]);
   const resume = async (folder: Folder) => {
     setBusy(true);
     setError("");
     try {
-      setAttempt(await provider.resume(folder.id));
+      const accepted = await provider.resume(folder.id);
+      setAttempt({ id: accepted.id, folderId: folder.id });
       onRefresh();
     } catch (reason) {
       onFailure(reason);
@@ -265,7 +278,7 @@ export function Folders({
         <ErrorNotice
           message={error}
           onRetry={() => {
-            if (attempt?.status === "pending") setAttempt({ ...attempt });
+            if (attempt && status === "pending") setAttempt({ ...attempt });
             onRefresh();
           }}
         />
@@ -277,13 +290,13 @@ export function Folders({
           aria-label="Результат команды"
         >
           <div>
-            <Badge value={attempt.status} />
+            <Badge value={status} />
             <p>
-              {attempt.status === "pending"
+              {status === "pending"
                 ? "Намерение сохранено. Ожидаем отдельной проверки исполнителя."
-                : `Результат попытки: ${statusLabel(attempt.status)}. Проверено: ${formatTime(attempt.verified_at)}`}
+                : `Результат попытки: ${statusLabel(status)}. Проверено: ${formatTime(result?.verified_at)}`}
             </p>
-            {attempt.error_code && <p>{attempt.error_code}</p>}
+            {result?.error_code && <p>{result.error_code}</p>}
           </div>
         </div>
       )}
@@ -378,8 +391,7 @@ export function Folders({
                     onClick={() => void resume(folder)}
                     disabled={
                       busy ||
-                      (attempt?.folder_id === folder.id &&
-                        attempt.status === "pending")
+                      (attempt?.folderId === folder.id && status === "pending")
                     }
                   >
                     Возобновить

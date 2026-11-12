@@ -135,13 +135,10 @@ export class ApiProvider implements Provider {
       if (value !== undefined && value !== "") params.set(key, String(value));
     return this.request<Page<Execution>>(`/api/executions?${params}`);
   }
-  async getExecution(id: string) {
-    const execution = await this.request<Execution>(
+  getExecution(id: string) {
+    return this.request<Execution>(
       `/api/executions/${encodeURIComponent(id)}`,
     );
-    if (execution.status !== "pending")
-      this.resumeKeys.delete(execution.folder_id);
-    return execution;
   }
   createRule(input: RuleInput) {
     return this.request<Rule>("/api/rules", {
@@ -182,13 +179,26 @@ export class ApiProvider implements Provider {
       `/api/analytics/summary?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
     );
   }
-  resume(folderId: string) {
+  async resume(folderId: string) {
     const key = this.resumeKeys.get(folderId) ?? crypto.randomUUID();
     this.resumeKeys.set(folderId, key);
-    return this.request<Execution>("/api/executions/resume", {
+    const execution = await this.request<Execution>("/api/executions/resume", {
       method: "POST",
       body: JSON.stringify({ folder_id: folderId, idempotency_key: key }),
     });
+    if (
+      typeof execution?.id !== "string" ||
+      !execution.id ||
+      execution.folder_id !== folderId
+    ) {
+      throw new ProviderError(
+        "Сервер вернул некорректную попытку.",
+        "invalid_response",
+      );
+    }
+    // The key is only needed until the POST identifies its execution.
+    if (this.resumeKeys.get(folderId) === key) this.resumeKeys.delete(folderId);
+    return execution;
   }
 }
 export function isProviderError(error: unknown): error is ProviderError {
