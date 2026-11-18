@@ -75,7 +75,7 @@ class FrozenStatusTransport:
         self.inner.close()
 
 
-def run():
+def run(export=False):
     report = {
         "stage": "D-01-r2",
         "started_at": bench.utc_now(),
@@ -199,7 +199,7 @@ def run():
         report["cleanup"] = {"stopped": sorted(set(stopped)), "running": cleanup["running"]}
         report["completed_at"] = bench.utc_now()
         bench.write_json(bench.RUNTIME / "d01-verification.json", report)
-        if report["result"] == "passed":
+        if export and report["result"] == "passed":
             Path(__file__).with_name("evidence-d01-v2.1.7.json").write_text(
                 check_live.assert_public(report, forbidden), encoding="utf-8"
             )
@@ -208,6 +208,7 @@ def run():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--export-evidence", action="store_true")
     parser.add_argument("--resume-child", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     try:
@@ -215,7 +216,7 @@ if __name__ == "__main__":
             resume_child()
         else:
             with bench.operation_lock():
-                result = run()
+                result = run(args.export_evidence)
             print(
                 json.dumps({k: v for k, v in result.items() if k != "adapter_regression"}, indent=2)
             )
