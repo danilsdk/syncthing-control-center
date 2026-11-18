@@ -1,5 +1,16 @@
 # Проверки приложения A4.4a
 
+На 18.11.2026 A4 обновляется от принятого `main`, PR #7 остаётся draft.
+H0 validate теперь доступен и проверяется отдельно. Этот workflow по-прежнему
+проверяет ранний amd64 core, общий worker/UI и ARM64 ещё не добавлены.
+При актуализации обнаружено: старый `format --check` отклоняет пять уже принятых
+файлов B (`tests/integration/executions/conftest.py`,
+`tests/integration/rules/conftest.py`, `tests/integration/rules/test_rules_api.py`,
+`tests/unit/reconciliation/test_decisions.py`, `tests/unit/scheduling/test_engine.py`).
+Lint проходит. Проверка формата сохранена без исключений; исходники B не меняются
+в подготовке A4. До устранения этого расхождения application-core не дойдёт до
+контейнерных испытаний. Старые зелёные результаты ниже не подтверждают новый head.
+
 [application.yml](../../.github/workflows/application.yml) проверяет готовое ядро
 A0–A3/A4.2 на GitHub-hosted ubuntu-24.04 с Python 3.12.14. События — pull_request,
 push в main и workflow_dispatch. Никаких действующих repository secrets не нужно.

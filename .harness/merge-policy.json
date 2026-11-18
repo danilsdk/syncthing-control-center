@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "repository": "danilsdk/syncthing-control-center",
+  "mode": "peer-agent",
+  "merge_method": "squash",
+  "required_checks": ["validate"],
+  "require_up_to_date": true,
+  "require_current_head_approval": true
+}

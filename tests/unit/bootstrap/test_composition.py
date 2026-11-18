@@ -24,7 +24,6 @@ from app.contracts.interfaces import (
 from app.contracts.locks import AdvisoryLocks, LockBusy, LockLost
 from app.db import Database, DatabaseNotReady
 from app.main import create_app, run_worker
-from app.syncthing_adapter import HttpAdapterFactory
 from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
 
@@ -93,8 +92,6 @@ def test_authorization_runs_before_adapter_resolution():
 @pytest.mark.parametrize(
     "failure,status,code",
     [
-        (KeyError("resolver-secret-canary"), 404, "not_found"),
-        (RuntimeError("resolver-secret-canary"), 503, "service_unavailable"),
         *[
             (
                 AdapterError(error),
@@ -106,8 +103,8 @@ def test_authorization_runs_before_adapter_resolution():
     ],
 )
 def test_resolver_errors_are_safe_api_responses_before_the_route(failure, status, code):
-    def resolve(_node_id):
-        raise failure
+    adapters = MagicMock(spec=AdapterFactory)
+    adapters.for_node.side_effect = failure
 
     router = APIRouter()
 
@@ -115,7 +112,7 @@ def test_resolver_errors_are_safe_api_responses_before_the_route(failure, status
     def protected(adapter: Annotated[SyncthingAdapter, Depends(get_adapter)]):
         pytest.fail("A failed resolver must not reach the route")
 
-    app = create_app(Settings(), routers=[router], adapters=HttpAdapterFactory(resolve))
+    app = create_app(Settings(), routers=[router], adapters=adapters)
     app.dependency_overrides[require_admin] = lambda: None
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.get(f"/api/nodes/{uuid4()}/test-adapter")

@@ -1,0 +1,26 @@
+{
+  "id": "B1",
+  "role": "B",
+  "title": "Расписания и API правил",
+  "branch": "codex/b01-scheduling",
+  "depends_on": [
+    "A0",
+    "B0"
+  ],
+  "allow": [
+    "backend/app/scheduling/**",
+    "backend/app/api/rules.py",
+    "tests/unit/scheduling/**",
+    "tests/integration/rules/**",
+    "docs/design/b/scheduling.md",
+    ".harness/tasks/B1.json",
+    "docs/agent-log/b/B1.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b1",
+  "acceptance": [
+    "Таблица времени B0 покрыта проверками.",
+    "Некорректные правила и второе активное правило отвергаются.",
+    "CRUD правил работает с общей защитой и схемой A."
+  ]
+}

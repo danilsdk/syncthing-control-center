@@ -6,8 +6,9 @@ import pytest
 from app.contracts.dto import EventPayload
 from app.contracts.interfaces import SourceCheckpoint, SourceEvent, StreamAnchor
 from app.models import ManagedNode, SyncEvent
-from sqlalchemy import insert, inspect, select, text, update
+from sqlalchemy import MetaData, insert, inspect, select, text, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.schema import CreateSchema, DropSchema
 
 from .conftest import migrate
 
@@ -108,6 +109,50 @@ def test_invalid_checkpoint_is_rejected_by_the_database(pg, anchor):
     with pytest.raises(IntegrityError) as caught, pg.begin() as connection:
         connection.execute(
             insert(ManagedNode).values(**node_values(uuid4(), source_stream_anchor=anchor))
+        )
+    assert caught.value.orig.diag.constraint_name == "ck_managed_nodes_stream_anchor"
+
+
+@pytest.fixture(params=["migration", "model"])
+def anchor_table(pg, request):
+    if request.param == "migration":
+        yield ManagedNode.__table__
+        return
+    schema = "anchor_boundary_" + uuid4().hex
+    table = ManagedNode.__table__.to_metadata(MetaData(), schema=schema)
+    with pg.begin() as connection:
+        connection.execute(CreateSchema(schema))
+        table.create(connection)
+    try:
+        yield table
+    finally:
+        with pg.begin() as connection:
+            connection.execute(DropSchema(schema, cascade=True))
+
+
+@pytest.mark.parametrize("anchor_id", [1, 2**63 - 1])
+def test_anchor_id_boundaries_roundtrip_through_sql_and_dto(pg, anchor_table, anchor_id):
+    node_id = uuid4()
+    with pg.begin() as connection:
+        connection.execute(
+            insert(anchor_table).values(
+                **node_values(node_id, source_stream_anchor={**ANCHOR, "id": anchor_id})
+            )
+        )
+        stored = connection.scalar(select(anchor_table.c.source_stream_anchor))
+    checkpoint = SourceCheckpoint(
+        node_id=node_id, start_time_raw=RAW, source_session_id="a" * 64, anchor=stored
+    )
+    assert checkpoint.anchor.id == anchor_id
+
+
+@pytest.mark.parametrize("anchor_id", [2**63, 10**19 - 1, 10**19, 1.5, "invalid"])
+def test_invalid_anchor_id_is_rejected_by_sql(pg, anchor_table, anchor_id):
+    with pytest.raises(IntegrityError) as caught, pg.begin() as connection:
+        connection.execute(
+            insert(anchor_table).values(
+                **node_values(uuid4(), source_stream_anchor={**ANCHOR, "id": anchor_id})
+            )
         )
     assert caught.value.orig.diag.constraint_name == "ck_managed_nodes_stream_anchor"
 

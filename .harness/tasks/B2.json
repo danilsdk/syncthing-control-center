@@ -1,0 +1,27 @@
+{
+  "id": "B2",
+  "role": "B",
+  "title": "Исполнитель и история команд",
+  "branch": "codex/b02-reconciliation",
+  "depends_on": [
+    "A0",
+    "A1",
+    "B1"
+  ],
+  "allow": [
+    "backend/app/reconciliation/**",
+    "backend/app/api/executions.py",
+    "tests/unit/reconciliation/**",
+    "tests/integration/executions/**",
+    "docs/design/b/reconciliation.md",
+    ".harness/tasks/B2.json",
+    "docs/agent-log/b/B2.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b2",
+  "acceptance": [
+    "HTTP-успех без проверки не считается applied.",
+    "Повторы и возвращение узла используют актуальное правило.",
+    "История читается через API; логика T-06/T-11 проверена."
+  ]
+}

@@ -6,13 +6,17 @@
 
 ```powershell
 $env:PYTHONPATH = (Resolve-Path backend).Path
-python -m pytest -c backend/pyproject.toml tests/unit tests/contract tests/integration/auth tests/integration/registry tests/integration/collection -m "not postgres" -q -W error
+python scripts/harness.py validate --task A3 --base origin/main
+python -m pytest -c backend/pyproject.toml tests/integration/auth tests/integration/registry tests/integration/collection -m "not postgres" -q -W error
 python tests/integration/collection/check_postgres.py --bin-dir "C:\Program Files\PostgreSQL\18\bin" --junitxml "$env:TEMP\a3-postgres.xml"
 python tests/integration/collection/check_postgres.py --bin-dir "C:\Program Files\PostgreSQL\18\bin" --live-report "$env:TEMP\a3-native.json"
 ```
 
-Первые два запуска: 427 тестов без PG и 69 SQL-сценариев; источник в SQL-сценариях
-подставной. Третий запуск — настоящий Uvicorn, login с scrypt, private PostgreSQL,
+Результаты повторной проверки 09.11.2026 на принятом main: validate — 414 passed /
+99 отдельных schema/lock PostgreSQL skipped и 32 harness self-tests; API-компоненты —
+59 passed / 110 PostgreSQL deselected; SQL A3 — 69 passed / 14 deselected.
+Источник в SQL-сценариях подставной. Последний запуск — настоящий Uvicorn,
+login с scrypt, private PostgreSQL,
 два нативных Syncthing v2.1.7 и свежий процесс collection pass для каждого цикла.
 HTTP-клиент переиспользуется из проверки A2, зависимости продукта не подменяются.
 
@@ -53,5 +57,10 @@ AGENTS.md; автоматический отчёт её не заменяет.
 
 [Результат успешного запуска 2026-10-26](evidence/a35-native-2026-10-26.json)
 не гарантирует те же счётчики следующему запуску: реальный источник асинхронен.
+[Новый native-отчёт 09.11.2026](evidence/a3-native-2026-11-09.json) подтверждает
+9 групп, 2085 событий, 46 snapshots/10 node-проб и успешное восстановление/cleanup.
+[Сводка повторной проверки](acceptance-a3-2026-11-09.json) связывает результаты
+с source `8e8789c` и base main `3db457b`. XML и полные журналы хранятся вне Git
+в `D:\.syntching\a3-main-refresh-20261109`. Mac в этом прогоне не участвовал.
 API в live_app.py и live_worker.py — только проверочная сборка. Постоянный
 router/планировщик/единственный worker подключаются в A4.

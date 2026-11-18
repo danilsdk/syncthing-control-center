@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "name": "Syncthing Control Center",
+  "remote": "origin",
+  "base_branch": "main",
+  "roles": {
+    "A": {
+      "person": "friend",
+      "github": "playerboom",
+      "focus": "интеграция и данные"
+    },
+    "B": {
+      "person": "user",
+      "github": "danilsdk",
+      "focus": "автоматизация и интерфейс"
+    }
+  },
+  "ownership": [
+    {
+      "path": "**",
+      "role": "A"
+    },
+    {
+      "path": "backend/app/scheduling/**",
+      "role": "B"
+    },
+    {
+      "path": "backend/app/reconciliation/**",
+      "role": "B"
+    },
+    {
+      "path": "backend/app/analytics/**",
+      "role": "B"
+    },
+    {
+      "path": "backend/app/api/rules.py",
+      "role": "B"
+    },
+    {
+      "path": "backend/app/api/executions.py",
+      "role": "B"
+    },
+    {
+      "path": "backend/app/api/analytics.py",
+      "role": "B"
+    },
+    {
+      "path": "frontend/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/unit/scheduling/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/unit/reconciliation/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/unit/analytics/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/integration/rules/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/integration/executions/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/integration/analytics/**",
+      "role": "B"
+    },
+    {
+      "path": "tests/e2e/ui/**",
+      "role": "B"
+    },
+    {
+      "path": "docs/design/b/**",
+      "role": "B"
+    },
+    {
+      "path": "docs/report/parts/b/**",
+      "role": "B"
+    },
+    {
+      "path": "docs/agent-log/b/**",
+      "role": "B"
+    },
+    {
+      "path": "AGENTS.md",
+      "role": "B"
+    },
+    {
+      "path": "docs/teamwork.md",
+      "role": "B"
+    },
+    {
+      "path": "docs/agent-tasks.md",
+      "role": "B"
+    },
+    {
+      "path": "docs/harness.md",
+      "role": "B"
+    },
+    {
+      "path": "docs/prompts/**",
+      "role": "B"
+    },
+    {
+      "path": "docs/templates/**",
+      "role": "B"
+    },
+    {
+      "path": ".harness/**",
+      "role": "B"
+    },
+    {
+      "path": ".agents/**",
+      "role": "B"
+    },
+    {
+      "path": ".githooks/**",
+      "role": "B"
+    },
+    {
+      "path": "scripts/harness.py",
+      "role": "B"
+    },
+    {
+      "path": "scripts/validate.sh",
+      "role": "B"
+    },
+    {
+      "path": "scripts/tests/**",
+      "role": "B"
+    },
+    {
+      "path": ".github/CODEOWNERS",
+      "role": "B"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "role": "B"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/agent-task.yml",
+      "role": "B"
+    },
+    {
+      "path": ".github/workflows/harness.yml",
+      "role": "B"
+    },
+    {
+      "path": "docs/AGENTS.md",
+      "role": "B"
+    },
+    {
+      "path": "tests/AGENTS.md",
+      "role": "B"
+    },
+    {
+      "path": ".harness/checks/backend.json",
+      "role": "A"
+    },
+    {
+      "path": ".github/workflows/review.yml",
+      "role": "B"
+    },
+    {
+      "path": ".harness/tasks/A*.json",
+      "role": "A"
+    }
+  ]
+}

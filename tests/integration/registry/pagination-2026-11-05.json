@@ -1,0 +1,119 @@
+{
+  "task": "A2",
+  "date": "2026-11-05",
+  "platform": "Windows amd64",
+  "python": "3.12.14",
+  "postgresql": "18.6",
+  "tested_source_commit": "bb2ac38da2dee67dcba165766694e5fe8dc9471c",
+  "base_commit": "2fbba70bfcb9098ca4df1a7fd5157bbe4f26bc81",
+  "review": "https://github.com/danilsdk/syncthing-control-center/pull/5#pullrequestreview-5739297860",
+  "change": "One SQL/MVCC snapshot for registry count and page, including empty offset pages.",
+  "results": {
+    "final-validate": {
+      "tests": 487,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 99,
+      "passed": 388
+    },
+    "final-api": {
+      "tests": 45,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 45
+    },
+    "final-postgres": {
+      "tests": 41,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 41
+    },
+    "final-b2": {
+      "tests": 24,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0,
+      "passed": 24
+    },
+    "old-regression": {
+      "tests": 4,
+      "errors": 0,
+      "failures": 4,
+      "skipped": 0,
+      "passed": 0
+    }
+  },
+  "harness_self_tests_passed": 32,
+  "regressions": [
+    "nodes: concurrent insert",
+    "folders: concurrent insert",
+    "nodes: concurrent delete",
+    "folders: concurrent delete",
+    "empty lists, offset boundaries, ordering and per-node folder scope"
+  ],
+  "cleanup": {
+    "owned_cluster_directories_checked_absent": 5,
+    "working_database_used": false
+  },
+  "limits": [
+    "99 separate PostgreSQL schema/lock tests skipped by validate",
+    "Real Syncthing, demo config and full A4 worker/runtime not rerun",
+    "Managed adapters in registry and execution PostgreSQL tests",
+    "Old-head regression has 4 expected failures and is not a successful product run"
+  ],
+  "source_hash_encoding": "UTF-8/LF",
+  "source_sha256": {
+    "backend/app/__init__.py": "96b0ef7b174044117a873a43f91759a9dc4695bd28e43c5f6c6a92e904161297",
+    "backend/app/api/__init__.py": "948cc602ed07a139c9342794636a9185701615a8cbc4acc577e7a17a92c659ce",
+    "backend/app/api/auth.py": "6026cded4fc869e5785fbcb27f7caf9e4d5c8c3ca606da3a0375c332054110de",
+    "backend/app/api/dependencies.py": "37d1a7f1e4be001cdaf1d69ffb25df38d8f4ad7e88bbb54b4fba7ee3212f5b9c",
+    "backend/app/api/executions.py": "234a70590841f46761244ef257d06339b69364eb3ae33f2950888d1b820b3ae7",
+    "backend/app/api/folders.py": "7acaedb30ab478ad5a5e109e4dec8fb242d19b9080cb41e2f442ce167234e057",
+    "backend/app/api/nodes.py": "ee1fb8504638a1f62fe9b0c87596988aca2146349953a585ec5c8dfe156a8578",
+    "backend/app/api/rules.py": "2d2853a63b1456b0a970bc7bc3edae8201f7b1068af3e09f333255773d9a8848",
+    "backend/app/config.py": "023c6afb717285768dce12d177598e6eb153c9744b8b01979080d6fca6f29bc3",
+    "backend/app/contracts/__init__.py": "9363eded14c2da79891e83dc99ba2cf3085a1fc9e45163fe8538a2e38125827b",
+    "backend/app/contracts/dto.py": "dd777fe9a9424264dd8dcac3e706417b9604b154ec89acba097c7acac8b90266",
+    "backend/app/contracts/errors.py": "f52ccb515fe9a201b06892e1a5f1a6ded079dd26a44a9f1012383e0514c58d5c",
+    "backend/app/contracts/interfaces.py": "48d4b443eb81afbc5e6a7a83c06ec26ba94071fe67b53a5ebeeec80bc79d6e67",
+    "backend/app/contracts/locks.py": "8cb3935e2d731b027202a5e14c339ee4e0386f7d8ca6082ab99d0ac8b6799479",
+    "backend/app/contracts/types.py": "c3ddf86b0b15e6ca15e7973b6ca644b3fa385b1801cf524fbb367702fedd34c1",
+    "backend/app/contracts/worker.py": "6f1399fa054b69980f2713f47c45a72ed0cb024ae3ddaab11738e34a16262dfe",
+    "backend/app/db.py": "4025d398681d6de861ad3e35067822ac474e140868f45baa580e43e656eb50e3",
+    "backend/app/main.py": "dccbd378b326e9e939b9e8ef797c70672ca95adfa2a1946a8eeb8b8d7b4fa67e",
+    "backend/app/models/__init__.py": "a408f7427f77be0853bba2e01558375b95e69740fa69e401adf048a3d5208f10",
+    "backend/app/models/base.py": "22101d5b946399bad40b0deeb5cb26c46d7c93b0532080053132fd26972dd450",
+    "backend/app/models/entities.py": "af6cc2cab260cfb72c158cd96667ff897b072403db386c403a2fcee263f60506",
+    "backend/app/reconciliation/decisions.py": "8786f97cbedd7e2618b0394c3b15a13afbe6f3585e3e9e6d2e02791d9f64fdbd",
+    "backend/app/reconciliation/service.py": "d8e9d5888fee580b0bfb3fa2fd5c8242564b65e80d9eda5123ccb6900715b185",
+    "backend/app/registry/__init__.py": "693e5bf02f79c65a653e81b21b6d4e4b2a27c1727f949ceba67b2de338331963",
+    "backend/app/registry/__main__.py": "6497d0410522800d22f62631184f061a23083cfad5bbf67f9cc9e5c6bb0f3232",
+    "backend/app/registry/admin.py": "8bdb75564d17bdea91d2346758ee07fe7af52cbf73f7119ca8c87b43d7d1a48a",
+    "backend/app/registry/authentication.py": "d69eb1b0515c0fe81190accfd77e2aa4d84834a806efd82de8865a62ed508452",
+    "backend/app/registry/projections.py": "a00e3b99778ea12ac784edc0fe35b19f429d2ce749e5dfe3d8386b5259d1c842",
+    "backend/app/registry/resolver.py": "6ab7df1ae01cef6684884d8064e683b52260e829a1695535668f3c5b94d5511d",
+    "backend/app/registry/security.py": "460309a9a6a9078ba6f128cbe3c82f651694387583715632ecf7d0b88ada05db",
+    "backend/app/registry/service.py": "f023ae7daea6276d3d1d5842a1d4fa506511b6ba9c72ec0e956b5759b8d9e272",
+    "backend/app/scheduling/__init__.py": "23b7b60c2c9e9645d4fa3812f117fd23381a842a07fcaabbf0e447eed293187a",
+    "backend/app/scheduling/engine.py": "f27937a78a73cbc6a3695df6242dcf04eeb70e9962003b9aeea9edd9dedf21c7",
+    "backend/app/scheduling/rules.py": "56fea7565426e72d1677cf391c74eda77d2dcef98ab06472dc68de2a846a0305",
+    "backend/app/syncthing_adapter/__init__.py": "8aa163bc526a70663e2ebbd554b39a34b39f906074aa7f33f5e83c7e22affa06",
+    "backend/app/syncthing_adapter/client.py": "4b1be98076be6042d868b973e1356b653dc759b218da8045c23fecae9856be27",
+    "backend/app/syncthing_adapter/factory.py": "a8dbbfcda4acb47137f22d01b1f1c26135364e174098a6490e7354aa8eeea19c",
+    "backend/app/syncthing_adapter/transport.py": "5d8174d9b1b3d4e75ecdd55d3401ccc2f51c320e845a7bd30f6530156f6aaf2c",
+    "tests/integration/auth/check_postgres.py": "edcd085d9a7fe2b697c91d151efb80d7e857950954ef71cced6fe97e6fb86339",
+    "tests/integration/auth/conftest.py": "b3e25372e7f7e9b68f6d345dc40900864fb9c709260e0f2f358975dc0a9bab5d",
+    "tests/integration/auth/test_api.py": "92a2362f9402761e79197092b152c99bd9030d65df0a397594ebd79b6b816d94",
+    "tests/integration/auth/test_postgres_auth.py": "656fb17a3425493f2ad585d4d17c0c1137ea1d3d17895a1c2206750d9f00fcf8",
+    "tests/integration/registry/check_live.py": "04cfbbb4565096703737eb95e7d550ec4a418893aa1e00eb9f2245275ca46525",
+    "tests/integration/registry/conftest.py": "c166fa29bd06148102ce275b3b94d38937806d5b1a36d7b5614bbc49dc2afd06",
+    "tests/integration/registry/test_api_contract.py": "986b0bab6eaafbe18406ef867d0358469c3e7a32231f0aa0786ccb2923a27248",
+    "tests/integration/registry/test_pagination.py": "3bb5bccb8560c2260b7e0169a8c1b305f2f9b40ac886d0f0bfd77726a0315902",
+    "tests/integration/registry/test_registry.py": "ee7e96e82817a4cbf88bdd4bba200ca528e8b36b074ca514b05886bdf6ef2c1a",
+    "tests/unit/registry/test_admin_cli.py": "e5d358f7266b521819ea81c63065c2b6819491e07e8380ef3c5d569cad1e01c7",
+    "tests/unit/registry/test_projections.py": "f94ab0252c8c938fd5bae6c9d654fa5f6f9ada3bf0632cb3da76d971ba6fe3b3",
+    "tests/unit/registry/test_security.py": "6dcf994811d09b8403cb73edb3da4be615232c4398f3598190611e338cef8ab9"
+  }
+}

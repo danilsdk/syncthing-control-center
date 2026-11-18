@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-06",
+  "base": "3db457bc718dc6fc32d91631baa94823db69c6ed",
+  "checked_tree": "B3 working tree prior to local commit; source hashes below",
+  "results": {
+    "unit": {
+      "passed": 9
+    },
+    "browser_intercepted_api": {
+      "passed": 9,
+      "browser": "Chromium",
+      "mobile_width": 360
+    },
+    "browser_real_api": {
+      "passed": 1,
+      "database": "PostgreSQL 17.11",
+      "real_components": [
+        "A2 authentication and registry",
+        "B1 rules and desired-state calculator",
+        "B2 execution API and singleton worker"
+      ],
+      "syncthing": "adapter double; no real Syncthing",
+      "cleanup": "owned API, worker and PostgreSQL stopped and removed"
+    },
+    "harness_validate": {
+      "result": "failed",
+      "backend_passed": 385,
+      "backend_skipped": 99,
+      "backend_failed": 3,
+      "reason": "unchanged A1 amd64/process-identity bench tests on macOS arm64"
+    },
+    "scope": "passed",
+    "ruff": "passed",
+    "typecheck": "passed",
+    "build": "passed",
+    "design_contract": "passed",
+    "npm_audit": {
+      "vulnerabilities": 0
+    }
+  },
+  "source_sha256": {
+    ".harness/checks/frontend.json": "84418313dee92628b5f06b2bc6d66d15507b0244fac69881d13b6dd9d9e4dfa7",
+    "docs/agent-log/b/B3.md": "955487771d436597326f39386c11293ffe421abaa0470196d3b2e6ef69620796",
+    "docs/design/b/ui.md": "d98d3132c415798ed93c6ce4b624512780e98053e836c6b60c7f2c921228576e",
+    "frontend/.env.demo": "e2d14106fb587fb8c6e8cb6af9cd1286af9ab78838d193da8f7948d00305204d",
+    "frontend/.gitignore": "81efcb28526452857faca0dcbe2cea05bf76f044029c60f93ca981317cab5ef8",
+    "frontend/e2e/api.spec.ts": "25993dba58dd8060f378c7a7449fbbe5ca1898c5babf575ce8413a251e796d9f",
+    "frontend/e2e/workspace.spec.ts": "c98f907f848b4fbb6b952356f5338b8571f5b0d153e13131dc2dc37e7e249b95",
+    "frontend/index.html": "9c9735504347ce2d79c4d1c8dce0c5cac0bcaf099a62457f8efd9d45bcfcaa53",
+    "frontend/package-lock.json": "89d2facb52331146147b5c75bddfa71d03472134a7cbe2ef622264d737f192b7",
+    "frontend/package.json": "651877a38812f60cf94a0e226372ef25742c7cd801f943d854c4274ae30ae732",
+    "frontend/playwright.config.ts": "b2849879ede07ab0499545a024f8e4ae32ff4cef55ae2b4461c5cd0ff4eb45b2",
+    "frontend/src/App.tsx": "4b170a9953fa2c9b9111c1ace3c3126b546df5b24d7d34800907ac7928b2a25b",
+    "frontend/src/main.tsx": "10ac689b4eb57228d6be39425516819110d59de99ccaff9eba6ab68ae07abcc3",
+    "frontend/src/mock.ts": "9ab33ad7dcd81d6ccc2c261680d4a598e82271398afb57cdcf781de1ded017d5",
+    "frontend/src/provider.test.ts": "f53cd9923b84c2b344ed4c058100d1a9d76c7a051c0605462a606334bee12d03",
+    "frontend/src/provider.ts": "83949ba8a16ce8033c4a4d8332829ffc4edc176f97d9facf61bcd672c38be494",
+    "frontend/src/screens.tsx": "c6657b01dd1f759ad798bd642112d6a944bd2df8c2adf47bb9d776e5ec6b921e",
+    "frontend/src/styles.css": "15a1efddc2989ba579d591bb30df7594ca71e0010e91120916e737d58394f355",
+    "frontend/src/types.ts": "ad12255d5827405d473c870163dc34c63a30da4c3937afa054bc7c9a9d8e2c87",
+    "frontend/src/ui.tsx": "e86953ed892b280f7d39bba7dffc0f4727c5ab323ca1ba73f1c39425367117a6",
+    "frontend/tsconfig.json": "c50eadfd8cadf813f6cb7c42e2a699793120b09fad37d3e1bf95b8b602ba0d75",
+    "frontend/vite.config.ts": "55ad90a78eddf3dfdd63eab811b0a166136df0376d88340287b31233ca719f95",
+    "tests/e2e/ui/application.py": "dd46d109bcd3a1d0a6ec992ce6f0ebb7b8aae9e31a6fbc13a5ef53f97c260013",
+    "tests/e2e/ui/check_postgres.py": "2dd69a685213b222e7160a64829acb19d27200a89c1712df3cca5260964dc868"
+  }
+}

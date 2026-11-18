@@ -64,7 +64,8 @@ last_seen_at <= last_checked_at, если оба заполнены. last_seen_a
 при ошибке API. Ожидаемый Device ID не заменяется молча при identity_mismatch.
 Коллектор меняет session/cursor/anchor атомарно с пакетом sync_events и маркером
 границы под блокировкой узла. Непустой anchor требует сессию и ровно три поля
-с ограничениями типов/формата (ck_managed_nodes_stream_anchor). Legacy-сессия
+с ограничениями типов/формата; id находится в диапазоне 1..2^63-1, как в DTO
+(ck_managed_nodes_stream_anchor). Legacy-сессия
 без anchor сохраняется, но не доказывает непрерывность нового чтения.
 Несколько папок одного экземпляра не создают несколько managed_nodes.
 

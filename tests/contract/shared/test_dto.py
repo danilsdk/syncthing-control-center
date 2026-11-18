@@ -40,6 +40,18 @@ def test_source_boundary_markers_keep_restart_and_unknown_continuity_distinct(ev
     assert_wire("Event", event.model_dump(mode="json"))
 
 
+@pytest.mark.parametrize("event_type", ["SourceRestarted", "SourceContinuityLost"])
+@pytest.mark.parametrize("payload", [{}, {"state": "idle"}])
+def test_source_boundary_requires_the_previous_epoch(event_type, payload):
+    value = fixture_value("sequence_gap") | {
+        "kind": "restart",
+        "event_type": event_type,
+        "payload_summary": payload,
+    }
+    with pytest.raises(ValidationError, match="previous source epoch"):
+        TYPES["Event"].model_validate(value)
+
+
 @pytest.mark.parametrize("case", EXAMPLES["positive"], ids=lambda case: case["name"])
 def test_examples_validate_and_serialize_to_the_published_contract(case):
     adapter = TypeAdapter(TYPES[case["schema"]])
