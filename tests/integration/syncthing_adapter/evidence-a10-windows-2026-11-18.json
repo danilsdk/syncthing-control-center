@@ -3,12 +3,12 @@
   "implementation_review_status": "pending native macOS and human config review",
   "source_base": "76062626716bbd9aab883d53598b3a2577b08d08",
   "reviewed_sources_sha256": {
-    "deploy/syncthing/prepare.py": "4e2d2f52fb817d2ec8b43a0784d4af11e8b3f1381381a3167b3a7064a54bf446",
-    "deploy/syncthing/bench.py": "80918bbe400718869e6ac583fa382ef7e3eb2b54007a152addee36ae21bb5047",
-    "deploy/syncthing/release.json": "5a02f0d2e81d81d397046ad2c7e989ade0a05afa016d8f3a16865ad6c462490b",
-    "tests/integration/syncthing_adapter/check_d01.py": "250b6a6118790e26e1780862869db2df90fd9dad5ebd50687430ce77eebea750",
+    "deploy/syncthing/prepare.py": "e1ccfe32d7b7dfa1f2d0ac89295ce0c2df995e696294d8d1d4fb54d5898c7896",
+    "deploy/syncthing/bench.py": "9be7f6b640ec54acc462aba0049a5e5635d4b963a76a29be05197c195c64012e",
+    "deploy/syncthing/release.json": "084d531159f89951628100e2e199e2e01cf1a00d15c7192ddfadc32ccd4732e5",
+    "tests/integration/syncthing_adapter/check_d01.py": "179b35c5c2b58316f480c64f64439683af4126b880af967d6e09955bfb45b1bc",
     "tests/contract/syncthing_adapter/test_platforms.py": "013bb85653d5758e2dd2d157864352a6aee404c90fac80e1768a08be573aacf4",
-    "tests/contract/syncthing_adapter/test_bench.py": "43a227b94335f09b405106eec045ff5c9788e6198f11379905d7c4121e174014"
+    "tests/contract/syncthing_adapter/test_bench.py": "5fa3bca9858da69fafeb5de2ce996cf5b385e38a285ea8989a44b7411ed6a316"
   },
   "platform": "Windows amd64",
   "python": "3.12.14",
@@ -279,5 +279,14 @@
     "bench verify passed on the final source including that refinement.",
     "Exact published-head full pre-push and Linux CI results are recorded in the PR.",
     "Mac API doubles and verified Mach-O archive do not prove native Mac execution."
-  ]
+  ],
+  "windows_checkout_sources_sha256": {
+    "deploy/syncthing/prepare.py": "4e2d2f52fb817d2ec8b43a0784d4af11e8b3f1381381a3167b3a7064a54bf446",
+    "deploy/syncthing/bench.py": "80918bbe400718869e6ac583fa382ef7e3eb2b54007a152addee36ae21bb5047",
+    "deploy/syncthing/release.json": "5a02f0d2e81d81d397046ad2c7e989ade0a05afa016d8f3a16865ad6c462490b",
+    "tests/integration/syncthing_adapter/check_d01.py": "250b6a6118790e26e1780862869db2df90fd9dad5ebd50687430ce77eebea750",
+    "tests/contract/syncthing_adapter/test_platforms.py": "013bb85653d5758e2dd2d157864352a6aee404c90fac80e1768a08be573aacf4",
+    "tests/contract/syncthing_adapter/test_bench.py": "43a227b94335f09b405106eec045ff5c9788e6198f11379905d7c4121e174014"
+  },
+  "source_hash_format": "reviewed_sources_sha256 hashes Git blobs with normalized LF; windows_checkout_sources_sha256 hashes the tested checkout bytes"
 }
