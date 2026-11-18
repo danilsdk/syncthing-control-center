@@ -1,0 +1,283 @@
+{
+  "task": "A10",
+  "implementation_review_status": "pending native macOS and human config review",
+  "source_base": "76062626716bbd9aab883d53598b3a2577b08d08",
+  "reviewed_sources_sha256": {
+    "deploy/syncthing/prepare.py": "4e2d2f52fb817d2ec8b43a0784d4af11e8b3f1381381a3167b3a7064a54bf446",
+    "deploy/syncthing/bench.py": "80918bbe400718869e6ac583fa382ef7e3eb2b54007a152addee36ae21bb5047",
+    "deploy/syncthing/release.json": "5a02f0d2e81d81d397046ad2c7e989ade0a05afa016d8f3a16865ad6c462490b",
+    "tests/integration/syncthing_adapter/check_d01.py": "250b6a6118790e26e1780862869db2df90fd9dad5ebd50687430ce77eebea750",
+    "tests/contract/syncthing_adapter/test_platforms.py": "013bb85653d5758e2dd2d157864352a6aee404c90fac80e1768a08be573aacf4",
+    "tests/contract/syncthing_adapter/test_bench.py": "43a227b94335f09b405106eec045ff5c9788e6198f11379905d7c4121e174014"
+  },
+  "platform": "Windows amd64",
+  "python": "3.12.14",
+  "postgresql": "18.6",
+  "syncthing": "2.1.7",
+  "native_macos_executed": false,
+  "native_linux_executed": false,
+  "contract_tests_final": 61,
+  "full_validate_before_last_two_darwin_errno_cases": {
+    "harness": 32,
+    "backend_passed": 441,
+    "sql_skipped": 99,
+    "vitest": 10,
+    "playwright": 13
+  },
+  "sql_tests": {
+    "schema_locks": 99,
+    "auth_registry": 41,
+    "collection": 69
+  },
+  "native_bench": {
+    "started_at": "2026-11-18T01:06:00.918667Z",
+    "stage": "A1.1",
+    "paused_patch_performed": false,
+    "result": "passed",
+    "version": "v2.1.7",
+    "nodes_ready": 2,
+    "synchronized_sha256": "3b8151d455d29372da060c0c596de1779225cecb5d6211562110552497732431",
+    "captured_responses": 18,
+    "negative_reads": {
+      "node-a": {
+        "auth": 403,
+        "missing_folder": 404
+      },
+      "node-b": {
+        "auth": 403,
+        "missing_folder": 404
+      }
+    },
+    "fixtures_exported": false,
+    "network_isolation_verified": true,
+    "initial_configuration": "offline owned homes",
+    "runtime_actions": [
+      "write one disposable file",
+      "POST db/scan",
+      "GET API probes"
+    ],
+    "cleanup": {
+      "stopped": [
+        "node-a",
+        "node-b"
+      ],
+      "running": []
+    },
+    "completed_at": "2026-11-18T01:06:06.112833Z"
+  },
+  "native_d01": {
+    "stage": "D-01-r2",
+    "started_at": "2026-11-18T00:59:03.761124Z",
+    "result": "passed",
+    "scheme": "scc:source-epoch:v2",
+    "adapter_regression": {
+      "result": "passed",
+      "pause": {
+        "config_paused": true,
+        "requires_restart": false,
+        "source_session_id": "25ce828309b0b68f6e39dc9938c25bc3e9a2af0df23564c0f5076d96587754b2",
+        "observed_at": "2026-11-18T00:59:08.982174Z",
+        "runtime": {
+          "available": false,
+          "error_code": "invalid_response"
+        },
+        "source_runtime": {
+          "state": "",
+          "needBytes": 0,
+          "pullErrors": 0,
+          "stateChanged": "0001-01-01T00:00:00Z",
+          "globalBytes": 0,
+          "localBytes": 0,
+          "sequence": 0
+        },
+        "changed_config_fields": [
+          "paused"
+        ],
+        "file_absent_during_observation": true,
+        "absence_checks": 11
+      },
+      "resume": {
+        "config_paused": false,
+        "requires_restart": false,
+        "source_session_id": "25ce828309b0b68f6e39dc9938c25bc3e9a2af0df23564c0f5076d96587754b2",
+        "observed_at": "2026-11-18T00:59:11.606089Z",
+        "runtime": {
+          "state": "idle",
+          "need_bytes": 0,
+          "pull_errors": 0,
+          "observed_at": "2026-11-18T00:59:11.606089Z"
+        },
+        "changed_config_fields": []
+      },
+      "transfer_after_resume": {
+        "bytes": 63,
+        "sha256": "52658a06813acd355232403e482cfbcdca214c9504a117d430c9f3438e5ef8a4",
+        "exact_content_matched": true
+      },
+      "non_target_folders_unchanged": true,
+      "explicit_restart_test": {
+        "old_session": "25ce828309b0b68f6e39dc9938c25bc3e9a2af0df23564c0f5076d96587754b2",
+        "new_session": "a5f4bb1f5bb62addee3fbfcbb404100b9d702b8d72304fb7328c74b636e5606a",
+        "identity_preserved": true,
+        "first_source_event_id": 1
+      }
+    },
+    "backend_process_recreation": {
+      "epoch_preserved": true,
+      "native_processes_unchanged": true,
+      "checkpoint": {
+        "node_id": "00000000-0000-0000-0000-000000000001",
+        "start_time_raw": "2026-11-18T03:59:25+03:00",
+        "source_session_id": "5b110b647f61a9bc9598244e84d37239260d12ce417cef7452711c8e8eabdc7f",
+        "anchor": {
+          "id": 15,
+          "time_raw": "2026-11-18T03:59:27.2544802+03:00",
+          "fingerprint": "ff568be680850fba28a577f6550fb92a0e9aa29f396ec840d250705019ec17e1"
+        }
+      }
+    },
+    "coarse_time_collision": {
+      "mode": "test transport freezes startTime and uptime; real source events and restart",
+      "native_same_second_restart_claimed": false,
+      "actual_native_start_times": [
+        "2026-11-18T03:59:25+03:00",
+        "2026-11-18T03:59:30+03:00"
+      ],
+      "status_start_time_before_after": "2026-11-18T03:59:25+03:00",
+      "old_anchor_id": 15,
+      "new_tail_before_read": 18,
+      "old_cursor_rejected": true,
+      "old_epoch": "5b110b647f61a9bc9598244e84d37239260d12ce417cef7452711c8e8eabdc7f",
+      "new_epoch": "8a0d6448aedc39ddfc8ad9443b2abfe343d8d92dc5f41db7ac8903668bcc420f",
+      "first_rebased_event_id": 1
+    },
+    "cleanup": {
+      "stopped": [
+        "node-a",
+        "node-b"
+      ],
+      "running": []
+    },
+    "completed_at": "2026-11-18T00:59:39.905500Z"
+  },
+  "native_registry": {
+    "stage": "A2.4",
+    "started_at": "2026-11-18T01:00:04.011567Z",
+    "result": "passed",
+    "syncthing_version": "v2.1.7",
+    "checks": [
+      "owned_services_ready",
+      "T12_session_and_all_registry_guards",
+      "origin_csrf_allowlist_and_atomic_wrong_key_failure",
+      "T01_two_real_nodes_four_distinct_folder_records_and_unknown_runtime",
+      "paging_duplicate_patch_and_observed_runtime_recovery",
+      "single_source_outage_retains_observations_and_peer_availability",
+      "pinned_identity_and_registered_source_auth_failure",
+      "api_and_source_restart_preserve_registry_and_canonical_checkpoint",
+      "logout_relogin_and_restored_demo_configuration"
+    ],
+    "cleanup": {
+      "api_running": false,
+      "syncthing_running": []
+    },
+    "completed_at": "2026-11-18T01:00:32.261075Z"
+  },
+  "native_collection": {
+    "stage": "A3.5",
+    "started_at": "2026-11-18T01:01:02.783113Z",
+    "result": "passed",
+    "syncthing_version": "v2.1.7",
+    "checks": [
+      {
+        "name": "native_buffer_rollover",
+        "at": "2026-11-18T01:01:40.851897Z",
+        "files": 600,
+        "first": 287,
+        "last": 1286,
+        "retained": 1000
+      },
+      {
+        "name": "T07_native_batch_replay_and_T08_bounded_gap",
+        "at": "2026-11-18T01:01:46.664863Z",
+        "received": 1000,
+        "gap_from": 1,
+        "gap_to": 287
+      },
+      {
+        "name": "real_login_guard_config_runtime_and_one_node_probe_per_cycle",
+        "at": "2026-11-18T01:01:50.900157Z"
+      },
+      {
+        "name": "backend_restart_retains_session_cursor_anchor_and_due_semantics",
+        "at": "2026-11-18T01:01:56.617454Z"
+      },
+      {
+        "name": "T05_native_outage_stale_cache_and_available_history",
+        "at": "2026-11-18T01:02:03.183419Z"
+      },
+      {
+        "name": "T08_real_restart_boundary_and_T05_current_reconciliation",
+        "at": "2026-11-18T01:02:07.005398Z"
+      },
+      {
+        "name": "T08_legacy_missing_proof_same_native_start_time",
+        "at": "2026-11-18T01:02:08.713860Z"
+      },
+      {
+        "name": "guarded_history_pagination_filters_safe_payloads_and_source_uniqueness",
+        "at": "2026-11-18T01:02:08.896706Z"
+      },
+      {
+        "name": "full_demo_folder_configuration_restored",
+        "at": "2026-11-18T01:02:09.052948Z"
+      }
+    ],
+    "persisted": {
+      "events": 1154,
+      "snapshots": 46,
+      "node_probes": 10,
+      "duplicate_source_positions": 0
+    },
+    "cleanup": {
+      "api_running": false,
+      "syncthing_running": [],
+      "fixture_directories_present": false
+    },
+    "completed_at": "2026-11-18T01:02:10.328222Z"
+  },
+  "archives": {
+    "macos": {
+      "result": "passed",
+      "platform": "macos-arm64",
+      "native_execution": false,
+      "verification_host": "Windows amd64",
+      "asset": "syncthing-macos-arm64-v2.1.7.zip",
+      "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-macos-arm64-v2.1.7.zip",
+      "archive_sha256": "2df075b463231a307c91da657157beaed06383a941ba7ea04d33d536e3c4af38",
+      "official_checksum_manifest_matches": true,
+      "extracted_binary_sha256": "38aab77073e47a717ec59eab082670b4fccf28c256fa0f7935aebb3f4665bb01",
+      "binary_format": "Mach-O 64-bit ARM64",
+      "binary_size": 35747424
+    },
+    "linux": {
+      "result": "passed",
+      "platform": "linux-amd64",
+      "native_execution": false,
+      "verification_host": "Windows amd64",
+      "asset": "syncthing-linux-amd64-v2.1.7.tar.gz",
+      "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-linux-amd64-v2.1.7.tar.gz",
+      "archive_sha256": "2edc416e7ed136b7c858ed5f3f02a3b8316589605e54c380228ceea7acbf0142",
+      "official_checksum_manifest_matches": true,
+      "extracted_binary_sha256": "f5c12679f2bad1b5eff619ba7b04ead1a457e439a1e55dc640d4d8995d7f4dbd",
+      "binary_format": "ELF 64-bit amd64",
+      "binary_size": 34022872
+    }
+  },
+  "notes": [
+    "All native A1/A2/A3 suites passed again after pending PID protection.",
+    "Final refinement after those suites changes Darwin-only ENOENT handling; covered by final 61 contract cases.",
+    "bench verify passed on the final source including that refinement.",
+    "Exact published-head full pre-push and Linux CI results are recorded in the PR.",
+    "Mac API doubles and verified Mach-O archive do not prove native Mac execution."
+  ]
+}
