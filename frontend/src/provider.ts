@@ -1,4 +1,5 @@
 import type {
+  AnalyticsQuery,
   AnalyticsSummary,
   EventQuery,
   Execution,
@@ -180,11 +181,12 @@ export class ApiProvider implements Provider {
       { method: "DELETE" },
     );
   }
-  analytics() {
-    const to = new Date();
-    const from = new Date(to.getTime() - 86_400_000);
+  analytics(query: AnalyticsQuery) {
+    const params = new URLSearchParams({ from: query.from, to: query.to });
+    if (query.node_id) params.set("node_id", query.node_id);
+    if (query.source) params.set("source", query.source);
     return this.request<AnalyticsSummary>(
-      `/api/analytics/summary?from=${encodeURIComponent(from.toISOString())}&to=${encodeURIComponent(to.toISOString())}`,
+      `/api/analytics/summary?${params}`,
     );
   }
   async resume(folderId: string) {

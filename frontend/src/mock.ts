@@ -1,4 +1,5 @@
 import type {
+  AnalyticsQuery,
   AnalyticsSummary,
   EventQuery,
   Execution,
@@ -160,23 +161,78 @@ export class MockProvider implements Provider {
       offset,
     });
   }
-  async analytics(): Promise<AnalyticsSummary> {
-    return {
-      from: new Date(Date.now() - 86_400_000).toISOString(),
-      to: this.now,
-      commands: {
+  async analytics(query: AnalyticsQuery): Promise<AnalyticsSummary> {
+    const start = Date.parse(query.from);
+    const end = Date.parse(query.to);
+    const attempts = this.executions.filter(
+      (attempt) =>
+        (!query.node_id || attempt.node_id === query.node_id) &&
+        (!query.source || attempt.source === query.source),
+    );
+    const metrics = (from: number, to: number) => {
+      const within = (value: string | null) => {
+        if (value === null) return false;
+        const time = Date.parse(value);
+        return time >= from && time < to;
+      };
+      const counts = {
         applied: 0,
         failed: 0,
-        unknown: 1,
+        unknown: 0,
         cancelled: 0,
-        pending_created: 0,
-        success_ratio: null,
-      },
-      api_checks: {
-        successful_checks: 0,
-        total_checks: 0,
-        success_ratio: null,
-      },
+        pending: 0,
+      };
+      for (const attempt of attempts) {
+        if (
+          within(
+            attempt.status === "pending"
+              ? attempt.created_at
+              : attempt.completed_at,
+          )
+        ) {
+          counts[attempt.status] += 1;
+        }
+      }
+      const { applied, failed, unknown, cancelled, pending } = counts;
+      const probes = this.nodes.filter(
+        (node) =>
+          (!query.node_id || node.id === query.node_id) &&
+          within(node.last_checked_at),
+      );
+      const successful = probes.filter(
+        (node) => node.api_status === "ok",
+      ).length;
+      return {
+        commands: {
+          applied,
+          failed,
+          unknown,
+          cancelled,
+          pending_created: pending,
+          success_ratio: applied + failed ? applied / (applied + failed) : null,
+        },
+        api_checks: {
+          successful_checks: successful,
+          total_checks: probes.length,
+          success_ratio: probes.length ? successful / probes.length : null,
+        },
+      };
+    };
+    const daily: AnalyticsSummary["daily"] = [];
+    const dayMs = 86_400_000;
+    for (let day = Math.floor(start / dayMs) * dayMs; day < end; day += dayMs) {
+      daily.push({
+        date: new Date(day).toISOString().slice(0, 10),
+        ...metrics(Math.max(day, start), Math.min(day + dayMs, end)),
+      });
+    }
+    return {
+      from: query.from,
+      to: query.to,
+      node_id: query.node_id ?? null,
+      source: query.source ?? null,
+      ...metrics(start, end),
+      daily,
     };
   }
   private syncFolder(id: string) {

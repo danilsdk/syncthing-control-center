@@ -1,4 +1,4 @@
-"""Run browser -> real API -> private PostgreSQL -> worker, with adapter doubles."""
+"""Run private PostgreSQL analytics tests and browser-to-API tests with adapter doubles."""
 
 import argparse
 import json
@@ -38,7 +38,7 @@ def main():
     env = {
         k: v
         for k, v in os.environ.items()
-        if not k.upper().startswith(("SCC_", "PG", "VITE_", "B3_"))
+        if not k.upper().startswith(("SCC_", "PG", "VITE_", "B3_", "B4_"))
     }
     env.update(
         PYTHONPATH=os.pathsep.join([str(ROOT / "backend"), str(Path(__file__).parent)]),
@@ -94,16 +94,33 @@ def main():
             autocommit=True,
         ) as connection:
             connection.execute("CREATE DATABASE scc_b3_browser")
-        env["SCC_DATABASE_URL"] = URL.create(
+            connection.execute("CREATE DATABASE scc_b4_analytics")
+        browser_database = URL.create(
             "postgresql+psycopg",
             username="scc_test",
             password=password,
             host="127.0.0.1",
             port=port,
             database="scc_b3_browser",
-        ).render_as_string(hide_password=False)
+        )
+        analytics_database = browser_database.set(database="scc_b4_analytics")
+        env["SCC_B4_TEST_DATABASE_URL"] = analytics_database.render_as_string(hide_password=False)
+        env["SCC_B4_TEST_PRIVATE_CLUSTER"] = "b4-private-cluster"
         env["SCC_SESSION_SECRET"] = secrets.token_urlsafe(48)
-        run([sys.executable, "-m", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"])
+        for database in (analytics_database, browser_database):
+            env["SCC_DATABASE_URL"] = database.render_as_string(hide_password=False)
+            run([sys.executable, "-m", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"])
+        run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-c",
+                "backend/pyproject.toml",
+                "tests/integration/analytics",
+                "-q",
+            ]
+        )
         env.update(B3_API_TARGET=f"http://127.0.0.1:{api_port}", B3_REAL_API="1")
         server_log = (directory / "api.log").open("w+")
         api = subprocess.Popen(
@@ -148,7 +165,7 @@ def main():
                     {
                         "result": "passed",
                         "transport": (
-                            "Chromium -> Vite proxy -> real A2/A3/B1/B2 HTTP API -> private "
+                            "Chromium -> Vite proxy -> real A2/A3/B1/B2/B4 HTTP API -> private "
                             "PostgreSQL -> singleton worker; Syncthing adapter doubles"
                         ),
                         "syncthing_live": False,

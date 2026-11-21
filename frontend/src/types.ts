@@ -104,12 +104,28 @@ export interface Metrics {
 export interface AnalyticsSummary {
   from: string;
   to: string;
+  node_id: string | null;
+  source: Execution["source"] | null;
   commands: Metrics;
-  api_checks: {
-    successful_checks: number;
-    total_checks: number;
-    success_ratio: number | null;
-  };
+  api_checks: ApiMetrics;
+  daily: {
+    date: string;
+    commands: Metrics;
+    api_checks: ApiMetrics;
+  }[];
+}
+
+export interface ApiMetrics {
+  successful_checks: number;
+  total_checks: number;
+  success_ratio: number | null;
+}
+
+export interface AnalyticsQuery {
+  from: string;
+  to: string;
+  node_id?: string;
+  source?: Execution["source"];
 }
 
 export interface Page<T> {
@@ -143,7 +159,7 @@ export interface Provider {
   listExecutions(query?: ExecutionQuery): Promise<Page<Execution>>;
   listEvents(query?: EventQuery): Promise<Page<SyncEvent>>;
   getExecution(id: string): Promise<Execution>;
-  analytics(): Promise<AnalyticsSummary>;
+  analytics(query: AnalyticsQuery): Promise<AnalyticsSummary>;
   resume(folderId: string): Promise<Execution>;
 }
 

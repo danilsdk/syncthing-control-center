@@ -118,6 +118,13 @@ button:disabled { cursor: not-allowed; }
 .history-sections .button[aria-pressed="true"] { border-color: #4d7c82; color: var(--cyan); background: #1b3545; }
 .history-filters .button { justify-self: start; }
 .history-table { width: 100%; }
+.analytics-period { margin-bottom: 12px; }
+.analytics-card small { display: block; margin-top: 6px; }
+.analytics-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.analytics-daily { padding-top: 14px; }
+.analytics-table table { min-width: 0; table-layout: fixed; }
+.analytics-table tbody th { border-top: 1px solid var(--line); vertical-align: top; }
+.analytics-table th, .analytics-table td { overflow-wrap: anywhere; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 680px; }
 th { text-align: left; font-weight: 500; color: var(--muted); padding: 16px 12px 14px 0; }
 td { padding: 16px 12px 16px 0; border-top: 1px solid var(--line); vertical-align: top; }

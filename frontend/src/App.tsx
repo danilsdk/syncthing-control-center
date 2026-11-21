@@ -3,7 +3,8 @@ import { MockProvider } from "./mock";
 import { ApiProvider, isProviderError } from "./provider";
 import type { Folder, Provider, Session } from "./types";
 import { ErrorNotice, ResourceNotice, StateCard, useResource } from "./ui";
-import { Analytics, Folders, History, Overview, Rules } from "./screens";
+import { Analytics } from "./analytics";
+import { Folders, History, Overview, Rules } from "./screens";
 
 export type View = "overview" | "folders" | "rules" | "history" | "analytics";
 const navItems: { id: View; label: string; icon: string }[] = [
@@ -444,6 +445,7 @@ function Workspace({
           {view === "analytics" && (
             <Analytics
               provider={provider}
+              nodes={nodes.data ?? []}
               revision={revision}
               onFailure={onFailure}
             />
