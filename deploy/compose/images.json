@@ -19,6 +19,20 @@
       "digest": "sha256:2b71da7c0d0a91a6ae5285ad079226fecc0a365d08b27720e1f7037b018f7546",
       "platform": "linux/amd64",
       "platform_digest": "sha256:c28e86f5173bacc429aef92af915b5c4fac56e1a9dcd3875855fd51f664d0414"
+    },
+    {
+      "tag": "node:22-bookworm-slim",
+      "digest": "sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee",
+      "platform": "linux/amd64",
+      "platform_digest": "sha256:47725aca53d3295ec2d3be8f62726599b3033cc262edc2c7e429909b3ac599fc",
+      "verified_on": "2026-11-22"
+    },
+    {
+      "tag": "nginx:1.30.7-alpine",
+      "digest": "sha256:caf4e1e032a20f9c3c5e28fc7f25ffd768ad8677b4975c54193075997b3a97e3",
+      "platform": "linux/amd64",
+      "platform_digest": "sha256:4d1d4ce08432dc7dfe4af762cb224ce6b5273ae878f41e020ea2425d02ea91a4",
+      "verified_on": "2026-11-22"
     }
   ]
 }

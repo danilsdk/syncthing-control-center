@@ -4,8 +4,10 @@ import argparse
 import http.cookiejar
 import importlib.util
 import json
+import re
 import secrets
-import socket
+import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -14,7 +16,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from check_transfer import Fixture, TransferError, verify
+from check_transfer import SHARED, Fixture, TransferError, check_config, verify
+from check_worker import verify_worker, window
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "backend"))
@@ -112,17 +115,47 @@ class Api:
         raise tools.StackError("Readiness deadline exceeded")
 
 
+def verify_browser(stack, fixture, folder_id, password, passed):
+    node = shutil.which("node")
+    require(node is not None, "Install Node and the pinned frontend browser dependencies")
+    original = fixture.probe("snapshot")
+    check_config(original, original, False)
+    stack.compose("up", "-d", "--wait", "--wait-timeout", "30", "worker", timeout=45)
+    options = {
+        "origin": stack.ui_url,
+        "password": password,
+        "folderId": folder_id,
+        "nodeId": fixture.ids[0],
+        "pause": window(True),
+        "resume": window(False),
+    }
+    result = subprocess.run(
+        [node, str(ROOT / "tests/e2e/system/compose_browser.cjs")],
+        input=json.dumps(options).encode(),
+        capture_output=True,
+        cwd=ROOT,
+        timeout=150,
+        creationflags=tools.HIDDEN,
+    )
+    if result.returncode:
+        diagnostics = result.stderr.decode(errors="replace").strip()
+        if re.fullmatch(r"Browser scenario failed at [a-z_]+ \([A-Za-z]+\)", diagnostics):
+            raise tools.StackError(diagnostics)
+        raise tools.StackError("Browser could not start or complete the Compose scenario")
+    check_config(original, fixture.probe("snapshot"), False)
+    passed("A44b_chromium_same_origin_real_rule_history_and_logout", **json.loads(result.stdout))
+
+
 def run(args, report):
     project = args.project or "scc-a4-test-" + uuid4().hex[:12]
     require(project.startswith("scc-a4-test-"), "Core check requires a test project")
     report["project"] = project
     if args.project:
-        port = tools.load_state(project)["port"]
+        state = tools.load_state(project)
+        port, ui_port = state["port"], state["ui_port"]
     else:
-        with socket.socket() as probe:
-            probe.bind(("127.0.0.1", 0))
-            port = probe.getsockname()[1]
-    tools.prepare(project, port)
+        port, ui_port = tools.free_test_ports()
+    tools.prepare(project, port, ui_port)
     stack = tools.Stack(project, docker=args.docker, context=args.context)
     # Short intervals only in this disposable project; ordinary Compose keeps 15s/30s.
     stack.env.update(SCC_RECONCILIATION_INTERVAL_SECONDS="1", SCC_OBSERVATION_INTERVAL_SECONDS="1")
@@ -175,6 +208,12 @@ def run(args, report):
             .strip()
         )
         passed("pinned_backend_image_built")
+        report["ui_image_id"] = (
+            stack.run("image", "inspect", f"scc-a4-ui:{project}", "--format", "{{.Id}}")
+            .stdout.decode()
+            .strip()
+        )
+        passed("A44b_pinned_production_ui_image_built")
         started = True
         report["phase"] = "core_startup"
         stack.up(build=False, include_worker=False)
@@ -315,10 +354,11 @@ def run(args, report):
         headers = api.login(password)
         passed("explicit_bootstrap_cannot_overwrite_administrator")
 
-        from check_worker import verify_worker
-
         verify_worker(stack, api, ids, headers, passed, report)
+        report["phase"] = "A44b_browser"
+        verify_browser(stack, Fixture(stack, ids), folders[0][SHARED], password, passed)
         inventory = stack.assert_owned()
+        published = {"api": "8000/tcp", "ui": "8080/tcp"}
         for container in inventory["container"]:
             configured = container["HostConfig"].get("PortBindings") or {}
             effective = container["NetworkSettings"].get("Ports") or {}
@@ -331,13 +371,26 @@ def run(args, report):
                 not any(value in "\n".join(container["Config"]["Env"]) for value in forbidden),
                 "A private value is in Docker container configuration",
             )
-            if container["Config"]["Labels"]["com.docker.compose.service"] != "api":
+            service = container["Config"]["Labels"]["com.docker.compose.service"]
+            if service in published:
+                require(
+                    {port for port, binding in effective.items() if binding}
+                    == {published[service]},
+                    "Unexpected published ports for API or UI",
+                )
+            else:
                 require(
                     not configured and not any(effective.values()),
                     "Private service has a host port",
                 )
-            else:
-                require(bool(effective.get("8000/tcp")), "API host port was not published")
+            if service == "ui":
+                require(
+                    all(
+                        mount["Type"] == "tmpfs" and mount["Destination"] == "/tmp"
+                        for mount in container["Mounts"]
+                    ),
+                    "UI has an unexpected mount",
+                )
         logs = stack.compose("logs", "--no-color", timeout=30).stdout
         require(
             not any(value.encode() in logs for value in [*forbidden, *api.tokens]),
@@ -390,7 +443,7 @@ def main():
     parser.add_argument("--context")
     parser.add_argument("--project", help="Existing owned test runtime prepared by the CI runner")
     args = parser.parse_args()
-    report = {"stage": "A4.3", "started_at": utc(), "result": "failed", "checks": []}
+    report = {"stage": "A4.4b", "started_at": utc(), "result": "failed", "checks": []}
     try:
         run(args, report)
     except Exception as error:

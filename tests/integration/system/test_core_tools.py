@@ -31,6 +31,24 @@ def test_prepare_reuses_settings_and_refuses_a_different_port(stack_tools):
     assert before == {path.name: path.read_bytes() for path in (directory / "private").iterdir()}
     with pytest.raises(stack_tools.StackError):
         stack_tools.prepare(first["project"], 18001)
+    with pytest.raises(stack_tools.StackError):
+        stack_tools.prepare(first["project"], 18000, 18001)
+
+
+def test_upgradable_runtime_keeps_its_api_port_and_owner(stack_tools):
+    project = "scc-a4-test-12345678"
+    state = stack_tools.prepare(project, 8080)
+    assert state["ui_port"] == 8081
+    marker = stack_tools.project_directory(project) / "state.json"
+    marker.write_text(json.dumps({key: value for key, value in state.items() if key != "ui_port"}))
+    assert stack_tools.load_state(project) == state
+    assert stack_tools.prepare(project, 8080) == state
+
+
+def test_ui_and_api_cannot_share_a_published_port(stack_tools):
+    with pytest.raises(stack_tools.StackError):
+        stack_tools.prepare("scc-a4-dev", 8000, 8000)
+    assert not list(stack_tools.RUNTIME.iterdir())
 
 
 def test_private_settings_have_portable_lf_bytes(stack_tools):

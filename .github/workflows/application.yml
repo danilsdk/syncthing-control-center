@@ -38,6 +38,15 @@ jobs:
           cache-dependency-path: backend/requirements-dev.txt
       - name: Install locked dependencies
         run: python -m pip install -r backend/requirements-dev.txt -e './backend[dev]'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Install locked browser test dependencies and Chromium
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          node node_modules/playwright/cli.js install --with-deps chromium
       - name: Check application and real test services
         run: python scripts/check_application.py run --work-dir "$RUNNER_TEMP/scc-application-private" --report-dir "$RUNNER_TEMP/scc-application-reports"
       - name: Cleanup owned resources after success, failure or cancellation

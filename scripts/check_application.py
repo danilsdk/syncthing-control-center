@@ -96,17 +96,23 @@ def validate_core(value):
         "A43_lock_loss_inside_A3_blocks_HTTP_SQL_commit_and_B2",
         "A43_stop_inside_A3_is_graceful_and_blocks_new_operations",
         "A43_recovery_history_and_four_folder_configuration_restored",
+        "A44b_pinned_production_ui_image_built",
+        "A44b_chromium_same_origin_real_rule_history_and_logout",
     }
     names = [check["name"] for check in value["checks"]]
     if (
         value["result"] != "passed"
-        or len(names) < 20
+        or len(names) < 22
         or len(set(names)) != len(names)
         or not required.issubset(names)
         or value.get("transfer", {}).get("restoration", {}).get("result") != "passed"
     ):
         raise CheckFailed("Container core scenario did not pass")
-    return {"checks": len(names), "backend_image_id": value["backend_image_id"]}
+    return {
+        "checks": len(names),
+        "backend_image_id": value["backend_image_id"],
+        "ui_image_id": value["ui_image_id"],
+    }
 
 
 def prepare(work, reports, docker=None, context=None):
@@ -368,7 +374,7 @@ class Runner:
 
     def core(self):
         project = self.state["core_project"]
-        core_state = stack_tools.prepare(project, free_port())
+        core_state = stack_tools.prepare(project, *stack_tools.free_test_ports())
         self.state["core_owner"] = core_state["owner"]
         write_json(self.work / "owner.json", self.state)
         args = [
@@ -461,7 +467,7 @@ def main():
         raise CheckFailed("Application checks require Python 3.12")
     state = prepare(args.work_dir, args.report_dir, args.docker, args.context)
     runner = Runner(state)
-    summary = {"stage": "A4.4a", "result": "failed", "started_at": utc(), "checks": []}
+    summary = {"stage": "A4.4b", "result": "failed", "started_at": utc(), "checks": []}
     try:
         source = runner.command(
             ["git", "-c", f"safe.directory={ROOT.as_posix()}", "rev-parse", "HEAD"]
@@ -492,6 +498,10 @@ def main():
             json.dumps(summary["source_sha256"], sort_keys=True).encode()
         ).hexdigest()
         summary["python"] = sys.version.split()[0]
+        # Preserve live browser evidence even when later static checks fail.
+        summary["phase"] = "core"
+        print("RUN: core", flush=True)
+        summary["checks"].append({"name": "core", "result": "passed", **runner.core()})
         for name, command in [
             (
                 "ruff",
@@ -524,7 +534,7 @@ def main():
             print("RUN: " + name, flush=True)
             runner.command(command, static_output=True)
             summary["checks"].append({"name": name, "result": "passed"})
-        for name in ("offline", "postgres", "core"):
+        for name in ("offline", "postgres"):
             summary["phase"] = name
             print("RUN: " + name, flush=True)
             if name == "offline":

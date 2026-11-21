@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -17,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT / "deploy/compose/runtime"
 HIDDEN = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 PROJECT = re.compile(r"scc-a4-(?:dev|test-[a-z0-9]{8,20})")
+DEFAULT_UI_PORT = 8080
 
 
 class StackError(Exception):
@@ -49,15 +51,28 @@ def project_directory(project):
     return directory
 
 
-def prepare(project, port):
+def free_test_ports():
+    with socket.socket() as api, socket.socket() as ui:
+        for listener in (api, ui):
+            listener.bind(("127.0.0.1", 0))
+        return api.getsockname()[1], ui.getsockname()[1]
+
+
+def default_ui_port(api_port):
+    return 8081 if api_port == DEFAULT_UI_PORT else DEFAULT_UI_PORT
+
+
+def prepare(project, port, ui_port=None):
     directory = project_directory(project)
-    if not 1024 <= port <= 65535:
-        raise StackError("Invalid loopback API port")
     if directory.exists():
         state = load_state(project)
-        if state["port"] != port:
-            raise StackError("Existing project uses another API port")
+        if state["port"] != port or (ui_port is not None and state["ui_port"] != ui_port):
+            raise StackError("Existing project uses different API or UI ports")
         return state
+    if ui_port is None:
+        ui_port = default_ui_port(port)
+    if not all(1024 <= value <= 65535 for value in (port, ui_port)) or port == ui_port:
+        raise StackError("API and UI require distinct loopback ports between 1024 and 65535")
     directory.mkdir(parents=True, mode=0o700)
     private = directory / "private"
     private.mkdir(mode=0o700)
@@ -83,7 +98,7 @@ def prepare(project, port):
         path.write_text(value + "\n", encoding="utf-8", newline="\n")
         # Parent is private (0700); mounted files must be readable by nonroot container UIDs.
         path.chmod(0o444)
-    state = {**owner, "root": str(ROOT.resolve()), "port": port}
+    state = {**owner, "root": str(ROOT.resolve()), "port": port, "ui_port": ui_port}
     (directory / "state.json").write_text(json.dumps(state), encoding="utf-8")
     return state
 
@@ -106,6 +121,8 @@ def load_state(project):
         key: state[key] for key in ("schema", "project", "owner")
     }:
         raise StackError("Private owner marker differs")
+    # Older A4 runtimes record only the API port. Reuse the same volumes and keys.
+    state.setdefault("ui_port", default_ui_port(state["port"]))
     return state
 
 
@@ -129,6 +146,7 @@ class Stack:
             SCC_OWNER=self.state["owner"],
             SCC_PRIVATE_DIR=(self.directory / "private").resolve().as_posix(),
             SCC_API_PORT=str(self.state["port"]),
+            SCC_UI_PORT=str(self.state["ui_port"]),
         )
         self.compose_args = [
             "compose",
@@ -209,8 +227,8 @@ class Stack:
 
     def build(self):
         self.preflight()
-        print("Building the pinned backend image", flush=True)
-        result = self.compose("build", "api", timeout=600)
+        print("Building the pinned backend and UI images", flush=True)
+        result = self.compose("build", "api", "ui", timeout=600)
         (self.directory / "build.log").write_bytes(result.stdout + result.stderr)
 
     def up(self, *, build=True, include_worker=True):
@@ -219,25 +237,33 @@ class Stack:
             self.build()
         self.assert_owned()
         self.compose("run", "--rm", "--no-deps", "-T", "init-demo", timeout=90)
-        services = ("api", "worker") if include_worker else ("api",)
+        services = ("ui", "worker") if include_worker else ("ui",)
         self.compose("up", "-d", "--wait", "--wait-timeout", "150", *services, timeout=180)
+        self.wait_ready("port", "API")
+        self.wait_ready("ui_port", "UI proxy")
+        print(f"Owned UI is ready at {self.ui_url}", flush=True)
+
+    @property
+    def ui_url(self):
+        return f"http://127.0.0.1:{self.state['ui_port']}"
+
+    def wait_ready(self, port_key, service):
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         deadline = time.monotonic() + 20
         while True:
             try:
                 with opener.open(
-                    f"http://127.0.0.1:{self.state['port']}/health/ready", timeout=2
+                    f"http://127.0.0.1:{self.state[port_key]}/health/ready", timeout=2
                 ) as response:
                     if response.status == 200 and json.loads(response.read(4097)) == {
                         "status": "ok"
                     }:
-                        break
+                        return
             except (OSError, ValueError):
                 pass
             if time.monotonic() >= deadline:
-                raise StackError("Published loopback API did not become ready")
+                raise StackError(f"Published loopback {service} did not become ready")
             time.sleep(0.2)
-        print(f"Owned core is ready at http://127.0.0.1:{self.state['port']}", flush=True)
 
     def down(self, *, delete_data=False):
         self.assert_owned()
@@ -278,6 +304,7 @@ def main():
     )
     parser.add_argument("--project", default="scc-a4-dev")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--ui-port", type=int)
     parser.add_argument("--docker")
     parser.add_argument("--context")
     parser.add_argument("--login", default="admin")
@@ -285,7 +312,7 @@ def main():
     parser.add_argument("--confirm-project")
     args = parser.parse_args()
     if args.command == "prepare":
-        prepare(args.project, args.port)
+        prepare(args.project, args.port, args.ui_port)
         print("Owned private settings prepared; secrets were not printed")
         return
     stack = Stack(args.project, docker=args.docker, context=args.context)

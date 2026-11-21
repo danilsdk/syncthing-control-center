@@ -1,15 +1,12 @@
-# Проверки приложения A4.4a
+# Проверки приложения A4.4b
 
-На 18.11.2026 A4 обновляется от принятого `main`, PR #7 остаётся draft.
-H0 validate теперь доступен и проверяется отдельно. Этот workflow по-прежнему
-проверяет ранний amd64 core, общий worker/UI и ARM64 ещё не добавлены.
-При актуализации обнаружено: старый `format --check` отклоняет пять уже принятых
+PR #7 остаётся draft. Workflow проверяет общий worker и production UI на amd64.
+H0 validate запускается отдельно. `format --check` отклоняет пять уже принятых
 файлов B (`tests/integration/executions/conftest.py`,
 `tests/integration/rules/conftest.py`, `tests/integration/rules/test_rules_api.py`,
 `tests/unit/reconciliation/test_decisions.py`, `tests/unit/scheduling/test_engine.py`).
-Lint проходит. Проверка формата сохранена без исключений; исходники B не меняются
-в подготовке A4. До устранения этого расхождения application-core не дойдёт до
-контейнерных испытаний. Старые зелёные результаты ниже не подтверждают новый head.
+Format gate сохранён без исключений. Compose и Chromium запускаются первыми,
+поэтому их отчёт доступен и при последующем сбое форматирования.
 
 [application.yml](../../.github/workflows/application.yml) проверяет готовое ядро
 A0–A3/A4.2 на GitHub-hosted ubuntu-24.04 с Python 3.12.14. События — pull_request,
@@ -35,25 +32,28 @@ push в main и workflow_dispatch. Никаких действующих reposit
 Один вход [scripts/check_application.py](../../scripts/check_application.py)
 выполняет последовательно:
 
-1. Ruff check и format --check для backend/app, tests, обоих помощников A4 и image entrypoint.
-2. Проверку OpenAPI/DTO/документированного контракта.
-3. Unit/contract и интеграционные doubles с -m "not postgres", -W error.
-4. Все SQL-тесты shared/auth/registry/collection/rules/executions на новом PostgreSQL 18.6 из
-   закреплённого [образа](../compose/images.json). Шесть отдельных pytest-процессов
-   исключают конфликт одноимённых фикстур A2/A3; ни один набор не исключается.
-5. Настоящий [core-check](../../tests/integration/system/check_core.py): build,
+1. Настоящий [core-check](../../tests/integration/system/check_core.py) включает build,
    новая PG, миграции, API, два Syncthing, bootstrap/login/CSRF, история и restart/down/up,
    передача/пауза/resume по SHA256 и восстановление всех demo folder configs.
    A4.3 добавляет восемь сценариев общего worker: правила B1/B2, второй процесс,
    ручное resume, restart, потеря singleton и остановка внутри A3, восстановление.
-   `validate_core` требует все 20 сценариев; старый отчёт ядра не подтверждает worker.
+   A4.4b добавляет сборку B3 и настоящий Chromium-сценарий через nginx. Проверяются
+   Origin/CSRF, логин, создание и изменение правила, подтверждённая пауза и
+   возобновление, история команд и событий, отключение правила и выход.
+   `validate_core` требует обе проверки A4.4b и прежние сценарии worker и передачи.
+2. Ruff check и format --check для backend/app, tests, обоих помощников A4 и image entrypoint.
+3. Проверку OpenAPI/DTO/документированного контракта.
+4. Unit/contract и интеграционные doubles с `-m "not postgres" -W error`.
+5. Все SQL-тесты shared/auth/registry/collection/rules/executions на новом PostgreSQL 18.6 из
+   закреплённого [образа](../compose/images.json). Шесть отдельных pytest-процессов
+   исключают конфликт одноимённых фикстур A2/A3.
 
 Принятые SQL-тесты B1/B2 выбирают частную БД через защищённую fixture, но не имеют
 маркера `postgres`. Runner запускает их полностью отдельными процессами в своей
 `scc_a03_tests`; они не смешиваются с offline-фазой и не теряются по marker.
 22.11 отдельный реальный SQL-прогон дал 228 тестов без skips: 99 + 7 + 34 + 69 + 6 + 13.
-Общий pipeline по-прежнему блокируется форматированием пяти принятых файлов B;
-их список ниже сохранён. Независимые SQL/core-результаты не означают зелёный pipeline.
+Format gate по-прежнему блокирует SQL-фазу общего pipeline. Этот SQL-результат
+относится к отдельному прогону A4.3.
 
 PostgreSQL для SQL-тестов получает случайный пароль через file mount, отдельные
 три БД, tmpfs для данных и случайный host-порт только на 127.0.0.1. Рабочие SCC/PG/
@@ -69,7 +69,9 @@ code, отсутствие отчёта, пропуски и неуспешна�
 ## Локальный запуск
 
 Нужны Python 3.12, зависимости backend/requirements-dev.txt с установленным
-backend dev-extra, Git и работающий Linux Docker Engine с Compose/Buildx.
+backend dev-extra, Git, Node 22, работающий Linux Docker Engine с Compose/Buildx,
+зависимости B3 из `npm ci` и `npx playwright install chromium` в `frontend`.
+Для Linux используйте `npx playwright install --with-deps chromium`.
 Команды выполняются из корня checkout. Приватная папка и папка отчётов должны быть
 новыми, отдельными и расположенными вне дерева исходников; прежние не перезаписываются.
 
@@ -113,13 +115,14 @@ inspect, stdout/stderr дочерних команд, credentials, конфиг�
 Core diagnostics.log не включён в artifact allowlist.
 
 Summary содержит SHA checkout, хеши фактических Git-visible исходников, Python,
-отдельные результаты SQL-групп/версии PG, ссылку на backend image ID и cleanup.
+отдельные результаты SQL-групп/версии PG, backend/UI image IDs и cleanup.
+Core report также содержит версию Chromium и ID двух подтверждённых попыток.
 Незакоммиченная локальная проверка отличается от проверки точного SHA в GitHub;
 сравнивать нужно хеши исходников и состояние рабочей папки. CI на GitHub считается
 пройденным только после фактического workflow run, а не по наличию YAML.
 
 Actions закреплены полными SHA официальных релизов checkout 7.0.1, setup-python
-7.0.0, upload-artifact 7.0.2. persist-credentials выключен, permissions — contents:
+7.0.0, setup-node 7.1.0 и upload-artifact 7.0.2. persist-credentials выключен, permissions — contents:
 read, pull_request_target не используется. Actionlint 1.7.12 закреплён версией
 и SHA256 архива; необязательные shellcheck/pyflakes явно отключены.
 Официальный архив скачивается через GitHub release-assets API по ID 384924896
@@ -132,9 +135,9 @@ read, pull_request_target не используется. Actionlint 1.7.12 за�
 - [События workflow](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 - [Фиксация Actions полным SHA](https://docs.github.com/en/actions/reference/security/secure-use).
 - [actions/checkout](https://github.com/actions/checkout), [setup-python](https://github.com/actions/setup-python).
+- [setup-node 7.1.0](https://github.com/actions/setup-node/releases/tag/v7.1.0).
 - [upload-artifact и retention](https://github.com/actions/upload-artifact).
 - [Actionlint 1.7.12 и контрольные суммы](https://github.com/rhysd/actionlint/releases/tag/v1.7.12).
 
 Результаты текущего этапа — в [журнале A4](../../docs/agent-log/a/A4.md).
-Постоянный worker, B1/B2/B3, UI, передача файлов и pause/resume по правилам,
-полный системный T-11 и VPS остаются за пределами A4.4a.
+Полный системный T-11, ARM64/Mac и VPS входят в последующие этапы A4.
