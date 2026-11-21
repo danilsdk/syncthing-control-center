@@ -6,7 +6,7 @@ import ssl
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from threading import RLock, Timer
+from threading import Event, RLock, Timer
 from typing import Protocol
 from urllib.parse import urlsplit
 
@@ -86,7 +86,18 @@ class HttpTransport:
                 )
             self._active[connection] = abort
         deadline = time.monotonic() + timeout
-        timer = Timer(timeout, abort)
+        expired = Event()
+
+        def expire():
+            # Record why I/O is interrupted before waking the request thread.
+            # A coarse monotonic clock can still read just before the deadline.
+            expired.set()
+            abort()
+
+        def deadline_expired():
+            return expired.is_set() or time.monotonic() >= deadline
+
+        timer = Timer(timeout, expire)
         timer.daemon = True
         timer.start()
         try:
@@ -102,7 +113,7 @@ class HttpTransport:
                         operation=operation,
                         write_outcome="not_applied" if write else None,
                     )
-                if time.monotonic() >= deadline:
+                if deadline_expired():
                     raise TimeoutError
                 if wire_socket is None:
                     raise OSError
@@ -120,6 +131,8 @@ class HttpTransport:
                     },
                 )
             with connection.getresponse() as response:
+                if deadline_expired():
+                    raise TimeoutError
                 if response.status in {401, 403, 404}:
                     raise AdapterError(
                         "not_found" if response.status == 404 else "auth_error",
@@ -136,7 +149,7 @@ class HttpTransport:
                 chunks, size = [], 0
                 while not response.isclosed():
                     remaining = deadline - time.monotonic()
-                    if remaining <= 0:
+                    if expired.is_set() or remaining <= 0:
                         raise TimeoutError
                     wire_socket.settimeout(remaining)
                     chunk = response.read1(min(65536, MAX_RESPONSE_BYTES + 1 - size))
@@ -146,7 +159,7 @@ class HttpTransport:
                     if size > MAX_RESPONSE_BYTES:
                         raise AdapterError("invalid_response")
                     chunks.append(chunk)
-                if time.monotonic() >= deadline:
+                if deadline_expired():
                     raise TimeoutError
                 if response.length not in {None, 0}:
                     raise AdapterError("invalid_response")
@@ -163,11 +176,11 @@ class HttpTransport:
                 if isinstance(error, http.client.RemoteDisconnected)
                 else "invalid_response"
             )
-            if time.monotonic() >= deadline:
+            if deadline_expired():
                 code = "timeout"
             raise AdapterError(code, operation=operation) from None
         except (OSError, http.client.HTTPException, UnicodeError, ValueError):
-            code = "timeout" if time.monotonic() >= deadline else "unreachable"
+            code = "timeout" if deadline_expired() else "unreachable"
             raise AdapterError(code, operation=operation) from None
         finally:
             timer.cancel()

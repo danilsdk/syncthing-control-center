@@ -452,3 +452,188 @@ def test_owner_close_cleans_up_a_pending_response_by_its_deadline():
             release.set()
             transport.close()
             thread.join(3)
+
+
+@pytest.fixture
+def controlled_deadline(monkeypatch):
+    """Let the watchdog fire while a coarse monotonic clock is still one tick behind."""
+    now, callbacks, cancelled = [0.0], [], []
+
+    class Watchdog:
+        def __init__(self, interval, callback):
+            assert interval == 5
+            callbacks.append(callback)
+
+        def start(self):
+            pass
+
+        def cancel(self):
+            cancelled.append(True)
+
+    monkeypatch.setattr(transport_module, "Timer", Watchdog)
+    monkeypatch.setattr(transport_module, "time", SimpleNamespace(monotonic=lambda: now[0]))
+
+    def expire():
+        now[0] = 4.99
+        assert len(callbacks) == 1
+        callbacks[0]()
+
+    return SimpleNamespace(expire=expire, cancelled=cancelled)
+
+
+@contextmanager
+def pending_request(transport, method):
+    outcomes = []
+
+    def request():
+        try:
+            outcomes.append(
+                transport.request(
+                    method,
+                    "/rest/config/folders/demo",
+                    body=b'{"paused":true}' if method == "PATCH" else None,
+                    timeout=5,
+                )
+            )
+        except Exception as error:
+            outcomes.append(error)
+
+    thread = Thread(target=request, daemon=True)
+    thread.start()
+    try:
+        yield thread, outcomes
+    finally:
+        transport.close()
+        thread.join(3)
+        assert not thread.is_alive()
+
+
+@pytest.mark.parametrize(
+    "method,phase", [("GET", "headers"), ("PATCH", "headers"), ("GET", "body")]
+)
+@pytest.mark.parametrize("interrupt", ["watchdog", "owner"])
+def test_interrupt_reason_is_preserved_before_clock_reaches_deadline(
+    monkeypatch, controlled_deadline, method, phase, interrupt
+):
+    entered, server_entered, release_io, release_server = Event(), Event(), Event(), Event()
+    target = http.client.HTTPConnection if phase == "headers" else http.client.HTTPResponse
+    name = "getresponse" if phase == "headers" else "read1"
+    original = getattr(target, name)
+
+    def gated_io(client, *args, **kwargs):
+        entered.set()
+        assert release_io.wait(3)
+        return original(client, *args, **kwargs)
+
+    def held_response(handler):
+        server_entered.set()
+        try:
+            if phase == "body":
+                handler.send_response(200)
+                handler.send_header("Content-Length", "200")
+                handler.end_headers()
+            release_server.wait(3)
+            handler.close_connection = True
+        except OSError:
+            pass
+
+    monkeypatch.setattr(target, name, gated_io)
+    with server(held_response) as (port, calls):
+        transport = HttpTransport(connection(port))
+        try:
+            with pending_request(transport, method) as (thread, outcomes):
+                try:
+                    assert entered.wait(2)
+                    assert server_entered.wait(2)
+                    if interrupt == "watchdog":
+                        controlled_deadline.expire()
+                    else:
+                        transport.close()
+                    # Winsock shutdown need not wake a pending read immediately.
+                    # Close the peer explicitly; only the interruption reason differs.
+                    release_server.set()
+                    release_io.set()
+                    thread.join(2)
+                    assert not thread.is_alive()
+                    assert len(outcomes) == 1 and isinstance(outcomes[0], AdapterError)
+                    if interrupt == "watchdog":
+                        assert outcomes[0].code == "timeout"
+                    else:
+                        assert outcomes[0].code in {"unreachable", "invalid_response"}
+                    assert outcomes[0].write_outcome == ("unknown" if method == "PATCH" else None)
+                    assert len(calls) == 1 and transport._active == {}
+                    assert controlled_deadline.cancelled == [True]
+                finally:
+                    release_io.set()
+        finally:
+            release_server.set()
+
+
+@pytest.mark.parametrize("method", ["GET", "PATCH"])
+@pytest.mark.parametrize("expired", [True, False])
+def test_watchdog_expiry_cannot_return_a_completed_body_or_patch_ack(
+    monkeypatch, controlled_deadline, method, expired
+):
+    entered, release = Event(), Event()
+    target = http.client.HTTPResponse if method == "GET" else http.client.HTTPConnection
+    name = "read1" if method == "GET" else "getresponse"
+    original = getattr(target, name)
+
+    def completed_io(client, *args, **kwargs):
+        result = original(client, *args, **kwargs)
+        entered.set()
+        assert release.wait(3)
+        return result
+
+    monkeypatch.setattr(target, name, completed_io)
+    with server(lambda h: respond(h, 200, b"{}")) as (port, calls):
+        transport = HttpTransport(connection(port))
+        with pending_request(transport, method) as (thread, outcomes):
+            try:
+                assert entered.wait(2)
+                if expired:
+                    controlled_deadline.expire()
+                release.set()
+                thread.join(2)
+                assert not thread.is_alive() and len(outcomes) == 1
+                if expired:
+                    assert isinstance(outcomes[0], AdapterError)
+                    assert outcomes[0].code == "timeout"
+                    assert outcomes[0].write_outcome == ("unknown" if method == "PATCH" else None)
+                else:
+                    assert isinstance(outcomes[0], transport_module.Response)
+                    assert outcomes[0].body == (b"{}" if method == "GET" else b"")
+                assert len(calls) == 1 and transport._active == {}
+                assert controlled_deadline.cancelled == [True]
+            finally:
+                release.set()
+
+
+@pytest.mark.parametrize("method", ["GET", "PATCH"])
+def test_watchdog_during_connect_prevents_sending_before_next_clock_tick(
+    monkeypatch, controlled_deadline, method
+):
+    original_connect = http.client.HTTPConnection.connect
+
+    def expire_during_connect(client):
+        original_connect(client)
+        # The request thread has not published wire_socket to the watchdog yet.
+        controlled_deadline.expire()
+
+    monkeypatch.setattr(http.client.HTTPConnection, "connect", expire_during_connect)
+    with server(lambda h: respond(h, 200, b"{}")) as (port, calls):
+        transport = HttpTransport(connection(port))
+        try:
+            with pytest.raises(AdapterError) as caught:
+                transport.request(
+                    method,
+                    "/rest/config/folders/demo",
+                    body=b'{"paused":true}' if method == "PATCH" else None,
+                    timeout=5,
+                )
+            assert caught.value.code == "timeout"
+            assert caught.value.write_outcome == ("unknown" if method == "PATCH" else None)
+            assert calls == [] and transport._active == {}
+            assert controlled_deadline.cancelled == [True]
+        finally:
+            transport.close()
