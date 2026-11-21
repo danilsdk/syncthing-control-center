@@ -142,3 +142,20 @@ def test_failed_private_removal_cannot_report_success(ci, tmp_path, monkeypatch)
     with pytest.raises(PermissionError):
         runner.cleanup(remove_private=True)
     assert work.exists() and not (reports / "cleanup.json").exists()
+
+
+def test_old_core_only_report_cannot_confirm_the_integrated_worker(ci):
+    names = [
+        "T02_real_file_transfer_sha256",
+        "T03_target_paused_new_file_absent_control_transfers",
+        "T04_adapter_resume_file_sha256_and_configuration_restored",
+        *[f"old-core-{index}" for index in range(9)],
+    ]
+    value = {
+        "result": "passed",
+        "checks": [{"name": name} for name in names],
+        "backend_image_id": "sha256:fixture",
+        "transfer": {"restoration": {"result": "passed"}},
+    }
+    with pytest.raises(ci.CheckFailed):
+        ci.validate_core(value)

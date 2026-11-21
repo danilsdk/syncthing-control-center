@@ -16,22 +16,41 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app import __version__
 from app.api.auth import PrivateApiHeadersMiddleware, protected_router, public_router, require_admin
+from app.api.events import router as events_router
+from app.api.executions import router as executions_router
 from app.api.folders import router as folders_router
 from app.api.nodes import router as nodes_router
+from app.api.rules import router as rules_router
 from app.config import Settings
-from app.contracts.dto import Error
+from app.contracts.dto import Error, RuleFields
 from app.contracts.errors import AppError
 from app.contracts.interfaces import AdapterFactory, Clock, SystemClock
 from app.contracts.locks import AdvisoryLocks, LockBusy, LockLost
+from app.contracts.types import mask_to_days, time_to_hhmm
 from app.contracts.worker import WorkerContext, WorkerRuntime
 from app.db import Database, DatabaseNotReady
 from app.registry.admin import AdminStore
 from app.registry.authentication import AdministratorAuth
 from app.registry.resolver import NodeResolver
 from app.registry.service import RegistryService
+from app.scheduling.engine import calculate_desired_paused
 from app.syncthing_adapter import HttpAdapterFactory
 
 logger = logging.getLogger(__name__)
+
+
+def desired_rule_state(rule, now):
+    """Adapt the persisted rule to the accepted B1 calculator."""
+    return calculate_desired_paused(
+        RuleFields(
+            timezone=rule.timezone,
+            days_of_week=mask_to_days(rule.days_mask),
+            start_time=time_to_hhmm(rule.start_time),
+            end_time=time_to_hhmm(rule.end_time),
+            enabled=rule.enabled,
+        ),
+        now,
+    )
 
 
 def _close_resources(db: Database | None, adapters: AdapterFactory | None) -> bool:
@@ -142,6 +161,7 @@ def create_app(
             db,
             current_clock,
             factory,
+            desired_state=desired_rule_state,
         )
     )
     app.state.auth = (
@@ -232,6 +252,11 @@ def create_app(
     protected.include_router(protected_router)
     protected.include_router(nodes_router)
     protected.include_router(folders_router)
+    # Explicit routers remain supported for existing module tests and consumers.
+    defaults = (events_router, rules_router, executions_router)
+    for router in defaults:
+        if all(router is not supplied for supplied in routers):
+            protected.include_router(router)
     for router in routers:
         protected.include_router(router)
     app.include_router(protected)

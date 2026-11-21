@@ -19,6 +19,8 @@ x-backend: &backend
   environment:
     SCC_PROJECT: ${SCC_PROJECT}
     SCC_ALLOWED_ORIGINS: '["http://localhost:${SCC_API_PORT:-8000}","http://127.0.0.1:${SCC_API_PORT:-8000}"]'
+    SCC_RECONCILIATION_INTERVAL_SECONDS: ${SCC_RECONCILIATION_INTERVAL_SECONDS:-15}
+    SCC_OBSERVATION_INTERVAL_SECONDS: ${SCC_OBSERVATION_INTERVAL_SECONDS:-30}
   secrets: [database_password, session_secret, connections, owner]
 
 services:
@@ -96,6 +98,16 @@ services:
       timeout: 5s
       retries: 30
     stop_grace_period: 15s
+
+  worker:
+    <<: *backend
+    command: [worker]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      syncthing-a: {condition: service_healthy}
+      syncthing-b: {condition: service_healthy}
+    restart: 'no'
+    stop_grace_period: 30s
 
 networks:
   private:

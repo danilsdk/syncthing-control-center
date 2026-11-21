@@ -175,7 +175,8 @@ def init_demo():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "mode", choices=("api", "migrate", "admin-create", "collect-once", "init-demo", "probe")
+        "mode",
+        choices=("api", "worker", "migrate", "admin-create", "collect-once", "init-demo", "probe"),
     )
     parser.add_argument("--login", default="admin")
     args = parser.parse_args()
@@ -189,13 +190,16 @@ def main():
         init_demo()
         return
     configuration = settings()
+    if args.mode == "worker":
+        from runtime import worker_main
+
+        raise SystemExit(worker_main(configuration))
     if args.mode == "api":
         import uvicorn
-        from app.api.events import router
         from app.main import create_app
 
         uvicorn.run(
-            create_app(configuration, routers=(router,)),
+            create_app(configuration),
             host="0.0.0.0",
             port=8000,
             workers=1,

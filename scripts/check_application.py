@@ -88,11 +88,19 @@ def validate_core(value):
         "T02_real_file_transfer_sha256",
         "T03_target_paused_new_file_absent_control_transfers",
         "T04_adapter_resume_file_sha256_and_configuration_restored",
+        "A43_protected_routes_B1_projection_and_real_rule_pause",
+        "A43_second_worker_rejected_before_runtime",
+        "A43_rule_pause_positive_control_resume_and_sha256_transfer",
+        "A43_manual_resume_after_disabled_rule_is_observed",
+        "A43_worker_restart_recalculates_current_rule_and_preserves_history",
+        "A43_lock_loss_inside_A3_blocks_HTTP_SQL_commit_and_B2",
+        "A43_stop_inside_A3_is_graceful_and_blocks_new_operations",
+        "A43_recovery_history_and_four_folder_configuration_restored",
     }
     names = [check["name"] for check in value["checks"]]
     if (
         value["result"] != "passed"
-        or len(names) < 12
+        or len(names) < 20
         or len(set(names)) != len(names)
         or not required.issubset(names)
         or value.get("transfer", {}).get("restoration", {}).get("result") != "passed"
@@ -304,10 +312,15 @@ class Runner:
             ("auth", "tests/integration/auth"),
             ("registry", "tests/integration/registry"),
             ("collection", "tests/integration/collection"),
+            ("rules", "tests/integration/rules"),
+            ("executions", "tests/integration/executions"),
         ]:
             # Existing A2/A3 suites have same-named fixtures; isolate their pytest processes.
             output = "postgres-" + name
-            result = self.pytest("postgres", env, paths=[path], name=output)
+            # Accepted B1/B2 SQL tests opt in through their private DB fixture, without
+            # the postgres marker used by A. Run them fully in the same owned cluster.
+            marker = None if name in {"rules", "executions"} else "postgres"
+            result = self.pytest(marker, env, paths=[path], name=output)
             cleaned = self.work / (output + "-sanitized.xml")
             try:
                 groups[name] = junit(self.work / (output + ".xml"), cleaned, [password])
@@ -339,8 +352,7 @@ class Runner:
                 "-c",
                 "backend/pyproject.toml",
                 *(TESTS if paths is None else paths),
-                "-m",
-                marker,
+                *(["-m", marker] if marker is not None else []),
                 "-q",
                 "-W",
                 "error",

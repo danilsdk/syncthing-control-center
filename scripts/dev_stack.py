@@ -213,13 +213,14 @@ class Stack:
         result = self.compose("build", "api", timeout=600)
         (self.directory / "build.log").write_bytes(result.stdout + result.stderr)
 
-    def up(self, *, build=True):
+    def up(self, *, build=True, include_worker=True):
         self.preflight()
         if build:
             self.build()
         self.assert_owned()
         self.compose("run", "--rm", "--no-deps", "-T", "init-demo", timeout=90)
-        self.compose("up", "-d", "--wait", "--wait-timeout", "150", "api", timeout=180)
+        services = ("api", "worker") if include_worker else ("api",)
+        self.compose("up", "-d", "--wait", "--wait-timeout", "150", *services, timeout=180)
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         deadline = time.monotonic() + 20
         while True:

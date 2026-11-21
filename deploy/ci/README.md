@@ -38,12 +38,22 @@ push в main и workflow_dispatch. Никаких действующих reposit
 1. Ruff check и format --check для backend/app, tests, обоих помощников A4 и image entrypoint.
 2. Проверку OpenAPI/DTO/документированного контракта.
 3. Unit/contract и интеграционные doubles с -m "not postgres", -W error.
-4. Все SQL-тесты shared/auth/registry/collection на новом PostgreSQL 18.6 из
-   закреплённого [образа](../compose/images.json). Четыре отдельные pytest-процесса
+4. Все SQL-тесты shared/auth/registry/collection/rules/executions на новом PostgreSQL 18.6 из
+   закреплённого [образа](../compose/images.json). Шесть отдельных pytest-процессов
    исключают конфликт одноимённых фикстур A2/A3; ни один набор не исключается.
 5. Настоящий [core-check](../../tests/integration/system/check_core.py): build,
    новая PG, миграции, API, два Syncthing, bootstrap/login/CSRF, история и restart/down/up,
    передача/пауза/resume по SHA256 и восстановление всех demo folder configs.
+   A4.3 добавляет восемь сценариев общего worker: правила B1/B2, второй процесс,
+   ручное resume, restart, потеря singleton и остановка внутри A3, восстановление.
+   `validate_core` требует все 20 сценариев; старый отчёт ядра не подтверждает worker.
+
+Принятые SQL-тесты B1/B2 выбирают частную БД через защищённую fixture, но не имеют
+маркера `postgres`. Runner запускает их полностью отдельными процессами в своей
+`scc_a03_tests`; они не смешиваются с offline-фазой и не теряются по marker.
+22.11 отдельный реальный SQL-прогон дал 228 тестов без skips: 99 + 7 + 34 + 69 + 6 + 13.
+Общий pipeline по-прежнему блокируется форматированием пяти принятых файлов B;
+их список ниже сохранён. Независимые SQL/core-результаты не означают зелёный pipeline.
 
 PostgreSQL для SQL-тестов получает случайный пароль через file mount, отдельные
 три БД, tmpfs для данных и случайный host-порт только на 127.0.0.1. Рабочие SCC/PG/

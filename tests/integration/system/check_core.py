@@ -69,7 +69,10 @@ class Api:
                 not any(value.encode() in raw for value in self.forbidden),
                 "Private value appeared in a response",
             )
-            require(response.code == expected, "Unexpected HTTP status for " + path)
+            require(
+                response.code == expected,
+                f"Unexpected HTTP status for {path}: expected {expected}, got {response.code}",
+            )
             value = json.loads(raw) if raw else None
             if path.startswith("/api/"):
                 require(response.headers.get("Cache-Control") == "no-store", "Missing no-store")
@@ -121,6 +124,8 @@ def run(args, report):
             port = probe.getsockname()[1]
     tools.prepare(project, port)
     stack = tools.Stack(project, docker=args.docker, context=args.context)
+    # Short intervals only in this disposable project; ordinary Compose keeps 15s/30s.
+    stack.env.update(SCC_RECONCILIATION_INTERVAL_SECONDS="1", SCC_OBSERVATION_INTERVAL_SECONDS="1")
     private = stack.directory / "private"
     connections = json.loads((private / "connections.json").read_text())
     password = secrets.token_urlsafe(32)
@@ -172,7 +177,7 @@ def run(args, report):
         passed("pinned_backend_image_built")
         started = True
         report["phase"] = "core_startup"
-        stack.up(build=False)
+        stack.up(build=False, include_worker=False)
         api.ready()
         for path in ("/api/nodes", "/api/events"):
             error = api.request("GET", path, expected=503)
@@ -276,7 +281,7 @@ def run(args, report):
 
         stack.down()
         require(len(stack.inventory()["volume"]) == 3, "Ordinary down removed persistent volumes")
-        stack.up(build=False)
+        stack.up(build=False, include_worker=False)
         api.ready()
         require(
             mappings() == folders and api.request("GET", "/api/events?limit=100") == before_events,
@@ -307,9 +312,12 @@ def run(args, report):
             input=(password + "\n" + password + "\n").encode(),
         )
         require(duplicate.returncode != 0, "Administrator bootstrap silently overwrote a user")
-        api.login(password)
+        headers = api.login(password)
         passed("explicit_bootstrap_cannot_overwrite_administrator")
 
+        from check_worker import verify_worker
+
+        verify_worker(stack, api, ids, headers, passed, report)
         inventory = stack.assert_owned()
         for container in inventory["container"]:
             configured = container["HostConfig"].get("PortBindings") or {}
@@ -382,7 +390,7 @@ def main():
     parser.add_argument("--context")
     parser.add_argument("--project", help="Existing owned test runtime prepared by the CI runner")
     args = parser.parse_args()
-    report = {"stage": "A4.2b", "started_at": utc(), "result": "failed", "checks": []}
+    report = {"stage": "A4.3", "started_at": utc(), "result": "failed", "checks": []}
     try:
         run(args, report)
     except Exception as error:
