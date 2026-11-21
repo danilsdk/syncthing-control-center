@@ -80,6 +80,7 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
       enabled: true,
     });
 
+    let confirmedExecutionId: string | undefined;
     await expect
       .poll(
         async () => {
@@ -92,24 +93,34 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
               },
             }),
           );
-          return history.items.some(
+          confirmedExecutionId = history.items.find(
             (attempt) =>
               attempt.rule_id === rule.id &&
               attempt.desired_paused &&
               attempt.observed_paused === true &&
               !!attempt.verified_at,
-          );
+          )?.id;
+          return confirmedExecutionId;
         },
         { timeout: 75_000 },
       )
-      .toBe(true);
+      .toBeDefined();
+    if (!confirmedExecutionId) throw new Error("Missing confirmed pause ID");
     await expect.poll(folder, { timeout: 45_000 }).toMatchObject({
       actual_paused: true,
       is_stale: false,
     });
     await page.getByRole("button", { name: "История", exact: true }).click();
+    await page
+      .getByRole("combobox", { name: "Узел", exact: true })
+      .selectOption(nodeId);
+    await page
+      .getByRole("combobox", { name: "Результат", exact: true })
+      .selectOption("applied");
     await expect(
-      page.getByRole("row").filter({ hasText: "Цель: пауза" }).first(),
+      page.getByRole("row").filter({
+        has: page.getByText(confirmedExecutionId.slice(0, 8), { exact: true }),
+      }),
     ).toContainText("Подтверждено");
     await page.getByRole("button", { name: "Аналитика", exact: true }).click();
     await page
