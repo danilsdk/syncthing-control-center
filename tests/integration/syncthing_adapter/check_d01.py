@@ -96,7 +96,7 @@ def run(export=False):
                 "explicit_restart_test",
             )
         }
-        check_live.start_after_owned_stop()
+        bench.start()
         state, node, raw, connection = target()
         for item in state["nodes"]:
             forbidden.extend(
@@ -151,7 +151,7 @@ def run(export=False):
         clients.append(frozen)
         before = frozen.read_system()
         stopped.extend(bench.stop()["stopped"])
-        check_live.start_after_owned_stop()
+        bench.start()
         _state, _node, raw, _connection = target()
         deadline = time.monotonic() + 12
         while time.monotonic() < deadline:

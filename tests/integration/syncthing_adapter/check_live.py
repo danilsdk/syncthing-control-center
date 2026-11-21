@@ -3,7 +3,6 @@
 import argparse
 import hashlib
 import json
-import socket
 import sys
 import time
 from copy import deepcopy
@@ -34,23 +33,6 @@ def wait_for(predicate, seconds, message):
             return
         time.sleep(0.1)
     raise bench.BenchError(message)
-
-
-def start_after_owned_stop():
-    # Windows may temporarily refuse a new bind after a rapid owned lifecycle restart.
-    # Keep the ordinary exclusive precheck; never reuse or terminate an occupied port.
-    def free_ports():
-        for _, api, sync in bench.NODES:
-            for port in (api, sync):
-                try:
-                    with socket.socket() as probe:
-                        probe.bind(("127.0.0.1", port))
-                except OSError:
-                    return False
-        return True
-
-    wait_for(free_ports, 130, "Owned restart ports remained busy; no other process was stopped")
-    return bench.start()
 
 
 def unchanged_except_paused(before, after, desired):
@@ -269,7 +251,7 @@ def run(export):
 
         old = first.read_system()
         stopped.extend(bench.stop()["stopped"])
-        start_after_owned_stop()  # Explicit lifecycle test, unrelated to applying paused.
+        bench.start()  # Explicit lifecycle test, unrelated to applying paused.
         new = first.read_system()
         require(new.device_id == old.device_id, "Disposable source identity changed across restart")
         require(

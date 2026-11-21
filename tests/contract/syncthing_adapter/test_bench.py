@@ -186,6 +186,7 @@ def test_configuration_uses_certificate_id_when_saved_xml_lists_the_peer_first(
 
 
 def test_occupied_port_refuses_start_without_touching_other_processes(tmp_path, monkeypatch):
+    monkeypatch.setattr(bench, "PORT_WAIT_SECONDS", 0)
     monkeypatch.setattr(bench, "RUNTIME", tmp_path)
     monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
     monkeypatch.setattr(bench, "prepare", lambda: pytest.fail("Unexpected binary preparation"))

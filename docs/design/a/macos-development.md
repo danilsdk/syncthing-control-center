@@ -30,6 +30,16 @@ Python **3.12 ARM64**, Syncthing **2.1.7** и двух собственных т
   Mac не использует `/proc`, `pidfd` или сигнал по PID. Если процесс продолжает
   работать, возвращается ограниченная ошибка и runtime сохраняется. HTTP 200
   сам по себе не считается завершением. Windows handles и Linux pidfd сохранены.
+- Ожидание освобождения портов перенесено в общий `bench.start()`: до 130 секунд
+  при `EADDRINUSE` (также Winsock `10013`), без `SO_REUSEADDR`/`SO_REUSEPORT`. Это относится
+  и к первому запуску следующей команды, и к внутреннему restart. Постоянно
+  занятый порт отклоняется, другие ошибки bind не повторяются.
+- Вместо прежних 8 секунд после shutdown ожидается до 30 секунд. В Syncthing
+  2.1.7 timeout служб равен 10 секундам, затем закрытие БД может занять ещё 10.
+  В приватный `runtime/shutdown-attempts.jsonl` добавляются HTTP статус, фаза,
+  длительность и подтверждение выхода; повторный cleanup сохраняет прошлые
+  попытки. Это устраняет преждевременный отказ при медленном выходе, но причину
+  конкретной остановки на Mac нужно подтвердить его повторным native-прогоном.
 - Backend API, зависимости, правила, worker, Compose и CI здесь не меняются.
   Общая сборка — A4, постоянная платформенная матрица — B6.
 
@@ -40,12 +50,16 @@ Python **3.12 ARM64**, Syncthing **2.1.7** и двух собственных т
 
 ```sh
 git fetch origin main codex/a10-macos-compatibility
-git worktree add --detach ../scc-a10-review origin/codex/a10-macos-compatibility
-cd ../scc-a10-review
+git worktree add --detach ../scc-a10-review-20261121 origin/codex/a10-macos-compatibility
+cd ../scc-a10-review-20261121
 git rev-parse HEAD origin/main
 sw_vers
 uname -m
 ```
+
+Это отдельная папка повторного review. Прежний runtime с неудачной остановкой
+сохранить для сравнения логов; перед новым прогоном проверить отсутствие его
+работающих узлов на фиксированных портах.
 
 Нужны нативные Python 3.12, PostgreSQL и Node, удовлетворяющий `frontend/package.json`.
 Если используется ARM64 Homebrew, он обычно находится в `/opt/homebrew`:
@@ -70,6 +84,8 @@ Rosetta не подходит. Для PostgreSQL используется `brew 
 Все native-проверки запускать последовательно: они используют одни порты
 18384/28384 и 22101/22102. Если порт занят, стенд отказывается его забирать.
 Нельзя останавливать чужие процессы ради освобождения порта.
+Между командами не нужны ручные паузы: каждый новый start сам ограниченно ждёт
+обычного bind. На `TIME_WAIT` это ожидание может занять до 130 секунд.
 
 ```sh
 mkdir -p deploy/syncthing/runtime/a10-reports deploy/syncthing/runtime/a10-temp
@@ -134,6 +150,10 @@ HTTP API и Syncthing настоящие; doubles системных вызов�
 принадлежащими стенду home и приватными отчётами может остаться. Если Mac shutdown
 не сработал, сохранять runtime и диагностировать его собственный процесс; не
 удалять файлы работающего узла и не заменять проверку принадлежности командой kill.
+Сохранить `shutdown-attempts.jsonl` и соответствующие `nodes/*/process.log` вместе
+с временем ошибки. Ответ HTTP 200, отсутствие listener и поздний успешный status
+по отдельности не доказывают своевременный выход. Если снова не подтверждён выход
+за 30 секунд, приёмка остаётся заблокированной до разбора этих данных.
 
 До реального Mac-прогона и подтверждения конфигурации PR не считается принятым.
 После merge A10 B начинает B6. Контейнерный прогон Docker Desktop ARM64 в A4
@@ -143,6 +163,9 @@ HTTP API и Syncthing настоящие; doubles системных вызов�
 
 - [Официальный release 2.1.7](https://github.com/syncthing/syncthing/releases/tag/v2.1.7)
   и [checksum manifest](https://github.com/syncthing/syncthing/releases/download/v2.1.7/sha256sum.txt.asc).
+- [Syncthing 2.1.7: timeout остановки служб](https://github.com/syncthing/syncthing/blob/v2.1.7/lib/svcutil/svcutil.go)
+  и [ожидание закрытия БД после служб](https://github.com/syncthing/syncthing/blob/v2.1.7/lib/syncthing/syncthing.go).
+- [Microsoft: эксклюзивный bind и коды Winsock](https://learn.microsoft.com/en-us/windows/win32/winsock/so-exclusiveaddruse).
 - [Apple: обнаружение Rosetta](https://developer.apple.com/documentation/apple-silicon/about-the-rosetta-translation-environment).
 - [Apple XNU: proc_bsdinfo и константы](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info.h)
   и [libproc wrappers](https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.c),

@@ -32,6 +32,9 @@ STATE = RUNTIME / "state.json"
 FOLDERS = ("scc-a1-shared", "scc-a1-control")
 NODES = (("node-a", 18384, 22101), ("node-b", 28384, 22102))
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+PORT_WAIT_SECONDS = 130
+# v2.1.7 allows 10s for services, then 10s for database close. Leave 10s margin.
+SHUTDOWN_GRACE_SECONDS = 30
 
 
 def utc_now() -> str:
@@ -137,15 +140,30 @@ class ProcBSDInfo(ctypes.Structure):
     _fields_ = [
         (name, ctypes.c_uint32)
         for name in (
-            "flags", "status", "xstatus", "pid", "ppid", "uid", "gid", "ruid",
-            "rgid", "svuid", "svgid", "reserved",
+            "flags",
+            "status",
+            "xstatus",
+            "pid",
+            "ppid",
+            "uid",
+            "gid",
+            "ruid",
+            "rgid",
+            "svuid",
+            "svgid",
+            "reserved",
         )
     ] + [
-        ("comm", ctypes.c_char * 16), ("name", ctypes.c_char * 32),
-        ("nfiles", ctypes.c_uint32), ("pgid", ctypes.c_uint32),
-        ("pjobc", ctypes.c_uint32), ("tdev", ctypes.c_uint32),
-        ("tpgid", ctypes.c_uint32), ("nice", ctypes.c_int32),
-        ("start_sec", ctypes.c_uint64), ("start_usec", ctypes.c_uint64),
+        ("comm", ctypes.c_char * 16),
+        ("name", ctypes.c_char * 32),
+        ("nfiles", ctypes.c_uint32),
+        ("pgid", ctypes.c_uint32),
+        ("pjobc", ctypes.c_uint32),
+        ("tdev", ctypes.c_uint32),
+        ("tpgid", ctypes.c_uint32),
+        ("nice", ctypes.c_int32),
+        ("start_sec", ctypes.c_uint64),
+        ("start_usec", ctypes.c_uint64),
     ]
 
 
@@ -154,7 +172,11 @@ def macos_process(pid: int):
     try:
         library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
         library.proc_pidinfo.argtypes = (
-            ctypes.c_int, ctypes.c_int, ctypes.c_uint64, ctypes.c_void_p, ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_uint64,
+            ctypes.c_void_p,
+            ctypes.c_int,
         )
         library.proc_pidinfo.restype = ctypes.c_int
         library.proc_pidpath.argtypes = (ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32)
@@ -229,7 +251,12 @@ def binary_path(binary: Path) -> Path:
 
 def check_layout() -> None:
     """Refuse redirected managed paths before creating files or stopping nodes."""
-    for path in (STATE, RUNTIME / "owner.json", RUNTIME / "bin"):
+    for path in (
+        STATE,
+        RUNTIME / "owner.json",
+        RUNTIME / "bin",
+        RUNTIME / "shutdown-attempts.jsonl",
+    ):
         runtime_path(RUNTIME, path)
     for name, _, _ in NODES:
         home = RUNTIME / "nodes" / name
@@ -477,27 +504,29 @@ class BenchClient:
         return result["body"]
 
 
-def stop(state: dict | None = None) -> dict:
-    check_layout()
-    state = state or read_state()
-    stopped = []
-    for node in state["nodes"]:
-        if not owned(node):
-            continue
+def stop_owned_node(node: dict, observation: dict) -> None:
+    started = time.monotonic()
+    try:
         try:
             client = BenchClient(node)
             if owned(node):  # Recheck after reading the owned home's credentials.
-                client.request("/rest/system/shutdown", method="POST")
+                response = client.request("/rest/system/shutdown", method="POST")
+                observation["shutdown_status"] = response["status_code"]
         except BenchError:
             pass
-        deadline = time.monotonic() + 8
+        observation["phase"] = "await_exit"
+        deadline = time.monotonic() + SHUTDOWN_GRACE_SECONDS
         while owned(node) and time.monotonic() < deadline:
             time.sleep(0.1)
         if owned(node):
             expected = node["process"]
             if platform.system() == "Darwin":
-                raise BenchError("macOS shutdown did not stop the owned process; runtime retained")
-            elif os.name == "nt":
+                raise BenchError(
+                    "macOS shutdown did not stop the owned process; runtime retained; "
+                    "see runtime/shutdown-attempts.jsonl"
+                )
+            observation["phase"] = "verified_termination"
+            if os.name == "nt":
                 windows_process(expected["pid"], expected, terminate=True)
             else:
                 descriptor = os.pidfd_open(expected["pid"])
@@ -512,13 +541,74 @@ def stop(state: dict | None = None) -> dict:
             time.sleep(0.1)
         if owned(node):
             raise BenchError("An owned bench process did not stop")
-        node.pop("process", None)
-        stopped.append(node["name"])
-    write_json(STATE, state)
-    return {
-        "stopped": stopped,
-        "running": [node["name"] for node in state["nodes"] if owned(node)],
+        observation.update(exit_confirmed=True, phase="exit_confirmed")
+    finally:
+        observation["elapsed_seconds"] = round(time.monotonic() - started, 3)
+
+
+def stop(state: dict | None = None) -> dict:
+    check_layout()
+    state = state or read_state()
+    stopped = []
+    report = {
+        "started_at": utc_now(),
+        "grace_seconds": SHUTDOWN_GRACE_SECONDS,
+        "result": "failed",
+        "nodes": [],
     }
+    try:
+        for node in state["nodes"]:
+            if not owned(node):
+                continue
+            observation = {
+                "name": node["name"],
+                "phase": "shutdown_request",
+                "shutdown_status": None,
+                "exit_confirmed": False,
+            }
+            report["nodes"].append(observation)
+            stop_owned_node(node, observation)
+            node.pop("process", None)
+            stopped.append(node["name"])
+        write_json(STATE, state)
+        result = {
+            "stopped": stopped,
+            "running": [node["name"] for node in state["nodes"] if owned(node)],
+        }
+        report["result"] = "passed"
+        return result
+    finally:
+        if report["nodes"]:
+            report["completed_at"] = utc_now()
+            # A later cleanup retry must not overwrite evidence of a failed attempt.
+            path = runtime_path(RUNTIME, RUNTIME / "shutdown-attempts.jsonl")
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(report) + "\n")
+
+
+def wait_for_ports() -> None:
+    """Allow TIME_WAIT to expire without reusing a port or stopping its listener."""
+    deadline = time.monotonic() + PORT_WAIT_SECONDS
+    while True:
+        try:
+            for _, api, sync in NODES:
+                for port in (api, sync):
+                    with socket.socket() as probe:
+                        probe.bind(("127.0.0.1", port))
+            return
+        except OSError as error:
+            # Winsock also reports an exclusive bind as WSAEACCES (10013).
+            if error.errno != errno.EADDRINUSE and getattr(error, "winerror", None) != 10013:
+                raise BenchError(
+                    "Cannot check reserved bench ports; no process was started"
+                ) from None
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise BenchError(
+                    "A reserved bench port is occupied after bounded waiting; "
+                    "no existing process was stopped"
+                ) from None
+            time.sleep(min(0.1, remaining))
 
 
 def start() -> dict:
@@ -529,15 +619,7 @@ def start() -> dict:
         if len(running) == 2:
             return state
         raise BenchError("Partial bench is already running; stop it before starting again")
-    for _, api, sync in NODES:
-        for port in (api, sync):
-            try:
-                with socket.socket() as probe:
-                    probe.bind(("127.0.0.1", port))
-            except OSError:
-                raise BenchError(
-                    "A reserved bench port is occupied; no existing process was stopped"
-                ) from None
+    wait_for_ports()
     binary = binary_path(prepare())
     if release()["version"] not in native(binary, "--version").split():
         raise BenchError("Executable version differs from the pinned release")

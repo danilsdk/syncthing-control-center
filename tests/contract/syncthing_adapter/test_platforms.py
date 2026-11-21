@@ -5,7 +5,9 @@ import errno
 import hashlib
 import importlib.util
 import io
+import json
 import os
+import socket
 import stat
 import sys
 import tarfile
@@ -244,9 +246,9 @@ def test_failed_mac_shutdown_never_signals_or_rewrites_runtime(tmp_path, monkeyp
     bench.write_json(bench.STATE, state)
     original = bench.STATE.read_bytes()
     monkeypatch.setattr(bench, "process_identity", lambda _pid: identity)
-    clock = iter(range(0, 100, 10))
-    monkeypatch.setattr(bench.time, "monotonic", lambda: next(clock))
-    monkeypatch.setattr(bench.time, "sleep", lambda _: pytest.fail("Unbounded wait"))
+    clock = Clock()
+    monkeypatch.setattr(bench.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(bench.time, "sleep", clock.sleep)
     monkeypatch.setattr(bench, "windows_process", lambda *_a, **_k: pytest.fail("Foreign signal"))
     monkeypatch.setattr(
         bench.os, "pidfd_open", lambda *_a: pytest.fail("Linux API on Mac"), raising=False
@@ -264,6 +266,11 @@ def test_failed_mac_shutdown_never_signals_or_rewrites_runtime(tmp_path, monkeyp
         bench.stop(state)
     assert requests == [("/rest/system/shutdown", {"method": "POST"})]
     assert bench.STATE.read_bytes() == original and executable.exists()
+    assert 30 <= clock.now < 31
+    report = json.loads((tmp_path / "shutdown-attempts.jsonl").read_text())
+    assert report["result"] == "failed"
+    assert report["nodes"][0]["exit_confirmed"] is False
+    assert report["nodes"][0]["phase"] == "await_exit"
 
 
 def test_identity_changed_while_opening_credentials_never_sends_shutdown(tmp_path, monkeypatch):
@@ -308,3 +315,189 @@ def test_failed_identity_after_spawn_is_persisted_and_cannot_claim_clean_stop(
     with pytest.raises(prepare.BenchError, match="unverified.*retained"):
         bench.stop(state)
     assert home.exists()
+
+
+class Clock:
+    def __init__(self):
+        self.now = 0.0
+        self.sleeps = []
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        assert seconds > 0
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+
+@pytest.mark.parametrize("winerror", [None, 10013])
+def test_initial_start_waits_for_closed_connections_without_reusing_ports(
+    tmp_path, monkeypatch, winerror
+):
+    clock = Clock()
+    monkeypatch.setattr(bench.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(bench.time, "sleep", clock.sleep)
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench, "NODES", (("node-a", 18384, 22101),))
+    checked = []
+
+    class ExclusiveProbe:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def bind(self, address):
+            checked.append(address)
+            if address[1] == 18384 and clock.now < 0.25:
+                error = OSError(errno.EACCES if winerror else errno.EADDRINUSE, "port reserved")
+                error.winerror = winerror
+                raise error
+
+    class PreparationReached(Exception):
+        pass
+
+    def prepare_after_free_ports():
+        raise PreparationReached
+
+    monkeypatch.setattr(bench.socket, "socket", ExclusiveProbe)
+    monkeypatch.setattr(bench, "prepare", prepare_after_free_ports)
+    with pytest.raises(PreparationReached):
+        bench.start()
+    assert 0.25 <= clock.now < 1
+    assert ("127.0.0.1", 22101) in checked
+
+
+def test_start_retains_a_real_foreign_listener_and_has_a_bounded_wait(tmp_path, monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(bench.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(bench.time, "sleep", clock.sleep)
+    monkeypatch.setattr(bench, "PORT_WAIT_SECONDS", 0.25, raising=False)
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench, "prepare", lambda: pytest.fail("Foreign port must prevent startup"))
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        port = listener.getsockname()[1]
+        monkeypatch.setattr(bench, "NODES", (("node-a", port, 0),))
+        with pytest.raises(prepare.BenchError, match="reserved bench port"):
+            bench.start()
+        assert 0.25 <= clock.now <= 0.35
+        with socket.create_connection(("127.0.0.1", port), timeout=1):
+            accepted, _ = listener.accept()
+            accepted.close()
+    assert not bench.STATE.exists()
+
+
+def test_non_busy_bind_error_is_not_retried(tmp_path, monkeypatch):
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench.time, "sleep", lambda _: pytest.fail("Permission error retried"))
+    monkeypatch.setattr(bench, "prepare", lambda: pytest.fail("Unbound port allowed startup"))
+
+    class DeniedProbe:
+        def __enter__(self):
+            raise OSError(errno.EACCES, "permission denied")
+
+        def __exit__(self, *_):
+            pass
+
+    monkeypatch.setattr(bench.socket, "socket", DeniedProbe)
+    with pytest.raises(prepare.BenchError, match="Cannot check"):
+        bench.start()
+
+
+def test_mac_shutdown_waits_for_verified_exit_after_the_service_timeout(tmp_path, monkeypatch):
+    clock = Clock()
+    monkeypatch.setattr(bench.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(bench.time, "sleep", clock.sleep)
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench.platform, "system", lambda: "Darwin")
+    identity = {"pid": 123, "created": "100:7", "executable": str(tmp_path / "bin/syncthing")}
+    monkeypatch.setattr(bench, "process_identity", lambda _: identity if clock.now < 12 else None)
+    monkeypatch.setattr(
+        bench,
+        "BenchClient",
+        lambda _: SimpleNamespace(request=lambda *_a, **_k: {"status_code": 200}),
+    )
+    monkeypatch.setattr(bench, "windows_process", lambda *_a, **_k: pytest.fail("Foreign signal"))
+    monkeypatch.setattr(bench.os, "pidfd_open", lambda *_: pytest.fail("Linux API"), raising=False)
+    result = bench.stop({"nodes": [{"name": "node-a", "process": identity}]})
+    assert result == {"stopped": ["node-a"], "running": []}
+    assert 12 <= clock.now < 13
+    report = json.loads((tmp_path / "shutdown-attempts.jsonl").read_text())
+    assert report["result"] == "passed"
+    assert report["nodes"][0]["shutdown_status"] == 200
+    assert report["nodes"][0]["exit_confirmed"] is True
+    assert report["nodes"][0]["elapsed_seconds"] >= 12
+
+
+def test_mac_shutdown_keeps_failed_attempt_when_a_later_cleanup_confirms_exit(
+    tmp_path, monkeypatch
+):
+    clock = Clock()
+    monkeypatch.setattr(bench.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(bench.time, "sleep", clock.sleep)
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench.platform, "system", lambda: "Darwin")
+    identity = {"pid": 123, "created": "100:7", "executable": str(tmp_path / "bin/syncthing")}
+    current = [identity]
+    monkeypatch.setattr(bench, "process_identity", lambda _: current[0])
+
+    def client(_):
+        if clock.now >= 30:
+            current[0] = None
+        return SimpleNamespace(request=lambda *_a, **_k: {"status_code": 200})
+
+    monkeypatch.setattr(bench, "BenchClient", client)
+    state = {"nodes": [{"name": "node-a", "process": identity}]}
+    with pytest.raises(prepare.BenchError, match="runtime retained"):
+        bench.stop(state)
+    assert bench.stop(state)["running"] == []
+    reports = [
+        json.loads(line) for line in (tmp_path / "shutdown-attempts.jsonl").read_text().splitlines()
+    ]
+    assert [item["result"] for item in reports] == ["failed", "passed"]
+    assert reports[0]["nodes"][0]["exit_confirmed"] is False
+    assert reports[1]["nodes"][0]["exit_confirmed"] is True
+
+
+def test_unknown_mac_identity_during_shutdown_retains_state_and_does_not_confirm_exit(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(bench, "RUNTIME", tmp_path)
+    monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
+    monkeypatch.setattr(bench.platform, "system", lambda: "Darwin")
+    identity = {"pid": 123, "created": "100:7", "executable": str(tmp_path / "bin/syncthing")}
+    state = {
+        "bench": "scc-a1",
+        "schema_version": 1,
+        "nodes": [{"name": "node-a", "process": identity}],
+    }
+    bench.write_json(bench.STATE, state)
+    original = bench.STATE.read_bytes()
+    known = [True]
+
+    def observe(_):
+        if not known[0]:
+            raise prepare.BenchError("Cannot verify macOS process creation time")
+        return identity
+
+    def shutdown(*_a, **_k):
+        known[0] = False
+        return {"status_code": 200}
+
+    monkeypatch.setattr(bench, "process_identity", observe)
+    monkeypatch.setattr(bench, "BenchClient", lambda _: SimpleNamespace(request=shutdown))
+    with pytest.raises(prepare.BenchError, match="Cannot verify macOS"):
+        bench.stop(state)
+    assert bench.STATE.read_bytes() == original
+    report = json.loads((tmp_path / "shutdown-attempts.jsonl").read_text())
+    assert report["result"] == "failed"
+    assert report["nodes"][0]["exit_confirmed"] is False
