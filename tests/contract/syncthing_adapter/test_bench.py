@@ -53,9 +53,10 @@ def test_archive_is_never_extracted_as_a_directory_tree(tmp_path):
         source.writestr("../../outside.txt", "must not be written")
         source.writestr("release/syncthing.exe", b"chosen binary")
         source.writestr("release/other.exe", b"not chosen")
-    assert prepare.extract_binary(
-        archive, archive_format="zip", executable="syncthing.exe"
-    ) == b"chosen binary"
+    assert (
+        prepare.extract_binary(archive, archive_format="zip", executable="syncthing.exe")
+        == b"chosen binary"
+    )
     assert sorted(path.name for path in tmp_path.iterdir()) == ["archive.zip"]
 
 
