@@ -1,0 +1,25 @@
+{
+  "id": "B7",
+  "role": "B",
+  "title": "Форматирование тестов B1/B2 для Application core",
+  "branch": "codex/b07-test-formatting",
+  "depends_on": [
+    "B1",
+    "B2"
+  ],
+  "allow": [
+    "tests/integration/executions/conftest.py",
+    "tests/integration/rules/conftest.py",
+    "tests/integration/rules/test_rules_api.py",
+    "tests/unit/reconciliation/test_decisions.py",
+    "tests/unit/scheduling/test_engine.py",
+    "docs/agent-log/b/B7.md"
+  ],
+  "deny": [],
+  "spec": "docs/agent-tasks.md#b7",
+  "acceptance": [
+    "Пять указанных файлов проходят ruff format --check с закреплённой версией Ruff и конфигурацией backend/pyproject.toml.",
+    "AST всех пяти файлов совпадает с исходниками из базовой ветки; поведение и набор тестов сохранены.",
+    "Штатный validate проходит; результат передан в A4 для полного Application core на актуальной сборке."
+  ]
+}
