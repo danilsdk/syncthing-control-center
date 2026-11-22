@@ -1,0 +1,26 @@
+{
+  "id": "B8",
+  "role": "B",
+  "title": "Кликабельный прототип панели администратора",
+  "branch": "codex/b08-interface-prototype",
+  "depends_on": [
+    "B3"
+  ],
+  "allow": [
+    ".harness/tasks/B8.json",
+    "docs/design/b/prototype/index.html",
+    "docs/design/b/prototype/reference.css",
+    "docs/design/b/prototype/styles.css",
+    "docs/design/b/prototype/model.js",
+    "docs/design/b/prototype/app.js",
+    "docs/design/b/prototype/design.md",
+    "docs/agent-log/b/B8.md"
+  ],
+  "deny": [],
+  "spec": "docs/design/b/prototype/design.md",
+  "acceptance": [
+    "Сохранены утверждённый обзор и логотип. Все разделы и записи имеют прямые ссылки.",
+    "В браузере проверены оба пути, возврат в список и управление с клавиатуры.",
+    "В design.md описаны решения, ограничения и критерии переноса."
+  ]
+}

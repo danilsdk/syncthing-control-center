@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#202020"><title>Обзор · Syncthing Control Center</title><link rel="stylesheet" href="reference.css"><link rel="stylesheet" href="styles.css"><script defer src="model.js"></script><script defer src="app.js"></script></head>
+<body><div class="scc objects" id="shell">
+<a class="skip" href="#content">К содержимому</a>
+<header class="mast">
+    <div class="brand"><span class="emblem" aria-hidden="true"></span>Syncthing <span class="brand-sub">Control Center</span></div>
+    <nav aria-label="Разделы"><a class="home-key" aria-label="Обзор" aria-current="page" data-section="overview" data-tip href="#/overview"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="panels-top-left" aria-hidden="true" class="lucide lucide-panels-top-left"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M9 21V9"></path></svg></a><a data-section="folders" href="#/folders">Папки</a><a data-section="rules" href="#/rules">Правила</a><a data-section="history" href="#/history/commands">История</a><a data-section="analytics" href="#/analytics">Аналитика</a></nav>
+    <button class="operator" data-act="account" aria-label="Учётная запись admin" data-tip="Учётная запись"><span class="avatar">A</span><span>admin</span></button>
+  </header>
+<main id="content" class="page-a" tabindex="-1"></main>
+<div id="toast" role="status" aria-live="polite"></div>
+<dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+<div id="tip" role="tooltip" hidden></div>
+<template id="approved"><div class="deck">
+      <section class="folder-well" aria-label="Рабочие документы">
+        <div class="paper-set" aria-hidden="true">
+          <div class="paper sheet-back"></div><div class="paper sheet-mid"><span></span></div><div class="paper sheet-front"><span></span></div>
+        </div>
+        <div class="front-rim" aria-hidden="true"></div><div class="front-glass" aria-hidden="true">        <div class="paper-set" aria-hidden="true">
+          <div class="paper sheet-back"></div><div class="paper sheet-mid"><span></span></div><div class="paper sheet-front"><span></span></div>
+        </div>
+</div>
+        <div class="folder-head"><span class="vcenter"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="folder" aria-hidden="true" class="lucide lucide-folder"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>Папка</span><span class="mono">DEMO-A / shared</span></div>
+        <div class="folder-body"><div><h2>Рабочие<br>документы</h2><p class="folder-state status"><span class="state state-unknown" aria-hidden="true">?</span>Нет свежих данных</p></div>
+          <div class="folder-bottom"><dl><div><dt>Фактическая пауза</dt><dd>Неизвестна</dd></div><div><dt>Синхронизация</dt><dd>Неизвестно</dd></div></dl><a class="small-action main" href="#/folders/DEMO-A/shared">Открыть папку <span aria-hidden="true">↗</span></a></div>
+        </div>
+      </section>
+      <aside class="side-a">
+        <section class="node-a">
+          <div class="card-hat"><span class="vcenter"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="server" aria-hidden="true" class="lucide lucide-server"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><line x1="6" x2="6.01" y1="6" y2="6"></line><line x1="6" x2="6.01" y1="18" y2="18"></line></svg>Узел</span><span class="status node-status"><span class="state state-ok" aria-hidden="true"></span>Доступен</span></div>
+          <h2>Демонстрационный узел A</h2>
+          <div class="node-foot"><span class="mono">DEMO-A</span><span>15:32 UTC</span></div>
+        </section>
+        <section class="schedule-a">
+          <div class="card-hat"><span class="vcenter"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="calendar-days" aria-hidden="true" class="lucide lucide-calendar-days"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path><path d="M16 18h.01"></path></svg>Активное правило</span><a class="iconbtn" aria-label="Открыть правило" data-tip href="#/rules/DEMO-A/shared"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-up-right" aria-hidden="true" class="lucide lucide-arrow-up-right"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></div>
+          <h2 class="schedule-time">09:00<span>—</span>18:00</h2>
+          <p class="schedule-zone">Пн–Пт <span>·</span> <span class="mono">Europe/Moscow</span></p>
+          <div class="rule-now"><span>Сейчас по правилу</span><strong class="vcenter"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="pause" aria-hidden="true" class="lucide lucide-pause"><rect x="14" y="3" width="5" height="18" rx="1"></rect><rect x="5" y="3" width="5" height="18" rx="1"></rect></svg>Пауза</strong></div>
+        </section>
+      </aside>
+    </div>
+    <section class="log-a" aria-label="Последние записи">
+      <div class="log-head"><h2>Последние записи</h2><div class="filters" role="group" aria-label="Тип записи"><button data-filter="all" aria-pressed="true">Все</button><button data-filter="command" aria-pressed="false">Команды</button><button data-filter="event" aria-pressed="false">События</button></div></div>
+      <div class="list-wrap"><table class="record-table"><thead><tr><th>Время, UTC</th><th>Запись</th><th>Папка</th><th>Результат</th><th><span class="only-reader">Подробности</span></th></tr></thead><tbody>
+        <tr data-kind="event"><td class="mono">15:32:50</td><td><span class="vcenter"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-check-2" aria-hidden="true" class="lucide lucide-file-check-2"><path d="M10.5 22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v6"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="m14 20 2 2 4-4"></path></svg>Обработка элемента завершена</span><small>Событие Syncthing</small></td><td>Рабочие документы</td><td class="mut" aria-label="Для события не применяется">—</td><td><a class="iconbtn" aria-label="Открыть событие" data-tip href="#/history/events/latest"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-up-right" aria-hidden="true" class="lucide lucide-arrow-up-right"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></td></tr>
+        <tr data-kind="command"><td class="mono">15:32</td><td><span class="vcenter"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="pause" aria-hidden="true" class="lucide lucide-pause"><rect x="14" y="3" width="5" height="18" rx="1"></rect><rect x="5" y="3" width="5" height="18" rx="1"></rect></svg>Приостановить по расписанию</span></td><td>Рабочие документы</td><td><span class="status"><span class="state state-unknown" aria-hidden="true">?</span>Неизвестно</span><small>Нет наблюдения</small></td><td><a class="iconbtn" aria-label="Открыть попытку команды" data-tip href="#/history/commands/latest"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-up-right" aria-hidden="true" class="lucide lucide-arrow-up-right"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></td></tr>
+      </tbody></table></div>
+    </section></template>
+</div></body></html>
