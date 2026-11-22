@@ -4,14 +4,25 @@
   "published_at": "2026-10-21T06:09:14Z",
   "assets": {
     "windows-amd64": {
+      "archive_format": "zip",
+      "executable": "syncthing.exe",
       "name": "syncthing-windows-amd64-v2.1.7.zip",
       "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-windows-amd64-v2.1.7.zip",
       "sha256": "3ce7da770f546a8d02b65b2e7ee31f2a3b8b7c3f990ede045590cca4172ecfe1"
     },
     "linux-amd64": {
+      "archive_format": "tar.gz",
+      "executable": "syncthing",
       "name": "syncthing-linux-amd64-v2.1.7.tar.gz",
       "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-linux-amd64-v2.1.7.tar.gz",
       "sha256": "2edc416e7ed136b7c858ed5f3f02a3b8316589605e54c380228ceea7acbf0142"
+    },
+    "macos-arm64": {
+      "archive_format": "zip",
+      "executable": "syncthing",
+      "name": "syncthing-macos-arm64-v2.1.7.zip",
+      "url": "https://github.com/syncthing/syncthing/releases/download/v2.1.7/syncthing-macos-arm64-v2.1.7.zip",
+      "sha256": "2df075b463231a307c91da657157beaed06383a941ba7ea04d33d536e3c4af38"
     }
   }
 }
