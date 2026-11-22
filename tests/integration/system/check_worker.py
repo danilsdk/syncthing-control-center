@@ -46,6 +46,22 @@ def verify_worker(stack, api, ids, headers, passed, report):
         )
         return json.loads(result.stdout)
 
+    def launch_probe(mode, current, **values):
+        path = stack.directory / ("worker-" + current + ".log")
+        with path.open("wb") as output:
+            process = subprocess.Popen(
+                [*stack.docker, *stack.compose_args, "exec", "-T", "api", "python", "-c", PROBE],
+                cwd=stack.directory,
+                env=stack.env,
+                stdin=subprocess.PIPE,
+                stdout=output,
+                stderr=subprocess.STDOUT,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+        process.stdin.write(json.dumps({"nonce": current, "mode": mode, **values}).encode())
+        process.stdin.close()
+        return process
+
     probe("create")
     original = fixture.probe("snapshot")
     target = next(
@@ -96,15 +112,56 @@ def verify_worker(stack, api, ids, headers, passed, report):
         stack.compose("stop", "--timeout", "30", "worker", timeout=40)
         wait_for(lambda: probe("state")["workers"] == 0, 15, "Stopped worker retained singleton")
 
-    report["phase"] = "A43_auth_desired_and_rule_pause"
     projection = next(
         row
         for row in api.request("GET", f"/api/nodes/{ids[0]}/folders")["items"]
         if row["id"] == target
     )
     require(projection["desired_paused"] is True, "Registry did not use B1's desired state")
-    start()
-    wait_for(lambda: applied(True), 45, "Rule pause was not observed and confirmed")
+
+    report["phase"] = "A4_folder_lock_contention"
+    holder = launch_probe("hold-folder", nonce, folder_id=target)
+    try:
+
+        def folder_locked():
+            require(holder.poll() is None, "Owned folder lock holder exited early")
+            return probe("control")["ready"]
+
+        wait_for(folder_locked, 20, "Could not hold the real demo folder lock")
+        start()
+        worker_pids = probe("state")["worker_pids"]
+        require(len(worker_pids) == 1, "Expected one worker during folder lock contention")
+
+        def deferred():
+            require(probe("state")["worker_pids"] == worker_pids, "Busy folder stopped the worker")
+            logs = stack.compose("logs", "--no-color", "--tail", "50", "worker", timeout=10)
+            return b"Reconciliation deferred: a folder lock is busy" in logs.stdout + logs.stderr
+
+        wait_for(deferred, 25, "Worker did not defer the busy folder pass")
+        snapshots = probe("state")["counts"]["status_snapshots"]
+
+        def collected_again():
+            health = probe("state")
+            require(
+                health["worker_pids"] == worker_pids, "Worker lost its singleton during contention"
+            )
+            return health["counts"]["status_snapshots"] > snapshots
+
+        wait_for(collected_again, 25, "Collection stopped while the folder lock was held")
+        require(holder.poll() is None and state(False), "Worker changed the locked demo folder")
+        require(
+            api.request("GET", f"/api/executions?folder_id={target}")["total"] == 0,
+            "Worker recorded a command before acquiring the folder lock",
+        )
+    finally:
+        if holder.poll() is None:
+            probe("control", action="gate-release")
+        require(holder.wait(timeout=20) == 0, "Owned folder lock holder failed")
+    wait_for(lambda: applied(True), 45, "The active rule was not applied after releasing the lock")
+    require(probe("state")["worker_pids"] == worker_pids, "Worker was restarted during recovery")
+    passed("A4_busy_folder_preserves_singleton_collection_and_retries")
+
+    report["phase"] = "A43_auth_desired_and_rule_pause"
     require(state(True), "Applied rule did not pause its source folder")
     check_config(original, fixture.probe("snapshot"), True)
     passed("A43_protected_routes_B1_projection_and_real_rule_pause")
@@ -182,19 +239,7 @@ def verify_worker(stack, api, ids, headers, passed, report):
         report["phase"] = "A43_loss_inside_collection" if lost else "A43_stop_inside_collection"
         current = uuid4().hex
         probe("create", current)
-        path = stack.directory / ("worker-" + current + ".log")
-        with path.open("wb") as output:
-            process = subprocess.Popen(
-                [*stack.docker, *stack.compose_args, "exec", "-T", "api", "python", "-c", PROBE],
-                cwd=stack.directory,
-                env=stack.env,
-                stdin=subprocess.PIPE,
-                stdout=output,
-                stderr=subprocess.STDOUT,
-                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-            )
-        process.stdin.write(json.dumps({"nonce": current, "mode": "run"}).encode())
-        process.stdin.close()
+        process = launch_probe("run", current)
         try:
 
             def reached(process=process, current=current):

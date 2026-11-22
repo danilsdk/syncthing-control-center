@@ -10,6 +10,7 @@ from dataclasses import replace
 from app.collection import CollectionService
 from app.config import Settings
 from app.contracts.interfaces import SystemClock
+from app.contracts.locks import LockBusy
 from app.db import Database
 from app.main import run_worker
 from app.reconciliation.service import run_once
@@ -133,7 +134,11 @@ class ApplicationRuntime:
                         self.monotonic() + context.settings.observation_interval_seconds
                     )
                 if self.monotonic() >= reconciliation_due:
-                    run_once(replace(guarded, _singleton=_ActivityLease(activity)))
+                    try:
+                        run_once(replace(guarded, _singleton=_ActivityLease(activity)))
+                    except LockBusy:
+                        # B2 retries from current database state on the next pass.
+                        print("Reconciliation deferred: a folder lock is busy", file=sys.stderr)
                     activity.check()
                     reconciliation_due = (
                         self.monotonic() + context.settings.reconciliation_interval_seconds

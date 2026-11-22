@@ -98,11 +98,12 @@ def validate_core(value):
         "A43_recovery_history_and_four_folder_configuration_restored",
         "A44b_pinned_production_ui_image_built",
         "A44b_chromium_same_origin_real_rule_history_and_logout",
+        "A4_busy_folder_preserves_singleton_collection_and_retries",
     }
     names = [check["name"] for check in value["checks"]]
     if (
         value["result"] != "passed"
-        or len(names) < 22
+        or len(names) < 23
         or len(set(names)) != len(names)
         or not required.issubset(names)
         or value.get("transfer", {}).get("restoration", {}).get("result") != "passed"

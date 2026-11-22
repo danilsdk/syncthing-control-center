@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from uuid import UUID
 
 
 def main():
@@ -47,13 +48,33 @@ def main():
             flush=True,
         )
         return 0
-    if mode in {"state", "lose"}:
+    if mode in {"state", "lose", "hold-folder"}:
+        from app.contracts.locks import AdvisoryLocks
         from app.db import Database
+        from app.models import Folder, ManagedNode
         from sqlalchemy import text
 
         database = Database(settings())
         try:
             database.check_ready()
+            if mode == "hold-folder":
+                folder_id = UUID(args["folder_id"])
+                with database.session() as session:
+                    folder = session.get(Folder, folder_id)
+                    if folder is None or folder.syncthing_folder_id != "scc-a4-shared":
+                        raise ValueError("Lock probe requires the shared demo folder")
+                    node = session.get(ManagedNode, folder.node_id)
+                    if node is None or node.connection_ref != "demo-a":
+                        raise ValueError("Lock probe requires demo-a")
+                with AdvisoryLocks(database.engine).folder(folder_id, timeout_seconds=0):
+                    (control / "gate-ready").touch()
+                    until = time.monotonic() + 100
+                    while not (control / "gate-release").exists():
+                        if time.monotonic() >= until:
+                            raise RuntimeError("Owned folder lock gate timed out")
+                        time.sleep(0.05)
+                return 0
+
             with database.session() as session:
                 pids = list(
                     session.scalars(
@@ -88,6 +109,7 @@ def main():
                         json.dumps(
                             {
                                 "workers": len(pids),
+                                "worker_pids": pids,
                                 "counts": counts,
                                 "proof": hashlib.sha256(
                                     json.dumps([list(row) for row in proof], default=str).encode()

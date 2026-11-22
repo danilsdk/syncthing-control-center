@@ -4,6 +4,7 @@ import importlib.util
 import sys
 import threading
 import warnings
+from contextlib import nullcontext
 from datetime import UTC, datetime, time
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,11 +12,12 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
+from app import main as application
 from app.api.events import router as events_router
 from app.config import Settings
 from app.contracts.errors import AppError
 from app.contracts.interfaces import SystemClock
-from app.contracts.locks import LockLost
+from app.contracts.locks import LockBusy, LockLost
 from app.contracts.worker import WorkerContext
 from app.main import create_app
 from fastapi.testclient import TestClient
@@ -142,7 +144,10 @@ def test_each_http_request_is_guarded_within_one_adapter_operation(stopping):
     assert calls == ["request", "close"]
 
 
-def test_phases_use_independent_intervals_and_do_not_replay_missed_ticks(monkeypatch):
+@pytest.mark.parametrize("first_pass_busy", [False, True])
+def test_phases_use_independent_intervals_and_do_not_replay_missed_ticks(
+    monkeypatch, first_pass_busy
+):
     clock, calls = [0.0], []
 
     class Stop:
@@ -158,7 +163,13 @@ def test_phases_use_independent_intervals_and_do_not_replay_missed_ticks(monkeyp
         "CollectionService",
         lambda *_a, **_k: SimpleNamespace(collect_once=lambda: calls.append(("collect", clock[0]))),
     )
-    monkeypatch.setattr(runtime, "run_once", lambda _: calls.append(("reconcile", clock[0])))
+
+    def reconcile(_context):
+        calls.append(("reconcile", clock[0]))
+        if first_pass_busy and clock[0] == 0:
+            raise LockBusy()
+
+    monkeypatch.setattr(runtime, "run_once", reconcile)
     engine = create_engine("sqlite://")
     try:
         runtime.ApplicationRuntime(Stop(), monotonic=lambda: clock[0]).run(
@@ -175,6 +186,21 @@ def test_phases_use_independent_intervals_and_do_not_replay_missed_ticks(monkeyp
         ]
     finally:
         engine.dispose()
+
+
+def test_runtime_lock_busy_is_not_a_singleton_conflict(monkeypatch, capsys):
+    database, adapters, worker = MagicMock(), MagicMock(), MagicMock()
+    worker.run.side_effect = LockBusy
+    locks = SimpleNamespace(worker=lambda: nullcontext(MagicMock()))
+    monkeypatch.setattr(application, "AdvisoryLocks", lambda _: locks)
+
+    assert (
+        application.run_worker(worker, settings=Settings(), database=database, adapters=adapters)
+        == 1
+    )
+    assert "A worker is already running" not in capsys.readouterr().err
+    database.close.assert_called_once_with()
+    adapters.close.assert_called_once_with()
 
 
 @pytest.mark.parametrize("stopping", [False, True])

@@ -4,7 +4,7 @@ import argparse
 import logging
 import sys
 from collections.abc import AsyncIterator, Sequence
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, FastAPI, Request
@@ -292,21 +292,24 @@ def run_worker(
                 if db.engine is None:
                     raise DatabaseNotReady("database_not_configured")
                 locks = AdvisoryLocks(db.engine)
-                with locks.worker() as singleton:
-                    context = WorkerContext(
-                        configuration,
-                        db,
-                        clock if clock is not None else SystemClock(),
-                        adapters,
-                        locks,
-                        singleton,
-                    )
-                    context.ensure_active()
-                    runtime.run(context)
-                result = 0
-    except LockBusy:
-        print("A worker is already running", file=sys.stderr)
-        result = 3
+                with ExitStack() as lock_scope:
+                    try:
+                        singleton = lock_scope.enter_context(locks.worker())
+                    except LockBusy:
+                        print("A worker is already running", file=sys.stderr)
+                        result = 3
+                    else:
+                        context = WorkerContext(
+                            configuration,
+                            db,
+                            clock if clock is not None else SystemClock(),
+                            adapters,
+                            locks,
+                            singleton,
+                        )
+                        context.ensure_active()
+                        runtime.run(context)
+                        result = 0
     except (DatabaseNotReady, LockLost, SQLAlchemyError):
         print("Worker database or lock is unavailable", file=sys.stderr)
         result = 4
