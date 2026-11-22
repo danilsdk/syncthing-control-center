@@ -23,9 +23,7 @@ def payload(folder_id: str, **changes) -> dict:
     }
 
 
-def test_crud_and_optimistic_versioning(
-    client: TestClient, graph, postgres_engine
-) -> None:
+def test_crud_and_optimistic_versioning(client: TestClient, graph, postgres_engine) -> None:
     _node_id, folder_id = graph
     created = client.post("/api/rules", json=payload(str(folder_id)))
     assert created.status_code == 201, created.text
@@ -62,16 +60,10 @@ def test_crud_and_optimistic_versioning(
     assert stale.json()["error"]["code"] == "version_conflict"
 
     assert (
-        client.delete(
-            f"/api/rules/{rule['id']}", params={"expected_version": 1}
-        ).status_code
-        == 409
+        client.delete(f"/api/rules/{rule['id']}", params={"expected_version": 1}).status_code == 409
     )
     assert (
-        client.delete(
-            f"/api/rules/{rule['id']}", params={"expected_version": 2}
-        ).status_code
-        == 204
+        client.delete(f"/api/rules/{rule['id']}", params={"expected_version": 2}).status_code == 204
     )
     assert client.get(f"/api/rules/{rule['id']}").status_code == 404
     with postgres_engine.connect() as connection:
@@ -92,16 +84,10 @@ def test_rule_page_stays_consistent_if_writer_commits_between_count_and_items(
     _node_id, folder_id = graph
     count_seen = False
 
-    def insert_after_count(
-        _connection, _cursor, statement, _parameters, _context, _executemany
-    ):
+    def insert_after_count(_connection, _cursor, statement, _parameters, _context, _executemany):
         nonlocal count_seen
         normalized = " ".join(statement.lower().split())
-        if (
-            count_seen
-            or "select count(" not in normalized
-            or "from sync_rules" not in normalized
-        ):
+        if count_seen or "select count(" not in normalized or "from sync_rules" not in normalized:
             return
         count_seen = True
         with postgres_engine.begin() as writer:
@@ -130,9 +116,7 @@ def test_rule_page_stays_consistent_if_writer_commits_between_count_and_items(
     assert body["total"] >= 0
 
 
-def test_rule_page_reports_total_for_an_empty_offset_page(
-    client: TestClient, graph
-) -> None:
+def test_rule_page_reports_total_for_an_empty_offset_page(client: TestClient, graph) -> None:
     _node_id, folder_id = graph
     created = client.post("/api/rules", json=payload(str(folder_id), enabled=False))
     assert created.status_code == 201, created.text
@@ -146,9 +130,7 @@ def test_rule_page_reports_total_for_an_empty_offset_page(
     assert body["items"] == []
 
 
-def test_only_one_active_rule_and_invalid_business_states(
-    client: TestClient, graph
-) -> None:
+def test_only_one_active_rule_and_invalid_business_states(client: TestClient, graph) -> None:
     _node_id, folder_id = graph
     first = client.post("/api/rules", json=payload(str(folder_id)))
     assert first.status_code == 201
@@ -170,9 +152,7 @@ def test_only_one_active_rule_and_invalid_business_states(
     assert invalid_timezone.json()["error"]["code"] == "invalid_timezone"
 
 
-def test_patch_rejects_equal_merged_window_boundaries(
-    client: TestClient, graph
-) -> None:
+def test_patch_rejects_equal_merged_window_boundaries(client: TestClient, graph) -> None:
     _node_id, folder_id = graph
     created = client.post("/api/rules", json=payload(str(folder_id)))
     assert created.status_code == 201

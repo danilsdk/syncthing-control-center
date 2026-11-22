@@ -21,10 +21,7 @@ def utc(value: str) -> datetime:
 class ScheduleEngineTests(TestCase):
     def test_absent_or_disabled_rule_has_no_desired_state(self) -> None:
         assert calculate_desired_paused(None, utc("2026-10-23T20:00:00Z")) is None
-        assert (
-            calculate_desired_paused(Rule(enabled=False), utc("2026-10-23T20:00:00Z"))
-            is None
-        )
+        assert calculate_desired_paused(Rule(enabled=False), utc("2026-10-23T20:00:00Z")) is None
 
     def test_same_day_window_includes_start_and_excludes_end(self) -> None:
         rule = Rule(days_of_week=(1,), start_time="09:00", end_time="17:00")
@@ -68,16 +65,12 @@ class ScheduleEngineTests(TestCase):
 
     def test_invalid_inputs_fail_closed(self) -> None:
         with self.assertRaises(ValueError):
-            calculate_desired_paused(
-                Rule(timezone="Mars/Phobos"), utc("2026-10-23T20:00:00Z")
-            )
+            calculate_desired_paused(Rule(timezone="Mars/Phobos"), utc("2026-10-23T20:00:00Z"))
         with self.assertRaises(ValueError):
             calculate_desired_paused(
                 Rule(start_time="23:00", end_time="23:00"), utc("2026-10-23T20:00:00Z")
             )
         with self.assertRaises(ValueError):
-            calculate_desired_paused(
-                Rule(days_of_week=(0,)), utc("2026-10-23T20:00:00Z")
-            )
+            calculate_desired_paused(Rule(days_of_week=(0,)), utc("2026-10-23T20:00:00Z"))
         with self.assertRaises(ValueError):
             calculate_desired_paused(Rule(), datetime(2026, 10, 23, 20, tzinfo=None))
