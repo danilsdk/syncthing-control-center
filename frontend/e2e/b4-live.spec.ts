@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, rmdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   expect,
   test as base,
   type APIRequestContext,
   type APIResponse,
 } from "@playwright/test";
-import type { Execution, Folder, Page, Rule, Session } from "../src/types";
+import type { Execution, Folder, Page, Rule, RuleInput, Session } from "../src/types";
 
 async function read<T>(response: APIResponse): Promise<T> {
   expect(response.ok(), `HTTP ${response.status()} from demo stand`).toBe(true);
@@ -17,13 +20,23 @@ type RestoreFolder = (api: APIRequestContext) => Promise<void>;
 const test = base.extend<{ restoreFolder: (restore: RestoreFolder) => void }>({
   restoreFolder: [
     async ({ page }, use) => {
+      const folderId = process.env.B4_LIVE_FOLDER_ID?.toLowerCase();
+      if (!folderId || !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/.test(folderId)) {
+        throw new Error("B4_LIVE_FOLDER_ID must identify a dedicated demo folder");
+      }
+      const lock = join(tmpdir(), `scc-b4-live-${folderId}`);
+      await mkdir(lock);
       let restore: RestoreFolder | undefined;
-      await use((callback) => {
-        restore = callback;
-      });
-      await restore?.(page.request);
+      try {
+        await use((callback) => {
+          restore = callback;
+        });
+        await restore?.(page.request);
+      } finally {
+        await rmdir(lock);
+      }
     },
-    { timeout: 150_000 },
+    { timeout: 195_000 },
   ],
 });
 
@@ -48,7 +61,10 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
   const api = page.request;
   const rules = async () =>
     read<Page<Rule>>(
-      await api.get("/api/rules", { params: { folder_id: folderId } }),
+      await api.get("/api/rules", {
+        params: { folder_id: folderId },
+        timeout: 10_000,
+      }),
     );
   const folder = async () => {
     const data = await read<Page<Folder>>(
@@ -85,18 +101,50 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
     await page.getByRole("button", { name: day, exact: true }).click();
   }
 
-  const creation = page.waitForResponse(
-    (response) =>
-      response.url() === new URL("/api/rules", origin).href &&
-      response.request().method() === "POST",
-    { timeout: 15_000 },
-  );
+  const createUrl = new URL("/api/rules", origin).href;
+  let submitted: RuleInput | undefined;
+  page.on("request", (request) => {
+    if (request.url() === createUrl && request.method() === "POST") {
+      submitted = request.postDataJSON();
+    }
+  });
+  const creation = page
+    .waitForResponse(
+      (response) =>
+        response.url() === createUrl && response.request().method() === "POST",
+      { timeout: 15_000 },
+    )
+    .catch(() => undefined);
   // Keep the response available for teardown even if the click or an assertion fails.
   restoreFolder(async (api) => {
-    const response = await creation.catch(() => undefined);
-    if (response?.status() !== 201) return;
+    if (!submitted) return;
+    const response = await creation;
+    const status = response?.status();
+    if (status && status >= 400 && status < 500 && status !== 408) return;
+    let created: Rule | undefined;
+    if (status === 201) {
+      created = await response?.json().catch(() => undefined);
+    }
+    if (!created) {
+      // This run owns the disposable folder and verified its empty baseline.
+      await expect
+        .poll(
+          async () => {
+            const { items, total } = await rules();
+            if (total === 1) created = items[0];
+            return total;
+          },
+          { timeout: 25_000, message: "Resolve the outcome of the demo rule POST" },
+        )
+        .toBe(1);
+      expect(created).toMatchObject({
+        ...submitted,
+        days_of_week: [...submitted.days_of_week].sort((a, b) => a - b),
+        version: 1,
+      });
+    }
+    if (!created) throw new Error("Missing created demo rule");
 
-    const created: Rule = await response.json();
     const removed = await api.delete(`/api/rules/${created.id}`, {
       params: { expected_version: created.version },
       headers,
@@ -131,6 +179,7 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
     creation,
     page.getByRole("button", { name: "Создать правило", exact: true }).click(),
   ]);
+  if (!response) throw new Error("The demo rule POST response did not arrive");
   expect(response.status()).toBe(201);
   const rule: Rule = await response.json();
   expect(rule).toMatchObject({
