@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import errno
 import hashlib
 import json
 import os
+import platform
 import re
 import signal
 import socket
@@ -30,6 +32,9 @@ STATE = RUNTIME / "state.json"
 FOLDERS = ("scc-a1-shared", "scc-a1-control")
 NODES = (("node-a", 18384, 22101), ("node-b", 28384, 22102))
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
+PORT_WAIT_SECONDS = 130
+# v2.1.7 allows 10s for services, then 10s for database close. Leave 10s margin.
+SHUTDOWN_GRACE_SECONDS = 30
 
 
 def utc_now() -> str:
@@ -129,11 +134,102 @@ def windows_process(pid: int, expected: dict | None = None, terminate: bool = Fa
         kernel.CloseHandle(handle)
 
 
+class ProcBSDInfo(ctypes.Structure):
+    """Darwin PROC_PIDTBSDINFO ABI from Apple's bsd/sys/proc_info.h (136 bytes)."""
+
+    _fields_ = [
+        (name, ctypes.c_uint32)
+        for name in (
+            "flags",
+            "status",
+            "xstatus",
+            "pid",
+            "ppid",
+            "uid",
+            "gid",
+            "ruid",
+            "rgid",
+            "svuid",
+            "svgid",
+            "reserved",
+        )
+    ] + [
+        ("comm", ctypes.c_char * 16),
+        ("name", ctypes.c_char * 32),
+        ("nfiles", ctypes.c_uint32),
+        ("pgid", ctypes.c_uint32),
+        ("pjobc", ctypes.c_uint32),
+        ("tdev", ctypes.c_uint32),
+        ("tpgid", ctypes.c_uint32),
+        ("nice", ctypes.c_int32),
+        ("start_sec", ctypes.c_uint64),
+        ("start_usec", ctypes.c_uint64),
+    ]
+
+
+def macos_process(pid: int):
+    """Read start time on both sides of proc_pidpath; no signals or /proc on Darwin."""
+    try:
+        library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+        library.proc_pidinfo.argtypes = (
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_uint64,
+            ctypes.c_void_p,
+            ctypes.c_int,
+        )
+        library.proc_pidinfo.restype = ctypes.c_int
+        library.proc_pidpath.argtypes = (ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32)
+        library.proc_pidpath.restype = ctypes.c_int
+    except (OSError, AttributeError):
+        raise BenchError("Cannot load macOS process identity API") from None
+
+    def creation():
+        info = ProcBSDInfo()
+        ctypes.set_errno(0)
+        count = library.proc_pidinfo(pid, 3, 0, ctypes.byref(info), ctypes.sizeof(info))
+        if count == 0 and ctypes.get_errno() == errno.ESRCH:
+            return None
+        if count != ctypes.sizeof(info) or info.pid != pid or not info.start_sec:
+            raise BenchError("Cannot verify macOS process creation time")
+        if info.status == 5:  # SZOMB: an exited child waiting to be reaped.
+            return None
+        return f"{info.start_sec}:{info.start_usec}"
+
+    before = creation()
+    if before is None:
+        return None
+    buffer = ctypes.create_string_buffer(4096)  # PROC_PIDPATHINFO_MAXSIZE
+    ctypes.set_errno(0)
+    length = library.proc_pidpath(pid, buffer, len(buffer))
+    if length == 0 and ctypes.get_errno() == errno.ESRCH:
+        return None
+    if length <= 0 or length >= len(buffer) or length != len(buffer.value):
+        raise BenchError("Cannot verify macOS executable")
+    after = creation()
+    if after is None or before != after:
+        return None
+    executable = Path(os.fsdecode(buffer.value))
+    if not executable.is_absolute():
+        raise BenchError("Cannot verify macOS executable")
+    try:
+        executable = executable.resolve(strict=True)
+    except OSError:
+        raise BenchError("Cannot verify macOS executable") from None
+    return {"pid": pid, "created": before, "executable": str(executable)}
+
+
 def process_identity(pid: int | None):
     if not pid:
         return None
+    if type(pid) is not int or not 0 < pid <= 2**31 - 1:
+        raise BenchError("Invalid bench process ID")
+    if platform.system() == "Darwin":
+        return macos_process(pid)
     if os.name == "nt":
         return windows_process(pid)
+    if platform.system() != "Linux":
+        raise BenchError("No process identity API for this operating system")
     try:
         source = Path(f"/proc/{pid}")
         fields = (source / "stat").read_text(encoding="utf-8").rsplit(") ", 1)[1].split()
@@ -155,7 +251,12 @@ def binary_path(binary: Path) -> Path:
 
 def check_layout() -> None:
     """Refuse redirected managed paths before creating files or stopping nodes."""
-    for path in (STATE, RUNTIME / "owner.json", RUNTIME / "bin"):
+    for path in (
+        STATE,
+        RUNTIME / "owner.json",
+        RUNTIME / "bin",
+        RUNTIME / "shutdown-attempts.jsonl",
+    ):
         runtime_path(RUNTIME, path)
     for name, _, _ in NODES:
         home = RUNTIME / "nodes" / name
@@ -184,6 +285,8 @@ def node_home(node: dict) -> Path:
 
 
 def owned(node: dict) -> bool:
+    if node.get("pending_pid") is not None:
+        raise BenchError("Started process identity is unverified; runtime retained for inspection")
     identity = node.get("process")
     if not identity or process_identity(identity["pid"]) != identity:
         return False
@@ -401,22 +504,28 @@ class BenchClient:
         return result["body"]
 
 
-def stop(state: dict | None = None) -> dict:
-    check_layout()
-    state = state or read_state()
-    stopped = []
-    for node in state["nodes"]:
-        if not owned(node):
-            continue
+def stop_owned_node(node: dict, observation: dict) -> None:
+    started = time.monotonic()
+    try:
         try:
-            BenchClient(node).request("/rest/system/shutdown", method="POST")
+            client = BenchClient(node)
+            if owned(node):  # Recheck after reading the owned home's credentials.
+                response = client.request("/rest/system/shutdown", method="POST")
+                observation["shutdown_status"] = response["status_code"]
         except BenchError:
             pass
-        deadline = time.monotonic() + 8
+        observation["phase"] = "await_exit"
+        deadline = time.monotonic() + SHUTDOWN_GRACE_SECONDS
         while owned(node) and time.monotonic() < deadline:
             time.sleep(0.1)
         if owned(node):
             expected = node["process"]
+            if platform.system() == "Darwin":
+                raise BenchError(
+                    "macOS shutdown did not stop the owned process; runtime retained; "
+                    "see runtime/shutdown-attempts.jsonl"
+                )
+            observation["phase"] = "verified_termination"
             if os.name == "nt":
                 windows_process(expected["pid"], expected, terminate=True)
             else:
@@ -432,13 +541,74 @@ def stop(state: dict | None = None) -> dict:
             time.sleep(0.1)
         if owned(node):
             raise BenchError("An owned bench process did not stop")
-        node.pop("process", None)
-        stopped.append(node["name"])
-    write_json(STATE, state)
-    return {
-        "stopped": stopped,
-        "running": [node["name"] for node in state["nodes"] if owned(node)],
+        observation.update(exit_confirmed=True, phase="exit_confirmed")
+    finally:
+        observation["elapsed_seconds"] = round(time.monotonic() - started, 3)
+
+
+def stop(state: dict | None = None) -> dict:
+    check_layout()
+    state = state or read_state()
+    stopped = []
+    report = {
+        "started_at": utc_now(),
+        "grace_seconds": SHUTDOWN_GRACE_SECONDS,
+        "result": "failed",
+        "nodes": [],
     }
+    try:
+        for node in state["nodes"]:
+            if not owned(node):
+                continue
+            observation = {
+                "name": node["name"],
+                "phase": "shutdown_request",
+                "shutdown_status": None,
+                "exit_confirmed": False,
+            }
+            report["nodes"].append(observation)
+            stop_owned_node(node, observation)
+            node.pop("process", None)
+            stopped.append(node["name"])
+        write_json(STATE, state)
+        result = {
+            "stopped": stopped,
+            "running": [node["name"] for node in state["nodes"] if owned(node)],
+        }
+        report["result"] = "passed"
+        return result
+    finally:
+        if report["nodes"]:
+            report["completed_at"] = utc_now()
+            # A later cleanup retry must not overwrite evidence of a failed attempt.
+            path = runtime_path(RUNTIME, RUNTIME / "shutdown-attempts.jsonl")
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(report) + "\n")
+
+
+def wait_for_ports() -> None:
+    """Allow TIME_WAIT to expire without reusing a port or stopping its listener."""
+    deadline = time.monotonic() + PORT_WAIT_SECONDS
+    while True:
+        try:
+            for _, api, sync in NODES:
+                for port in (api, sync):
+                    with socket.socket() as probe:
+                        probe.bind(("127.0.0.1", port))
+            return
+        except OSError as error:
+            # Winsock also reports an exclusive bind as WSAEACCES (10013).
+            if error.errno != errno.EADDRINUSE and getattr(error, "winerror", None) != 10013:
+                raise BenchError(
+                    "Cannot check reserved bench ports; no process was started"
+                ) from None
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise BenchError(
+                    "A reserved bench port is occupied after bounded waiting; "
+                    "no existing process was stopped"
+                ) from None
+            time.sleep(min(0.1, remaining))
 
 
 def start() -> dict:
@@ -449,15 +619,7 @@ def start() -> dict:
         if len(running) == 2:
             return state
         raise BenchError("Partial bench is already running; stop it before starting again")
-    for _, api, sync in NODES:
-        for port in (api, sync):
-            try:
-                with socket.socket() as probe:
-                    probe.bind(("127.0.0.1", port))
-            except OSError:
-                raise BenchError(
-                    "A reserved bench port is occupied; no existing process was stopped"
-                ) from None
+    wait_for_ports()
     binary = binary_path(prepare())
     if release()["version"] not in native(binary, "--version").split():
         raise BenchError("Executable version differs from the pinned release")
@@ -483,9 +645,19 @@ def start() -> dict:
                     stdin=subprocess.DEVNULL,
                     creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
                 )
+            # Persist the launch before querying OS metadata. If that query fails,
+            # status/stop must report uncertainty instead of an empty running list.
+            node["pending_pid"] = process.pid
+            write_json(STATE, state)
             node["process"] = process_identity(process.pid)
             if node["process"] is None:
-                raise BenchError("Syncthing exited before its process identity was captured")
+                if process.poll() is not None:
+                    node.pop("pending_pid")
+                    write_json(STATE, state)
+                raise BenchError(
+                    "Syncthing identity was not captured; inspect the retained runtime"
+                )
+            node.pop("pending_pid")
             write_json(STATE, state)
         deadline = time.monotonic() + 25
         for node in state["nodes"]:

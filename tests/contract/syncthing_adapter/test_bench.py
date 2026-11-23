@@ -53,7 +53,10 @@ def test_archive_is_never_extracted_as_a_directory_tree(tmp_path):
         source.writestr("../../outside.txt", "must not be written")
         source.writestr("release/syncthing.exe", b"chosen binary")
         source.writestr("release/other.exe", b"not chosen")
-    assert prepare.extract_binary(archive, windows=True) == b"chosen binary"
+    assert (
+        prepare.extract_binary(archive, archive_format="zip", executable="syncthing.exe")
+        == b"chosen binary"
+    )
     assert sorted(path.name for path in tmp_path.iterdir()) == ["archive.zip"]
 
 
@@ -63,7 +66,7 @@ def test_duplicate_binary_is_rejected(tmp_path):
         source.writestr("one/syncthing.exe", b"first")
         source.writestr("two/syncthing.exe", b"second")
     with pytest.raises(prepare.BenchError, match="exactly one"):
-        prepare.extract_binary(archive, windows=True)
+        prepare.extract_binary(archive, archive_format="zip", executable="syncthing.exe")
 
 
 def test_correct_archive_digest_passes(tmp_path):
@@ -184,6 +187,7 @@ def test_configuration_uses_certificate_id_when_saved_xml_lists_the_peer_first(
 
 
 def test_occupied_port_refuses_start_without_touching_other_processes(tmp_path, monkeypatch):
+    monkeypatch.setattr(bench, "PORT_WAIT_SECONDS", 0)
     monkeypatch.setattr(bench, "RUNTIME", tmp_path)
     monkeypatch.setattr(bench, "STATE", tmp_path / "state.json")
     monkeypatch.setattr(bench, "prepare", lambda: pytest.fail("Unexpected binary preparation"))
@@ -429,6 +433,8 @@ def test_linked_bin_cannot_receive_prepared_executable(tmp_path, monkeypatch):
         "assets": {
             "windows-amd64": {
                 "name": archive.name,
+                "archive_format": "zip",
+                "executable": "syncthing.exe",
                 "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
             }
         },
