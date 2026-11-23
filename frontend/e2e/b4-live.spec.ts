@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { expect, test, type APIResponse } from "@playwright/test";
+import {
+  expect,
+  test as base,
+  type APIRequestContext,
+  type APIResponse,
+} from "@playwright/test";
 import type { Execution, Folder, Page, Rule, Session } from "../src/types";
 
 async function read<T>(response: APIResponse): Promise<T> {
@@ -7,8 +12,24 @@ async function read<T>(response: APIResponse): Promise<T> {
   return response.json();
 }
 
+type RestoreFolder = (api: APIRequestContext) => Promise<void>;
+
+const test = base.extend<{ restoreFolder: (restore: RestoreFolder) => void }>({
+  restoreFolder: [
+    async ({ page }, use) => {
+      let restore: RestoreFolder | undefined;
+      await use((callback) => {
+        restore = callback;
+      });
+      await restore?.(page.request);
+    },
+    { timeout: 150_000 },
+  ],
+});
+
 test("live stand: a browser rule pauses Syncthing, is confirmed in history and enters analytics", async ({
   page,
+  restoreFolder,
 }) => {
   test.setTimeout(210_000);
   const {
@@ -31,7 +52,7 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
     );
   const folder = async () => {
     const data = await read<Page<Folder>>(
-      await api.get(`/api/nodes/${nodeId}/folders`),
+      await api.get(`/api/nodes/${nodeId}/folders`, { timeout: 10_000 }),
     );
     return data.items.find((item) => item.id === folderId);
   };
@@ -64,115 +85,124 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
     await page.getByRole("button", { name: day, exact: true }).click();
   }
 
-  try {
-    await page
-      .getByRole("button", { name: "Создать правило", exact: true })
-      .click();
-    const disable = page.getByRole("button", {
-      name: "Отключить расписание",
-      exact: true,
-    });
-    await expect(disable).toBeVisible();
-    const [rule] = (await rules()).items;
-    expect(rule).toMatchObject({
-      start_time: start,
-      end_time: end,
-      enabled: true,
-    });
+  const creation = page.waitForResponse(
+    (response) =>
+      response.url() === new URL("/api/rules", origin).href &&
+      response.request().method() === "POST",
+    { timeout: 15_000 },
+  );
+  // Keep the response available for teardown even if the click or an assertion fails.
+  restoreFolder(async (api) => {
+    const response = await creation.catch(() => undefined);
+    if (response?.status() !== 201) return;
 
-    let confirmedExecutionId: string | undefined;
+    const created: Rule = await response.json();
+    const removed = await api.delete(`/api/rules/${created.id}`, {
+      params: { expected_version: created.version },
+      headers,
+      timeout: 10_000,
+    });
+    expect(removed.status()).toBe(204);
     await expect
       .poll(
         async () => {
-          const history = await read<Page<Execution>>(
-            await api.get("/api/executions", {
-              params: {
-                folder_id: folderId,
-                source: "rule",
-                status: "applied",
-              },
-            }),
-          );
-          confirmedExecutionId = history.items.find(
-            (attempt) =>
-              attempt.rule_id === rule.id &&
-              attempt.desired_paused &&
-              attempt.observed_paused === true &&
-              !!attempt.verified_at,
-          )?.id;
-          return confirmedExecutionId;
+          const response = await api.get("/api/executions", {
+            params: { folder_id: folderId, status: "pending" },
+            timeout: 10_000,
+          });
+          return (await read<Page<Execution>>(response)).total;
         },
-        { timeout: 75_000 },
+        { timeout: 45_000 },
       )
-      .toBeDefined();
-    if (!confirmedExecutionId) throw new Error("Missing confirmed pause ID");
-    await expect.poll(folder, { timeout: 45_000 }).toMatchObject({
-      actual_paused: true,
+      .toBe(0);
+    const resume = await api.post("/api/executions/resume", {
+      data: { folder_id: folderId, idempotency_key: randomUUID() },
+      headers,
+      timeout: 10_000,
+    });
+    expect(resume.status()).toBe(202);
+    await expect.poll(folder, { timeout: 75_000 }).toMatchObject({
+      actual_paused: false,
       is_stale: false,
     });
-    await page.getByRole("button", { name: "История", exact: true }).click();
-    await page
-      .getByRole("combobox", { name: "Узел", exact: true })
-      .selectOption(nodeId);
-    await page
-      .getByRole("combobox", { name: "Результат", exact: true })
-      .selectOption("applied");
-    await expect(
-      page.getByRole("row").filter({
-        has: page.getByText(confirmedExecutionId.slice(0, 8), { exact: true }),
-      }),
-    ).toContainText("Подтверждено");
-    await page.getByRole("button", { name: "Аналитика", exact: true }).click();
-    await page
-      .getByRole("combobox", { name: "Узел", exact: true })
-      .selectOption(nodeId);
-    await page
-      .getByRole("combobox", { name: "Источник команд" })
-      .selectOption("rule");
-    await page.getByRole("button", { name: "Применить", exact: true }).click();
-    await expect(
-      page.getByRole("region", { name: "Доля подтверждённых команд" }),
-    ).toContainText(/[1-9]\d* подтверждено/);
-    await expect(
-      page.getByRole("region", { name: "Доля успешных проверок API" }),
-    ).toContainText(/из [1-9]\d* проверок/);
-    await expect(
-      page.getByRole("table", { name: "Дневные показатели UTC" }),
-    ).toBeVisible();
-  } finally {
-    // Restore only the rule created in this dedicated folder and its initial pause state.
-    const created = (await rules()).items.find(
-      (item) =>
-        item.timezone === "UTC" &&
-        item.start_time === start &&
-        item.end_time === end,
-    );
-    if (created) {
-      const removed = await api.delete(`/api/rules/${created.id}`, {
-        params: { expected_version: created.version },
-        headers,
-      });
-      expect(removed.status()).toBe(204);
-      await expect
-        .poll(
-          async () => {
-            const response = await api.get("/api/executions", {
-              params: { folder_id: folderId, status: "pending" },
-            });
-            return (await read<Page<Execution>>(response)).total;
-          },
-          { timeout: 45_000 },
-        )
-        .toBe(0);
-      const resume = await api.post("/api/executions/resume", {
-        data: { folder_id: folderId, idempotency_key: randomUUID() },
-        headers,
-      });
-      expect(resume.status()).toBe(202);
-      await expect.poll(folder, { timeout: 75_000 }).toMatchObject({
-        actual_paused: false,
-        is_stale: false,
-      });
-    }
-  }
+  });
+
+  const [response] = await Promise.all([
+    creation,
+    page.getByRole("button", { name: "Создать правило", exact: true }).click(),
+  ]);
+  expect(response.status()).toBe(201);
+  const rule: Rule = await response.json();
+  expect(rule).toMatchObject({
+    folder_id: folderId,
+    start_time: start,
+    end_time: end,
+    enabled: true,
+  });
+  await expect(
+    page.getByRole("button", {
+      name: "Отключить расписание",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  let confirmedExecutionId: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const history = await read<Page<Execution>>(
+          await api.get("/api/executions", {
+            params: {
+              folder_id: folderId,
+              source: "rule",
+              status: "applied",
+            },
+          }),
+        );
+        confirmedExecutionId = history.items.find(
+          (attempt) =>
+            attempt.rule_id === rule.id &&
+            attempt.desired_paused &&
+            attempt.observed_paused === true &&
+            !!attempt.verified_at,
+        )?.id;
+        return confirmedExecutionId;
+      },
+      { timeout: 75_000 },
+    )
+    .toBeDefined();
+  if (!confirmedExecutionId) throw new Error("Missing confirmed pause ID");
+  await expect.poll(folder, { timeout: 45_000 }).toMatchObject({
+    actual_paused: true,
+    is_stale: false,
+  });
+  await page.getByRole("button", { name: "История", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Узел", exact: true })
+    .selectOption(nodeId);
+  await page
+    .getByRole("combobox", { name: "Результат", exact: true })
+    .selectOption("applied");
+  await expect(
+    page.getByRole("row").filter({
+      has: page.getByText(confirmedExecutionId.slice(0, 8), { exact: true }),
+    }),
+  ).toContainText("Подтверждено");
+  await page.getByRole("button", { name: "Аналитика", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Узел", exact: true })
+    .selectOption(nodeId);
+  await page
+    .getByRole("combobox", { name: "Источник команд" })
+    .selectOption("rule");
+  await page.getByRole("button", { name: "Применить", exact: true }).click();
+  await expect(
+    page.getByRole("region", { name: "Доля подтверждённых команд" }),
+  ).toContainText(/[1-9]\d* подтверждено/);
+  await expect(
+    page.getByRole("region", { name: "Доля успешных проверок API" }),
+  ).toContainText(/из [1-9]\d* проверок/);
+  await expect(
+    page.getByRole("table", { name: "Дневные показатели UTC" }),
+  ).toBeVisible();
 });
