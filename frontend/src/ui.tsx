@@ -108,15 +108,21 @@ export function StateCard({
 export type Resource<T> = { data?: T; error: string; loading: boolean };
 export type OnFailure = (error: unknown) => void;
 export function useResource<T>(
-  load: () => Promise<T>,
+  load: (signal: AbortSignal) => Promise<T>,
   revision: number,
   onFailure: OnFailure,
+  preserve = false,
 ): Resource<T> {
   const [state, setState] = useState<Resource<T>>({ error: "", loading: true });
   useEffect(() => {
     let current = true;
-    setState({ error: "", loading: true });
-    load()
+    const controller = new AbortController();
+    setState((old) => ({
+      data: preserve ? old.data : undefined,
+      error: "",
+      loading: true,
+    }));
+    load(controller.signal)
       .then((data) => {
         if (current) setState({ data, error: "", loading: false });
       })
@@ -130,8 +136,9 @@ export function useResource<T>(
       });
     return () => {
       current = false;
+      controller.abort();
     };
-  }, [load, revision, onFailure]);
+  }, [load, revision, onFailure, preserve]);
   return state;
 }
 export function ResourceNotice({
@@ -141,7 +148,8 @@ export function ResourceNotice({
   resource: Resource<unknown>;
   onRetry: () => void;
 }) {
-  if (resource.loading) return <StateCard title="Загружаем данные…" loading />;
+  if (resource.loading && resource.data === undefined)
+    return <StateCard title="Загружаем данные…" loading />;
   return resource.error ? (
     <ErrorNotice message={resource.error} onRetry={onRetry} />
   ) : null;
@@ -170,7 +178,9 @@ export function Pagination({
       >
         Назад
       </button>
-      <span>{items.length ? `${offset + 1}–${end}` : "0"} из {total}</span>
+      <span>
+        {items.length ? `${offset + 1}–${end}` : "0"} из {total}
+      </span>
       <button
         className="button button-small"
         disabled={end >= total}

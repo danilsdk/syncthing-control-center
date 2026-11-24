@@ -3,21 +3,16 @@ import { MockProvider } from "./mock";
 import { ApiProvider, isProviderError } from "./provider";
 import type { Folder, Provider, Session } from "./types";
 import { ErrorNotice, ResourceNotice, StateCard, useResource } from "./ui";
-import { Analytics, Folders, History, Overview, Rules } from "./screens";
+import { Analytics, History } from "./screens";
+import { Overview, PaperFront } from "./overview";
+import { FolderCatalog, FolderAppearance, FolderDetail } from "./folders";
+import { Rules } from "./rules";
+import { RecordDetail } from "./records";
+import { Icon } from "./icons";
+import { Brand, Mast, sectionName } from "./chrome";
+import { PageLink, navigate, useRoute } from "./navigation";
 
-export type View = "overview" | "folders" | "rules" | "history" | "analytics";
-const navItems: { id: View; label: string; icon: string }[] = [
-  { id: "overview", label: "Обзор", icon: "◒" },
-  { id: "folders", label: "Папки", icon: "▣" },
-  { id: "rules", label: "Правила", icon: "◫" },
-  { id: "history", label: "История", icon: "◷" },
-  { id: "analytics", label: "Аналитика", icon: "↗" },
-];
 const mode = import.meta.env.VITE_DATA_MODE === "mock" ? "mock" : "api";
-function currentView(): View {
-  const name = window.location.hash.replace("#/", "");
-  return navItems.find((item) => item.id === name)?.id ?? "overview";
-}
 function Login({
   provider,
   onLogin,
@@ -31,6 +26,7 @@ function Login({
   const [password, setPassword] = useState(
     mode === "mock" ? "demo-password" : "",
   );
+  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
   const submit = async (event: React.FormEvent) => {
@@ -49,85 +45,85 @@ function Login({
     }
   };
   return (
-    <main className="login-page">
-      <div className="login-art">
-        <div className="brand-mark large" aria-hidden="true">
-          S
-        </div>
-        <span className="eyebrow">Syncthing Control Center</span>
-        <h1>
-          Ваши папки.
-          <br />
-          Ваше расписание.
-        </h1>
-        <p>
-          Состояние узлов, расписания и история подтверждённых команд в одной
-          панели.
-        </p>
-        <div className="login-orbit" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-      </div>
-      <section className="login-panel" aria-labelledby="login-heading">
-        <div className="brand-row">
-          <div className="brand-mark" aria-hidden="true">
-            S
-          </div>
-          <span>
-            Syncthing
-            <br />
-            <b>Control Center</b>
-          </span>
-        </div>
-        <div className="login-copy">
-          <h2 id="login-heading">Войти в систему</h2>
-          <p>Учётная запись администратора</p>
-        </div>
-        <form onSubmit={submit} className="form-stack">
-          <label>
-            Логин
-            <input
-              name="username"
-              autoComplete="username"
-              value={login}
-              onChange={(event) => setLogin(event.target.value)}
-              required
-              maxLength={64}
-            />
-          </label>
-          <label>
-            Пароль
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              maxLength={1024}
-            />
-          </label>
-          {error && (
-            <div className="form-error" role="alert">
-              {error}
+    <div className="scc objects auth">
+      <main className="page-a">
+        <div className="login-layout">
+          <section className="folder-well" aria-hidden="true">
+            <PaperFront />
+            <div className="folder-head">
+              <Icon name="folder" />
+              Панель администратора
             </div>
-          )}
-          <button className="button button-primary button-wide" disabled={busy}>
-            {busy ? "Проверяем…" : "Войти"} <span aria-hidden="true">→</span>
-          </button>
-        </form>
-        <div className="login-foot">
-          {mode === "mock"
-            ? "Демонстрационные данные · пароль не проверяется"
-            : "Вход администратора · Backend API"}
+            <div className="folder-body">
+              <div className="login-wordmark">
+                <span className="emblem" />
+                <div>
+                  Syncthing
+                  <br />
+                  Control Center
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className="login-panel">
+            <Brand />
+            <h1>Войти в систему</h1>
+            <form onSubmit={submit} className="form-stack">
+              <label>
+                Логин
+                <input
+                  name="username"
+                  autoComplete="username"
+                  value={login}
+                  onChange={(event) => setLogin(event.target.value)}
+                  required
+                  maxLength={64}
+                />
+              </label>
+              <label>
+                Пароль
+                <span className="password">
+                  <input
+                    name="password"
+                    type={show ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    maxLength={1024}
+                  />
+                  <button
+                    type="button"
+                    aria-label={show ? "Скрыть пароль" : "Показать пароль"}
+                    onClick={() => setShow(!show)}
+                  >
+                    <Icon name="eye" />
+                  </button>
+                </span>
+              </label>
+              {error && (
+                <div className="form-error" role="alert">
+                  {error}
+                </div>
+              )}
+              <button className="btn primary" disabled={busy}>
+                {busy ? "Проверяем…" : "Войти"}{" "}
+                <span aria-hidden="true">→</span>
+              </button>
+            </form>
+            <div className="login-foot">
+              {mode === "mock"
+                ? "Демонстрационные данные · пароль не проверяется"
+                : "Вход администратора · Backend API"}
+            </div>
+          </section>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
 export default function App() {
+  const route = useRoute();
   const provider = useMemo<Provider>(
     () => (mode === "mock" ? new MockProvider() : new ApiProvider()),
     [],
@@ -172,6 +168,24 @@ export default function App() {
     );
     return () => clearTimeout(expiry);
   }, [session]);
+  useEffect(() => {
+    if (checking) return;
+    if (!session && route.section !== "login")
+      navigate(
+        "/login?next=" +
+          encodeURIComponent(location.hash.slice(1) || "/overview"),
+        { replace: true },
+      );
+    if (session && route.section === "login") {
+      const next = route.query.get("next") ?? "/overview";
+      navigate(
+        /^\/(overview|folders|rules|history|analytics)([/?]|$)/.test(next)
+          ? next
+          : "/overview",
+        { replace: true },
+      );
+    }
+  }, [checking, session, route.path]);
   if (checking)
     return (
       <main className="session-check">
@@ -210,7 +224,8 @@ function Workspace({
   onFailure: (error: unknown) => void;
   onLogout: () => void;
 }) {
-  const [view, setView] = useState<View>(currentView);
+  const route = useRoute();
+  const view = route.section;
   const [revision, setRevision] = useState(0);
   const [logoutError, setLogoutError] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
@@ -221,8 +236,8 @@ function Workspace({
   }, [reload]);
   const loadNodes = useCallback(() => provider.listNodes(), [provider]);
   const loadRules = useCallback(() => provider.listRules(), [provider]);
-  const nodes = useResource(loadNodes, revision, onFailure);
-  const rules = useResource(loadRules, revision, onFailure);
+  const nodes = useResource(loadNodes, revision, onFailure, true);
+  const rules = useResource(loadRules, revision, onFailure, true);
   const loadFolders = useCallback(async () => {
     if (!nodes.data) return { items: [] as Folder[], failures: [] as string[] };
     const pages = await Promise.all(
@@ -243,24 +258,16 @@ function Workspace({
       failures: pages.map((page) => page.failure).filter(Boolean),
     };
   }, [provider, nodes.data]);
-  const folders = useResource(loadFolders, revision, onFailure);
-  const loadLatest = useCallback(
-    () => provider.listExecutions({ limit: 1 }),
-    [provider],
-  );
-  const latest = useResource(loadLatest, revision, onFailure);
+  const folders = useResource(loadFolders, revision, onFailure, true);
   useEffect(() => {
-    const update = () => setView(currentView());
-    window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
-  }, []);
-  useEffect(() => {
-    document.title = `${navItems.find((item) => item.id === view)?.label} · Syncthing Control Center`;
+    document.title = sectionName(view) + " · Syncthing Control Center";
   }, [view]);
-  const navigate = (target: View) => {
-    window.location.hash = `/${target}`;
-    setView(target);
-  };
+  useEffect(() => {
+    if (route.path !== "/folders") {
+      window.scrollTo(0, 0);
+      document.getElementById("content")?.focus({ preventScroll: true });
+    }
+  }, [route.path]);
   const logout = async () => {
     setLoggingOut(true);
     setLogoutError("");
@@ -285,175 +292,136 @@ function Workspace({
     !folders.loading &&
     !!folders.data &&
     !folders.data.failures.length;
+  const data = {
+    provider,
+    nodes: nodes.data ?? [],
+    folders: folderItems,
+    rules: rules.data,
+    ready: foldersReady && !rules.loading && !rules.error,
+    revision,
+    onFailure,
+    onRefresh: reload,
+  };
+  const heading =
+    view === "folders" && route.sub === "appearance"
+      ? "Оформление папки"
+      : view === "history" && route.sub
+        ? route.id === "events"
+          ? "Событие"
+          : "Попытка команды"
+        : sectionName(view);
   return (
-    <div className="app-shell">
+    <div className="scc objects">
       <a
-        className="skip-link"
-        href="#main-content"
-        onClick={(event) => {
-          event.preventDefault();
-          document.getElementById("main-content")?.focus();
+        className="skip"
+        href="#content"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById("content")?.focus();
         }}
       >
         К содержимому
       </a>
-      <aside className="sidebar">
-        <div className="brand-row app-brand">
-          <div className="brand-mark" aria-hidden="true">
-            S
-          </div>
-          <span>
-            Syncthing
-            <br />
-            <b>Control Center</b>
-          </span>
-        </div>
-        <div className="workspace-label">
-          ПАНЕЛЬ <span>{mode === "mock" ? "ДЕМО" : "API"}</span>
-        </div>
-        <nav aria-label="Разделы">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              aria-label={item.label}
-              aria-current={view === item.id ? "page" : undefined}
-              className={`nav-item ${view === item.id ? "active" : ""}`}
-              onClick={() => navigate(item.id)}
-            >
-              <span aria-hidden="true">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="connection-state">
-            <span className="mode-dot" aria-hidden="true" />
-            <div>
-              <small>Источник данных</small>
-              <strong>{mode === "mock" ? "Mock API" : "Backend API"}</strong>
-            </div>
-          </div>
-          <div className="user-chip">
-            <span className="avatar" aria-hidden="true">
-              {session.user.login.slice(0, 1).toUpperCase()}
-            </span>
-            <div>
-              <strong>{session.user.login}</strong>
-              <small>Администратор</small>
-            </div>
-            <button
-              className="logout-button"
-              aria-label="Выйти"
-              onClick={() => void logout()}
-              disabled={loggingOut}
-            >
-              ↗
-            </button>
-          </div>
-        </div>
-      </aside>
-      <main className="main-content" id="main-content" tabIndex={-1}>
-        <header className="topbar">
-          <div>
-            <span className="breadcrumb">
-              Control Center /{" "}
-              {navItems.find((item) => item.id === view)?.label}
-            </span>
-            <h1>{navItems.find((item) => item.id === view)?.label}</h1>
-          </div>
-          <div className="top-actions">
-            <span className={`mode-pill ${mode}`}>
-              {mode === "mock" ? "ДЕМО" : "BACKEND API"}
+      <Mast
+        section={view}
+        user={session.user.login}
+        logout={() => void logout()}
+        busy={loggingOut}
+      />
+      <main className="page-a" id="content" tabIndex={-1}>
+        <header className="title-a">
+          <h1>{heading}</h1>
+          <div className="right-meta">
+            <span className="source-label">
+              {mode === "mock" ? "Демонстрационные данные" : "Backend API"}
             </span>
             <button
-              className="icon-button"
+              className="iconbtn"
+              data-tip="Перечитать данные"
               aria-label="Обновить"
               onClick={reload}
-              disabled={nodes.loading || rules.loading || folders.loading}
             >
-              ↻
+              <Icon name="reset" />
             </button>
           </div>
         </header>
-        {mode === "mock" && (
-          <div className="mock-banner" role="status">
-            <span>Демонстрационные данные</span>Mock-режим изолирован от
-            Syncthing. Он не подтверждает работу интеграции.
-          </div>
-        )}
         {logoutError && <ErrorNotice message={logoutError} />}
-        <div className="view-content">
-          {view !== "analytics" && (
-            <ResourceNotice resource={nodes} onRetry={reload} />
-          )}
-          {["overview", "folders", "rules"].includes(view) && (
-            <>
-              <ResourceNotice resource={folders} onRetry={reload} />
-              {folders.data?.failures.map((message) => (
-                <ErrorNotice key={message} message={message} onRetry={reload} />
-              ))}
-            </>
-          )}
-          {["overview", "folders", "rules"].includes(view) && (
-            <ResourceNotice resource={rules} onRetry={reload} />
-          )}
-          {view === "overview" && (
-            <>
-              <ResourceNotice resource={latest} onRetry={reload} />
-              <Overview
-                nodes={nodes.data}
-                folders={foldersReady ? folderItems : undefined}
-                rules={rules.data}
-                latest={latest.data?.items[0]}
-                onNavigate={navigate}
-              />
-            </>
-          )}
-          {view === "folders" && (
-            <Folders
-              folders={folderItems}
-              nodes={nodes.data ?? []}
-              rules={rules.data}
-              ready={foldersReady}
-              provider={provider}
-              onRefresh={reload}
-              onFailure={onFailure}
-            />
-          )}
-          {view === "rules" && (
-            <Rules
-              folders={folderItems}
-              nodes={nodes.data ?? []}
-              rules={rules.data}
-              ready={foldersReady}
-              provider={provider}
-              onRefresh={reload}
-              onFailure={onFailure}
-            />
-          )}
-          {view === "history" && (
-            <History
-              provider={provider}
-              nodes={nodes.data ?? []}
-              folders={folderItems}
-              revision={revision}
-              onFailure={onFailure}
-              onRefresh={reload}
-            />
-          )}
-          {view === "analytics" && (
-            <Analytics
-              provider={provider}
-              revision={revision}
-              onFailure={onFailure}
-            />
-          )}
+        <ResourceNotice resource={nodes} onRetry={reload} />
+        {view !== "analytics" && (
+          <>
+            <ResourceNotice resource={folders} onRetry={reload} />
+            {folders.data?.failures.map((message) => (
+              <ErrorNotice key={message} message={message} onRetry={reload} />
+            ))}
+          </>
+        )}
+        {["overview", "folders", "rules"].includes(view) && (
+          <ResourceNotice resource={rules} onRetry={reload} />
+        )}
+        <div className="route-enter" key={route.path}>
+          <WorkspaceScreen
+            route={route}
+            data={data}
+            foldersReady={foldersReady}
+          />
         </div>
-        <footer className="footer">
-          <span>Время истории и наблюдений — UTC</span>
-          <span>Расписания — в выбранном часовом поясе</span>
-        </footer>
       </main>
     </div>
   );
+}
+
+function WorkspaceScreen({
+  route,
+  data,
+  foldersReady,
+}: {
+  route: ReturnType<typeof useRoute>;
+  data: import("./folders").WorkspaceData;
+  foldersReady: boolean;
+}) {
+  const missing = (
+    <StateCard title="Страница не найдена">
+      <PageLink to="/overview">На обзор</PageLink>
+    </StateCard>
+  );
+  if (route.path.split("/").length > 4) return missing;
+  switch (route.section) {
+    case "overview":
+      return route.id ? missing : <Overview {...data} />;
+    case "analytics":
+      return route.id ? missing : <Analytics {...data} />;
+    case "rules":
+      if (route.sub && (route.sub !== "edit" || route.id === "new"))
+        return missing;
+      return <Rules {...data} />;
+    case "history":
+      if (route.id && route.id !== "commands" && route.id !== "events")
+        return missing;
+      return route.sub ? (
+        <RecordDetail {...data} id={route.sub} events={route.id === "events"} />
+      ) : (
+        <History {...data} />
+      );
+    case "folders": {
+      if (route.sub && route.sub !== "appearance") return missing;
+      if (!route.id) return <FolderCatalog {...data} />;
+      const folder = data.folders.find((f) => f.id === route.id);
+      if (!folder)
+        return foldersReady ? (
+          <StateCard title="Папка не найдена">
+            <PageLink to="/folders">К списку папок</PageLink>
+          </StateCard>
+        ) : null;
+      if (route.sub === "appearance") return <FolderAppearance f={folder} />;
+      return (
+        <FolderDetail
+          {...data}
+          f={folder}
+          n={data.nodes.find((n) => n.id === folder.node_id)}
+        />
+      );
+    }
+    default:
+      return missing;
+  }
 }
