@@ -23,6 +23,21 @@ const sectionNames = {
   login: 'Вход',
 };
 const paths = {
+  home: 'M3 10.5 12 3l9 7.5M5 9.5V21h5v-7h4v7h5V9.5',
+  history: 'M3 5v5h5 M4 9a8.5 8.5 0 1 1-.4 6 M12 7v5l3.5 2',
+  chart: 'M4 4v16h17 M8 15l4-5 4 2 4-7',
+  search: 'M16 16l5 5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
+  tune: 'M3 7h6m5 0h7 M3 17h10m5 0h3 M9 4h5v6H9z M13 14h5v6h-5z',
+  pin: 'm8 3 9 0-1 6 3 4v2H5v-2l3-4z M12 15v6',
+  move: 'M2 12h20 M6 8l-4 4 4 4 M18 8l4 4-4 4',
+  docs: 'M8 3h8l4 4v13H8z M15 3v5h5 M4 7v15h12 M11 12h6 M11 16h4',
+  archive: 'M3 4h18v5H3z M5 9v11h14V9 M9 13h6',
+  photo: 'M3 4h18v16H3z M3 16l6-6 5 5 3-3 4 4 M17 8h.01',
+  music:
+    'M9 17V6l11-3v12 M9 9l11-3 M9 17a3 2 0 1 1-6 0 3 2 0 0 1 6 0 M20 15a3 2 0 1 1-6 0 3 2 0 0 1 6 0',
+  code: 'm7 7-5 5 5 5 M17 7l5 5-5 5 M14 4l-4 16',
+  briefcase: 'M3 7h18v13H3z M8 7V4h8v3 M3 12q9 5 18 0 M12 12v3',
+  book: 'M12 6Q7 3 2 5v14q5-2 10 1 5-3 10-1V5q-5-2-10 1Zm0 0v14',
   folder: 'M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z',
   server: 'M3 4h18v6H3z M3 14h18v6H3z M6 7h.1 M6 17h.1',
   calendar: 'M4 5h16v16H4z M4 10h16 M8 3v4 M16 3v4 M8 14h2 M14 14h2 M8 17h2',
@@ -102,6 +117,13 @@ function savePos() {
 function go(url, { nav = false, replace = false, restore = null } = {}) {
   if (url === current().raw && !replace) return;
   const before = current();
+  const fromMark =
+    before.path === '/folders' && /^\/folders\/[^/?]+$/.test(url)
+      ? document.activeElement
+          ?.closest('.folder-entry')
+          ?.querySelector('.collection-mark')
+          ?.getBoundingClientRect()
+      : null;
   savePos();
   let origin = nav ? null : history.state?.origin;
   if (!nav && before.path === '/folders' && url.startsWith('/folders/')) origin = pos();
@@ -113,10 +135,12 @@ function go(url, { nav = false, replace = false, restore = null } = {}) {
   const state = {
     index: (history.state?.index ?? 0) + (replace ? 0 : 1),
     origin,
+    previous: before.raw,
     position: restore,
   };
   history[replace ? 'replaceState' : 'pushState'](state, '', '#' + url);
   render(!isTabSwitch, restore);
+  if (fromMark) moveFolderMark(fromMark);
   if (isTabSwitch) {
     const tab = $('.tab[aria-current]');
     tab?.focus({ preventScroll: true });
@@ -133,6 +157,52 @@ function go(url, { nav = false, replace = false, restore = null } = {}) {
       $('[data-audit]')?.classList.add('updated');
     }
   }
+}
+let markFlight;
+function moveFolderMark(from) {
+  const target = $('.dossier-identity>.collection-mark');
+  if (
+    !target ||
+    matchMedia('(prefers-reduced-motion:reduce)').matches ||
+    from.bottom <= 0 ||
+    from.top >= innerHeight
+  )
+    return;
+  const to = target.getBoundingClientRect();
+  if (to.bottom <= 0 || to.top >= innerHeight) return;
+  markFlight?.cancel();
+  const layer = document.createElement('div');
+  layer.className = 'objects mark-flight';
+  layer.setAttribute('aria-hidden', 'true');
+  const clone = target.cloneNode(true);
+  layer.append(clone);
+  document.body.append(layer);
+  Object.assign(clone.style, {
+    left: to.left + 'px',
+    top: to.top + 'px',
+    width: to.width + 'px',
+    height: to.height + 'px',
+    borderRadius: getComputedStyle(target).borderRadius,
+    fontSize: getComputedStyle(target).fontSize,
+  });
+  target.style.visibility = 'hidden';
+  const flight = clone.animate(
+    [
+      {
+        transform: `translate(${from.left - to.left}px,${from.top - to.top}px) scale(${from.width / to.width})`,
+      },
+      { transform: 'none' },
+    ],
+    { duration: 260, easing: 'cubic-bezier(.2,.78,.25,1)' },
+  );
+  markFlight = flight;
+  function done() {
+    target.style.removeProperty('visibility');
+    layer.remove();
+    if (markFlight === flight) markFlight = null;
+  }
+  flight.onfinish = done;
+  flight.oncancel = done;
 }
 function refreshControl() {
   const { sec, path } = current();
@@ -181,9 +251,27 @@ function demoPanel() {
 function overview() {
   const box = document.createElement('div');
   box.innerHTML = $('#approved').innerHTML;
-  const f = folderBy(IDS.folder),
+  const f = featuredFolder(),
     r = activeFor(f.id);
   $('.folder-bottom a', box).href = '#' + folderPath(f);
+  const n = nodeBy(f.node);
+  $('.folder-well', box).setAttribute('aria-label', folderName(f));
+  const headline = $('.folder-body h2', box);
+  if (folderName(f) !== 'Рабочие документы') headline.textContent = folderName(f);
+  $('.folder-head .vcenter', box).innerHTML =
+    folderIcon(f) + (db.folders.length === 1 ? 'Единственная папка' : 'Закреплено на обзоре');
+  $('.folder-head .mono', box).textContent = address(f);
+  $('.folder-state', box).innerHTML = folderStatus(f);
+  const fields = $$('.folder-bottom dd', box);
+  fields[0].textContent =
+    f.paused == null
+      ? 'Неизвестна'
+      : (f.paused ? 'Включена' : 'Выключена') + (isFresh(f) ? '' : ' · устарело');
+  fields[1].textContent = f.runtime === 'idle' ? 'Ожидание' : f.runtime || 'Неизвестно';
+  $('.node-a h2', box).textContent = n.label;
+  $('.node-foot .mono', box).textContent = n.name;
+  $('.node-status', box).innerHTML = nodeStatus(n);
+  $('.folder-bottom a', box).innerHTML = 'Состояние папки ' + icon('diagonal');
   const latest = db.attempts[0];
   const ev = db.events[0];
   const a = $('.schedule-a a', box);
@@ -211,9 +299,19 @@ function overview() {
     icon(latest.paused ? 'pause' : 'play') +
     (latest.paused ? 'Приостановить' : 'Возобновить') +
     (latest.rule ? ' по расписанию' : ' вручную');
-  cells[2].textContent = who.name;
+  cells[2].textContent = folderName(who);
   cells[3].innerHTML = badge(latest.status) + `<small>${verification(latest)}</small>`;
   $('[data-kind="event"] a', box).href = '#/history/events/' + ev.id;
+  $('[data-kind="event"]', box).cells[2].textContent = folderName(folderBy(ev.folder));
+  if (db.folders.length > 1) {
+    $('.log-head h2', box).insertAdjacentHTML('beforeend', ' <small>Все папки</small>');
+    for (const [row, object] of [
+      [$('[data-kind="event"]', box), folderBy(ev.folder)],
+      [$('[data-kind="command"]', box), who],
+    ]) {
+      row.cells[2].insertAdjacentHTML('beforeend', '<small>' + esc(address(object)) + '</small>');
+    }
+  }
   if (latest.created > ev.at) $('tbody', box).prepend(row);
   const filter = current().q.get('type') || 'all';
   $$('[data-filter]', box).forEach((b) =>
@@ -227,57 +325,151 @@ function overview() {
 function nodeOptions(val) {
   return opt('', 'Все узлы', val) + db.nodes.map((n) => opt(n.id, n.name, val)).join('');
 }
-function foldersPage(q) {
+const glyphs = {
+  folder: 'Папка',
+  docs: 'Документы',
+  archive: 'Архив',
+  photo: 'Фотографии',
+  music: 'Музыка',
+  code: 'Код',
+  briefcase: 'Проекты',
+  book: 'Библиотека',
+};
+const prefKey = 'scc-folder-appearance-v1';
+function readPreferences() {
+  try {
+    return JSON.parse(localStorage.getItem(prefKey)) || {};
+  } catch {
+    return {};
+  }
+}
+let preferences = readPreferences();
+function storePreferences() {
+  try {
+    localStorage.setItem(prefKey, JSON.stringify(preferences));
+  } catch {}
+}
+const appearance = (f) => preferences.folders?.[f?.id] || {};
+const folderName = (f) => (f ? appearance(f).label || f.name : '');
+const featuredFolder = () => folderBy(preferences.featured) || db.folders[0];
+function folderIcon(f, overrides = appearance(f)) {
+  const key = Object.hasOwn(glyphs, overrides.glyph) ? overrides.glyph : 'folder';
+  return `<span class="collection-mark mark-${key}" aria-hidden="true">${overrides.symbol ? `<span class="custom-symbol">${esc(overrides.symbol)}</span>` : icon(key)}</span>`;
+}
+function inventory(q) {
   const node = q.get('node') || '',
-    state = q.get('state') || '';
+    state = q.get('state') || '',
+    term = (q.get('search') || '').trim().toLocaleLowerCase('ru');
+  const folders = db.folders.filter(
+    (f) =>
+      (!node || f.node === node) &&
+      (!state || (state === 'fresh') === isFresh(f)) &&
+      (!term ||
+        [folderName(f), f.name, address(f), nodeBy(f.node).label].some((x) =>
+          x.toLocaleLowerCase('ru').includes(term),
+        )),
+  );
   const groups = db.nodes
-    .filter((n) => !node || node === n.id)
     .map((n) => {
-      const items = db.folders.filter(
-        (f) => f.node === n.id && (!state || (state === 'fresh') === isFresh(f)),
-      );
+      const items = folders.filter((f) => f.node === n.id);
       if (!items.length) return '';
-      return `<section class="node-group"><header><div class="identity"><span class="icon-frame">${icon('server')}</span><div><h2>${n.name}</h2><span class="hint">${n.label}</span></div></div>${nodeStatus(n)}</header><div class="folder-cols table-caption"><span>Папка</span><span>Наблюдение</span><span>По расписанию</span><span></span></div>${items.map((f) => link(folderPath(f), `<span class="identity"><span class="folder-glyph">${icon('folder')}</span><span><strong>${esc(f.name)}</strong><small>${esc(f.key)}</small></span></span><span>${folderStatus(f)}</span><span>${esc(desired(activeFor(f.id)))}</span>${icon('diagonal')}`, 'folder-cols folder-row', `data-key="row-${f.id}"`)).join('')}</section>`;
+      return `<section class="catalog-group"><header><div class="identity"><span class="node-symbol">${icon('server')}</span><div><h2>${esc(n.name)}</h2><span class="hint">${esc(n.label)}</span></div></div>${nodeStatus(n)}</header><div class="catalog-head"><span>Папка</span><span>Наблюдение</span><span>По расписанию</span><span></span></div>${items
+        .map((f) => {
+          const isFeatured = f.id === featuredFolder().id;
+          return `<div class="catalog-row">${link(folderPath(f), `${folderIcon(f)}<span class="catalog-name"><strong>${esc(folderName(f))}</strong><small>${esc(f.key)}${isFeatured ? ' · На обзоре' : ''}</small></span>`, 'folder-entry', `data-key="row-${f.id}"`)}<span data-fresh="${f.id}">${folderStatus(f)}</span><span class="catalog-desired">${esc(desired(activeFor(f.id)))}</span>${link(folderPath(f) + '/appearance', icon('tune'), 'iconbtn', `data-key="appearance-${f.id}" aria-label="Настроить оформление: ${attr(folderName(f))}" data-tip="Имя и значок"`)}</div>`;
+        })
+        .join('')}</section>`;
     })
     .join('');
-  const filters = `<div class="filter-bar"><label>Узел<select data-query="node">${nodeOptions(node)}</select></label><label>Наблюдение<select data-query="state">${opt('', 'Все состояния', state)}${opt('stale', 'Без свежих данных', state)}${opt('fresh', 'Свежие данные', state)}</select></label>${node || state ? action('clear', 'Сбросить', 'text-link') : ''}</div>`;
-  const count = db.folders.filter(
-    (f) => (!node || f.node === node) && (!state || (state === 'fresh') === isFresh(f)),
+  return (
+    groups ||
+    empty(
+      'Папок по этим условиям нет',
+      'Попробуйте другое имя, ID или узел.',
+      action('clear', 'Сбросить фильтры'),
+    )
   );
+}
+function foldersPage(q) {
+  const state = q.get('state') || '';
   return (
     title('Папки') +
-    filters +
-    `<div class="split"><div class="stack">${groups || empty('Папок по этим фильтрам нет', 'Выберите другой узел или состояние.', action('clear', 'Сбросить фильтры'))}</div><aside class="panel summary"><div class="panel-label">${icon('pulse')}Свежесть наблюдений</div><div class="metric compact">${count.filter(isFresh).length}<span> / ${count.length}</span></div><p>папок со свежей конфигурацией</p><div class="hairline"></div>${facts(
-      [
-        ['Порог свежести', '60 секунд'],
-        ['Время снимка', time(db.clock)],
-      ],
-    )}</aside></div>`
+    `<div class="catalog-tools"><label class="searchbox"><span class="only-reader">Найти папку</span>${icon('search')}<input type="search" id="folder-search" placeholder="Имя папки, ID или узел" value="${attr(q.get('search') || '')}" autocomplete="off"><kbd>/</kbd></label><label>Узел<select data-query="node">${nodeOptions(q.get('node') || '')}</select></label><label>Наблюдение<select data-query="state">${opt('', 'Все состояния', state)}${opt('stale', 'Без свежих данных', state)}${opt('fresh', 'Свежие данные', state)}</select></label></div><div id="inventory">${inventory(q)}</div>`
   );
+}
+function finishAppearance(f) {
+  const prev = history.state?.previous;
+  if (prev && (prev.split('?')[0] === '/folders' || prev === folderPath(f))) history.back();
+  else go(folderPath(f), { replace: true });
+}
+function appearancePage(f) {
+  const pref = appearance(f);
+  return (
+    breadcrumbs([['Папки', '/folders'], [folderName(f), folderPath(f)], ['Оформление']]) +
+    title('Оформление папки') +
+    `<div class="custom-layout"><form id="appearance-form" class="panel editor" data-id="${f.id}"><h2>Имя и значок</h2><p class="hint">Оформление сохраняется в этом браузере. Folder ID — <code>${esc(f.key)}</code>.</p><label>Название в панели<input name="label" required maxlength="64" value="${attr(folderName(f))}"></label><fieldset><legend>Значок</legend><div class="glyph-picker">${Object.entries(
+      glyphs,
+    )
+      .map(
+        ([key, label]) =>
+          `<label data-tip="${label}"><input type="radio" name="glyph" value="${key}" aria-label="${label}" ${!pref.symbol && (pref.glyph || 'folder') === key ? 'checked' : ''}><span>${icon(key)}</span></label>`,
+      )
+      .join(
+        '',
+      )}</div></fieldset><label>Свой символ или эмодзи<input name="symbol" maxlength="32" value="${attr(pref.symbol || '')}" placeholder="Например, 📚" autocomplete="off"></label><p class="form-error" role="alert"></p><div class="actions"><button class="btn primary" type="submit">Сохранить оформление</button>${action('cancel-appearance', 'Отмена', 'quiet', `data-id="${f.id}"`)}</div></form><aside class="identity-preview"><span class="panel-label">В списке папок</span><div class="identity" id="folder-sample">${folderIcon(f)}<div><strong>${esc(folderName(f))}</strong><small>${localName(f)}</small></div></div></aside></div>`
+  );
+}
+function readAppearance(form) {
+  return {
+    label: form.elements.label.value.trim(),
+    glyph: form.elements.glyph.value || appearance(folderBy(form.dataset.id)).glyph || 'folder',
+    symbol: form.elements.symbol.value.trim(),
+  };
+}
+function updateSample(form) {
+  const f = folderBy(form.dataset.id),
+    pref = readAppearance(form);
+  $('#folder-sample').innerHTML =
+    `${folderIcon(f, pref)}<div><strong>${esc(pref.label || f.name)}</strong><small>${localName(f)}</small></div>`;
+}
+function saveAppearance(form) {
+  const f = folderBy(form.dataset.id),
+    pref = readAppearance(form);
+  if (
+    !pref.label ||
+    [...new Intl.Segmenter('ru', { granularity: 'grapheme' }).segment(pref.symbol)].length > 1
+  ) {
+    $('.form-error', form).textContent = pref.label
+      ? 'Введите один символ или эмодзи.'
+      : 'Введите название папки.';
+    return;
+  }
+  preferences.folders = { ...preferences.folders, [f.id]: pref };
+  storePreferences();
+  finishAppearance(f);
+  toast('Оформление папки сохранено');
 }
 function folderPage(f) {
   const n = nodeBy(f.node),
     r = activeFor(f.id),
-    other = db.rules.find((r) => r.folder === f.id),
+    other = db.rules.find((item) => item.folder === f.id),
     reason = resumeReason(f);
-  const observation =
-    f.observed === null ? 'Нет наблюдения' : time(f.observed) + (isFresh(f) ? '' : ' · устарело');
-  const material = $('#approved').content.querySelector('.folder-well').cloneNode(true);
-  $('.folder-head .mono', material).textContent = address(f);
-  $('.folder-body', material).innerHTML =
-    `<div><h1 class="folio-title" tabindex="-1">${esc(f.name)}</h1><p class="folder-state">${folderStatus(f)}</p></div><div class="folder-bottom"><span class="micro">Конфигурация · ${observation}</span></div>`;
-  const ruleBox = `<div class="panel-label">${icon('calendar')}Управляющее правило</div>${r ? `<div class="large-time">${r.start}<i>—</i>${r.end}</div><p class="mut">${dayText(r.days)} · ${esc(r.zone)}</p>${facts([['Сейчас по правилу', desired(r)]])}${link(rulePath(r), 'Открыть правило ' + icon('arrow'), 'btn primary')}` : `<h2>Без активного правила</h2>${link(other ? rulePath(other) : queryURL('/rules/new', { folder: f.id }), other ? 'Открыть выключенное правило' : 'Создать правило', 'btn')}`}`;
-  const manage = `${reason ? `<button class="btn" type="button" aria-disabled="true" data-tip="${attr(reason)}">${icon('play')}Возобновить вручную</button>` : action('resume', icon('play') + 'Возобновить вручную', 'btn primary', `data-id="${f.id}"`)}${note(reason || 'Свежая конфигурация подтверждает паузу. Активного правила нет.')}`;
+  const observation = !f.observed
+    ? 'Нет наблюдения'
+    : time(f.observed) + (isFresh(f) ? '' : ' · устарело');
+  const isFeatured = featuredFolder().id === f.id;
+  const ruleBox = `<div class="panel-label">${icon('calendar')}Расписание</div>${r ? `<div class="large-time">${r.start}<i>—</i>${r.end}</div><p class="mut">${dayText(r.days)} · ${esc(r.zone)}</p>${facts([['Сейчас по правилу', desired(r)]])}${link(rulePath(r), 'Открыть правило ' + icon('arrow'), 'btn primary')}` : `<h2>Без активного правила</h2>${link(other ? rulePath(other) : queryURL('/rules/new', { folder: f.id }), other ? 'Открыть выключенное правило' : 'Создать правило', 'btn')}`}`;
+  const manage = reason
+    ? `<button class="btn" type="button" aria-disabled="true" data-tip="${attr(reason)}">${icon('play')}Возобновить вручную</button>`
+    : action('resume', icon('play') + 'Возобновить вручную', 'btn primary', `data-id="${f.id}"`);
   return (
     breadcrumbs([['Папки', '/folders'], [address(f)]]) +
-    `<div class="object-meta">${metadata()}</div>` +
-    `<div class="deck object-detail">${material.outerHTML}<aside class="panel schedule-detail">${ruleBox}</aside></div><div class="detail-grid">${block(
-      'Наблюдения',
-      facts([
-        ['Узел', `${n.name} · ${nodeStatus(n)}`],
+    `<div class="object-meta">${metadata()}</div><section class="dossier"><div class="dossier-identity">${folderIcon(f)}<div><span class="mono">${esc(address(f))}</span><h1 tabindex="-1">${esc(folderName(f))}</h1></div></div><div class="dossier-actions">${link(folderPath(f) + '/appearance', icon('tune') + 'Имя и значок', 'btn')}${isFeatured ? `<span class="featured-tag">${icon('pin')}На обзоре</span>` : action('feature', icon('pin') + 'На обзор', 'btn', `data-id="${f.id}"`)}</div></section><div class="dossier-grid"><section class="panel observation-panel"><div class="panel-label">${icon('pulse')}Наблюдения</div><div class="reading-status" data-folder-status>${folderStatus(f)}</div>${facts(
+      [
+        ['Узел', `${esc(n.name)} · ${nodeStatus(n)}`],
         [
           'Фактическая пауза',
-          f.paused === null
+          f.paused == null
             ? 'Неизвестна'
             : (f.paused ? 'Включена' : 'Выключена') + (isFresh(f) ? '' : ' · устарело'),
         ],
@@ -287,67 +479,260 @@ function folderPage(f) {
           'Наблюдение синхронизации',
           time(f.runtimeAt) + (f.runtimeAt && db.clock - f.runtimeAt > 60000 ? ' · устарело' : ''),
         ],
-      ]),
-    )}${block('Управление', manage + '<div class="hairline"></div>' + link(scopedHistory(f), 'История папки ' + icon('arrow'), 'text-link') + `<div data-manual="${f.id}">${manualResult(f)}</div>`)}</div>`
+      ],
+    )}</section><aside class="panel schedule-detail">${ruleBox}</aside></div><section class="panel folder-commands"><div><h2>Управление</h2>${note(reason || 'Папка на паузе. Доступно ручное возобновление.')}</div><div class="action-pair">${manage}${link(scopedHistory(f), 'История папки ' + icon('arrow'), 'text-link')}</div><div data-manual="${f.id}">${manualResult(f)}</div></section>`
   );
 }
+
 function manualResult(f) {
   const a = db.attempts.find((a) => a.folder === f.id && !a.rule);
   return a
     ? `<div class="inline-result">${badge(a.status)} ${link(commandPath(a), 'Открыть попытку ' + icon('diagonal'))}</div>`
     : '';
 }
-function bars(r) {
-  const m = (t) => {
-    const [h, n] = t.split(':').map(Number);
-    return 60 * h + n;
-  };
-  const start = m(r.start),
-    end = m(r.end);
-  return `<div class="week" aria-hidden="true"><div class="scale"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>${DAYS.map(
-    (day, i) => {
-      const ranges = [];
-      if (start !== end && Number.isFinite(start + end)) {
-        if (r.days.includes(i + 1)) ranges.push([start, end > start ? end : 1440]);
-        if (end < start && r.days.includes(i === 0 ? 7 : i)) ranges.push([0, end]);
-      }
-      return `<div class="week-row"><span>${day}</span><div class="track">${ranges.map(([a, b]) => `<i style="left:${a / 14.4}%;width:${(b - a) / 14.4}%"></i>`).join('')}</div></div>`;
-    },
-  ).join('')}</div>`;
+const minuteValue = (t) => {
+  if (!/^\d{2}:\d{2}$/.test(t || '')) return NaN;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
+const formatMinute = (m) =>
+  String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+function weekRows(r) {
+  const start = minuteValue(r.start),
+    end = minuteValue(r.end),
+    valid = Number.isFinite(start + end) && start !== end,
+    overnight = end < start;
+  function segment(a, b) {
+    return b > a
+      ? `<i class="window-fill" style="left:${a / 14.4}%;width:${(b - a) / 14.4}%"></i>`
+      : '';
+  }
+  function handle(edge, at, owner) {
+    const value = edge === 'start' ? start : end,
+      label = edge === 'start' ? 'Начало окна' : 'Конец окна';
+    return `<button type="button" class="window-grip" role="slider" data-edge="${edge}" data-owner="${owner}" tabindex="${owner === r.days[0] ? 0 : -1}" aria-label="${label}, ${DAYS[owner - 1]}" aria-valuemin="0" aria-valuemax="1439" aria-valuenow="${value}" aria-valuetext="${formatMinute(value)}" style="left:${at / 14.4}%"><span aria-hidden="true"></span></button>`;
+  }
+  return DAYS.map((day, i) => {
+    const today = i + 1,
+      prev = i || 7,
+      starts = valid && r.days.includes(today),
+      tail = valid && overnight && end > 0 && r.days.includes(prev);
+    const finish = overnight ? 1440 : end;
+    const blocks = (starts ? segment(start, finish) : '') + (tail ? segment(0, end) : '');
+    const grips =
+      (starts ? handle('start', start, today) : '') +
+      (starts && (!overnight || end === 0) ? handle('end', finish, today) : '') +
+      (tail ? handle('end', end, prev) : '');
+    return `<div class="planner-row ${blocks ? 'has-window' : ''}"><span>${day}</span><div class="planner-track">${blocks}${grips}</div></div>`;
+  }).join('');
 }
 function windowNote(r) {
   if (!r.days.length) return 'Выберите хотя бы один день начала.';
   if (!r.start || !r.end) return 'Укажите обе границы окна.';
   if (r.start === r.end) return 'Начало и конец должны различаться.';
-  const day = r.days[0],
-    overnight = r.end < r.start;
-  return `${dayText(r.days)} · ${r.start}–${r.end}${overnight ? ' следующего дня' : ''}. ${overnight ? `Например, ${DAYS[day - 1]} ${r.start} → ${DAYS[day % 7]} ${r.end}. ` : ''}С ${r.end} — пауза до следующего окна.`;
+  const d = r.days[0],
+    cross = r.end < r.start;
+  return `${dayText(r.days)} · ${r.start}–${r.end}${cross ? ' следующего дня' : ''}.${cross ? ` Например, ${DAYS[d - 1]} ${r.start} → ${DAYS[d % 7]} ${r.end}.` : ''}${r.enabled ? '' : ' Расписание выключено.'}`;
+}
+function board(r) {
+  return `<div class="week-board" aria-label="Недельная шкала"><div class="planner-axis"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div><div class="week-grid">${weekRows(r)}</div><div class="week-legend"><span>Синхронизация разрешена</span><span>Пауза</span></div><p class="board-instruction">${icon('move')}<span>Потяните край полосы. Время общее для выбранных дней.</span></p></div>`;
 }
 function preview(r) {
-  return `<div class="panel-label">${icon('clock')}Окно синхронизации</div><div class="large-time">${esc(r.start || '––:––')}<i>—</i>${esc(r.end || '––:––')}</div><div class="schedule-caption">${esc(r.zone || 'Часовой пояс')} ${r.end < r.start ? '<span>Через полночь</span>' : ''}</div>${bars(r)}<div class="week-legend"><span>Разрешено</span><span>Пауза по расписанию</span></div><p class="window-note">${esc(windowNote(r))}${r.enabled ? '' : ' Расписание выключено.'}</p>`;
+  return `<div class="panel-label">${icon('calendar')}Неделя синхронизации</div><div class="large-time" data-live-time>${esc(r.start)}<i>—</i>${esc(r.end)}</div><div class="schedule-caption" data-live-zone>${esc(r.zone)}</div>${board(r)}<p class="window-note" data-window-note>${esc(windowNote(r))}</p>`;
+}
+function quickWindow(r) {
+  return `<form class="panel quick-window" data-id="${r.id}"><div class="planner-heading"><h2>Неделя синхронизации</h2><span class="mono">${esc(r.zone)}</span></div><div class="range-times">${timeInput('start', 'Начало', r.start)}<span aria-hidden="true">—</span>${timeInput('end', 'Конец', r.end)}</div>${board(r)}<div class="planner-foot"><div><p data-window-note>${esc(windowNote(r))}</p><span class="hint" data-draft>Сохранено · версия ${r.version}</span></div><div class="action-pair"><button type="button" class="quiet" data-act="undo-window" hidden>Отменить</button><button class="btn primary" type="submit" disabled>Сохранить окно</button></div></div><p class="form-error" role="alert"></p></form>`;
+}
+function nextWindows(r) {
+  if (!r.enabled) return '<p class="hint">Расписание выключено.</p>';
+  if (!r.start || !r.end || r.start === r.end)
+    return '<p class="hint">Укажите разные границы окна.</p>';
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: r.zone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(db.clock)
+      .map((p) => [p.type, p.value]),
+  );
+  const first = Date.UTC(+parts.year, +parts.month - 1, +parts.day);
+  const dateLabel = new Intl.DateTimeFormat('ru', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  });
+  const items = [];
+  for (let i = 0; i < 21 && items.length < 3; i++) {
+    const date = new Date(first + i * 86400000),
+      d = date.getUTCDay() || 7;
+    if (!r.days.includes(d) || (!i && r.start <= `${parts.hour}:${parts.minute}`)) continue;
+    items.push(
+      `<li><div class="day-stamp">${DAYS[d - 1]}</div><div><strong>${dateLabel.format(date)}</strong><small>${esc(r.start)} — ${esc(r.end)}${r.end < r.start ? ' · +1 день' : ''}</small></div></li>`,
+    );
+  }
+  return `<ol class="next-windows">${items.join('')}</ol>`;
 }
 function rulesPage() {
-  const sorted = [...db.rules].sort((a, b) => Number(b.enabled) - Number(a.enabled)),
-    r = sorted[0];
+  const all = [...db.rules].sort((a, b) => Number(b.enabled) - Number(a.enabled));
+  const selected = ruleBy(current().q.get('rule')) || all[0];
+  const create = link('/rules/new', icon('add') + 'Создать правило', 'btn primary');
+  if (!selected)
+    return title('Правила') + empty('Правил пока нет', 'Создайте расписание для папки.', create);
+  const f = folderBy(selected.folder);
+  const selector =
+    all.length > 1
+      ? `<label class="rule-selector">Правило<select data-query="rule">${all.map((r) => opt(r.id, folderName(folderBy(r.folder)) + ' · ' + address(folderBy(r.folder)) + ' · ' + r.start + '–' + r.end + ' · v' + r.version, selected.id)).join('')}</select></label>`
+      : '';
   return (
     title('Правила') +
-    `<div class="bar-head"><span>${sorted.length} ${sorted.length === 1 ? 'правило' : 'правил'} в расписании</span>${link('/rules/new', icon('add') + 'Создать правило', 'btn primary')}</div>` +
-    (r
-      ? `<div class="split rule-layout"><section class="panel rules-list"><h2>Правила папок</h2>${sorted
-          .map((r) => {
-            const f = folderBy(r.folder);
-            return link(
-              rulePath(r),
-              `<div class="list-rule-head"><span class="panel-label">${icon('folder')}${localName(f)}</span>${badge(r.enabled ? 'online' : 'cancelled', r.enabled ? 'Включено' : 'Выключено')}</div><strong>${esc(f.name)}</strong><div class="rule-small-time">${r.start}<i>—</i>${r.end}</div><div class="rule-bottom"><span>${dayText(r.days)} · ${esc(r.zone)}</span>${icon('diagonal')}</div>`,
-              'rule-card',
-            );
-          })
-          .join(
-            '',
-          )}</section><aside class="panel schedule-detail"><div class="minor-context">${esc(folderBy(r.folder).name)}</div>${preview(r)}</aside></div>`
-      : empty('Правил пока нет', 'Создайте расписание для папки.'))
+    `<div class="planner-selection"><div class="identity">${folderIcon(f)}<div><span class="mono">${esc(address(f))}</span><h2>${esc(folderName(f))}</h2></div></div>${selector}<div class="action-pair">${link(rulePath(selected), 'Параметры правила ' + icon('diagonal'), 'btn')}${create}</div></div><div class="planner-layout">${quickWindow(selected)}<aside class="planner-aside"><section class="panel next-panel"><div class="panel-label">${icon('calendar')}Ближайшие окна</div><div data-upcoming>${nextWindows(selected)}</div><div class="schedule-now"><span>Сейчас по правилу</span><strong>${desired(selected)}</strong></div></section>${block('Последняя попытка', `<div data-latest="${selected.id}">${lastAttempt(selected)}</div>`)}</aside></div>`
   );
 }
+function windowForm(el) {
+  return el.closest('.quick-window') || $('#rule-form');
+}
+function windowDraft(form) {
+  if (form.id === 'rule-form') return readRule(form);
+  return {
+    ...ruleBy(form.dataset.id),
+    start: form.elements.start.value,
+    end: form.elements.end.value,
+  };
+}
+function updateWindow(form) {
+  const draft = windowDraft(form),
+    quick = form.classList.contains('quick-window'),
+    root = quick ? form : $('#preview');
+  $('.week-grid', root).innerHTML = weekRows(draft);
+  if (edgeDrag && edgeDrag.form === form)
+    edgeDrag.board
+      .querySelector(`[data-edge="${edgeDrag.edge}"][data-owner="${edgeDrag.owner}"]`)
+      ?.classList.add('drag-origin');
+  $('[data-window-note]', root).textContent = windowNote(draft);
+  $('.form-error', form).textContent = '';
+  if (quick) {
+    const saved = ruleBy(draft.id),
+      dirty = draft.start !== saved.start || draft.end !== saved.end;
+    $('[type=submit]', form).disabled = !dirty || current().q.get('view') === 'stale';
+    $('[data-act=undo-window]', form).hidden = !dirty;
+    $('[data-draft]', form).textContent = dirty
+      ? 'Есть несохранённые изменения'
+      : 'Сохранено · версия ' + saved.version;
+    const upcoming = $('[data-upcoming]');
+    if (upcoming) upcoming.innerHTML = nextWindows(draft);
+  } else {
+    $('[data-live-time]', root).innerHTML =
+      esc(draft.start || '––:––') + '<i>—</i>' + esc(draft.end || '––:––');
+    $('[data-live-zone]', root).textContent = draft.zone;
+    $('#inline-window').textContent = windowNote(draft);
+  }
+}
+function moveEdge(form, edge, value) {
+  if (current().q.get('view') === 'stale') return;
+  const next = formatMinute(value);
+  if (
+    next === form.elements[edge].value ||
+    next === form.elements[edge === 'start' ? 'end' : 'start'].value
+  )
+    return;
+  form.elements[edge].value = next;
+  updateWindow(form);
+}
+let edgeDrag = null;
+function focusEdge(drag) {
+  const grip = drag.board.querySelector(`[data-edge="${drag.edge}"][data-owner="${drag.owner}"]`);
+  grip?.focus({ preventScroll: true });
+}
+function finishEdge(e, undo = false) {
+  if (!edgeDrag || (e.pointerId != null && e.pointerId !== edgeDrag.pointer)) return;
+  const drag = edgeDrag;
+  edgeDrag = null;
+  if (undo) {
+    drag.form.elements[drag.edge].value = drag.old;
+    updateWindow(drag.form);
+  }
+  if (drag.board.hasPointerCapture(drag.pointer)) drag.board.releasePointerCapture(drag.pointer);
+  drag.board.classList.remove('dragging');
+  drag.board.querySelector('.drag-origin')?.classList.remove('drag-origin');
+  delete drag.board.dataset.dragEdge;
+  focusEdge(drag);
+}
+document.addEventListener('pointerdown', (e) => {
+  const grip = e.target.closest('.window-grip');
+  if (!grip || e.button !== 0 || !e.isPrimary || current().q.get('view') === 'stale') return;
+  const chart = grip.closest('.week-board'),
+    form = windowForm(chart),
+    rect = grip.closest('.planner-track').getBoundingClientRect();
+  e.preventDefault();
+  edgeDrag = {
+    board: chart,
+    form,
+    owner: grip.dataset.owner,
+    edge: grip.dataset.edge,
+    old: form.elements[grip.dataset.edge].value,
+    left: rect.left,
+    width: rect.width,
+    pointer: e.pointerId,
+    offset: e.clientX - (rect.left + (rect.width * parseFloat(grip.style.left)) / 100),
+  };
+  chart.setPointerCapture(e.pointerId);
+  chart.classList.add('dragging');
+  chart.dataset.dragEdge = grip.dataset.edge;
+  grip.classList.add('drag-origin');
+  grip.focus({ preventScroll: true });
+});
+document.addEventListener('pointermove', (e) => {
+  const d = edgeDrag;
+  if (!d || e.pointerId !== d.pointer) return;
+  const minute = Math.max(
+    0,
+    Math.min(1440, Math.round(((e.clientX - d.offset - d.left) / d.width) * 96) * 15),
+  );
+  moveEdge(d.form, d.edge, minute === 1440 ? (d.edge === 'end' ? 0 : 1425) : minute);
+});
+document.addEventListener('pointerup', (e) => finishEdge(e));
+document.addEventListener('pointercancel', (e) => finishEdge(e, true));
+document.addEventListener('lostpointercapture', (e) => {
+  if (edgeDrag?.pointer === e.pointerId) finishEdge(e, true);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && edgeDrag) {
+    finishEdge(e, true);
+    return;
+  }
+  const grip = e.target.closest('.window-grip');
+  if (!grip) return;
+  const chart = grip.closest('.week-board'),
+    form = windowForm(chart),
+    edge = grip.dataset.edge;
+  const direction = {
+    ArrowLeft: -1,
+    ArrowDown: -1,
+    ArrowRight: 1,
+    ArrowUp: 1,
+    PageDown: -1,
+    PageUp: 1,
+  }[e.key];
+  if (!direction && !['Home', 'End'].includes(e.key)) return;
+  e.preventDefault();
+  const step = e.shiftKey || e.key.startsWith('Page') ? 60 : 15;
+  let value =
+    e.key === 'Home'
+      ? 0
+      : e.key === 'End'
+        ? 1439
+        : (minuteValue(form.elements[edge].value) + direction * step + 1440) % 1440;
+  if (direction && value === minuteValue(form.elements[edge === 'start' ? 'end' : 'start'].value))
+    value = (value + direction * step + 1440) % 1440;
+  moveEdge(form, edge, value);
+  focusEdge({ board: chart, edge, owner: grip.dataset.owner });
+});
+
 function lastAttempt(r) {
   const a = db.attempts.find((a) => a.rule === r.id);
   if (!a) return `<p class="mut">Попыток для этого правила пока нет.</p>`;
@@ -362,7 +747,7 @@ function rulePage(r) {
   return (
     breadcrumbs([['Правила', '/rules'], [address(f)]]) +
     title('Правило папки') +
-    `<div class="split rule-layout"><div class="stack"><section class="panel"><div class="list-rule-head"><span class="panel-label">${icon('folder')}${localName(f)}</span>${badge(r.enabled ? 'online' : 'cancelled', r.enabled ? 'Включено' : 'Выключено')}</div><h2 class="record-name">${esc(f.name)}</h2>${facts(
+    `<div class="split rule-layout"><div class="stack"><section class="panel"><div class="list-rule-head"><span class="panel-label">${icon('folder')}${localName(f)}</span>${badge(r.enabled ? 'online' : 'cancelled', r.enabled ? 'Включено' : 'Выключено')}</div><h2 class="record-name">${esc(folderName(f))}</h2>${facts(
       [
         ['Сейчас по правилу', desired(r)],
         ['Версия расписания', String(r.version)],
@@ -373,7 +758,7 @@ function rulePage(r) {
             : (f.paused ? 'Включена' : 'Выключена') + (isFresh(f) ? '' : ' · устарело'),
         ],
       ],
-    )}<div class="actions">${link(rulePath(r) + '/edit', icon('edit') + 'Изменить расписание', 'btn primary')}${action('toggle-rule', r.enabled ? 'Отключить' : 'Включить', 'btn', `data-id="${r.id}"`)}${action('delete-rule', 'Удалить', 'quiet', `data-id="${r.id}"`)}</div></section>${block('Последняя попытка', `<div data-latest="${r.id}">${lastAttempt(r)}</div>`)}</div><aside class="panel schedule-detail">${preview(r)}<div class="hairline"></div>${link(folderPath(f), 'Карточка папки ' + icon('arrow'), 'text-link')}</aside></div>`
+    )}<div class="actions">${link(rulePath(r) + '/edit', icon('edit') + 'Изменить расписание', 'btn primary')}${action('toggle-rule', r.enabled ? 'Отключить' : 'Включить', 'btn', `data-id="${r.id}"`)}${action('delete-rule', 'Удалить', 'quiet', `data-id="${r.id}"`)}</div></section>${block('Последняя попытка', `<div data-latest="${r.id}">${lastAttempt(r)}</div>`)}</div><aside class="stack">${quickWindow(r)}${link(folderPath(f), 'Карточка папки ' + icon('arrow'), 'text-link')}</aside></div>`
   );
 }
 const timeInput = (name, label, val) =>
@@ -391,10 +776,10 @@ function editor(existing, q) {
   return (
     breadcrumbs([
       ['Правила', '/rules'],
-      [existing ? f.name : 'Создание', existing ? rulePath(existing) : null],
+      [existing ? folderName(f) : 'Создание', existing ? rulePath(existing) : null],
     ]) +
     title(existing ? 'Изменить расписание' : 'Новое правило') +
-    `<div class="split rule-layout"><form class="panel editor" id="rule-form" data-id="${existing?.id || ''}"><h2>Параметры расписания</h2>${existing ? `<p class="target-line">${icon('folder')}${esc(f.name)} · ${localName(f)}</p><input type="hidden" name="folder" value="${f.id}">` : `<label>Узел и папка<select name="folder">${db.folders.map((f) => opt(f.id, f.name + ' · ' + address(f), r.folder)).join('')}</select></label>`}<fieldset><legend>Дни начала окна</legend><div class="days">${DAYS.map((d, i) => `<label><input type="checkbox" name="day" value="${i + 1}" ${r.days.includes(i + 1) ? 'checked' : ''}><span>${d}</span></label>`).join('')}</div></fieldset><div class="field-pair">${timeInput('start', 'Начало окна', r.start)}${timeInput('end', 'Конец окна', r.end)}</div><label>Часовой пояс IANA<input name="zone" list="zones" required value="${attr(r.zone)}" autocomplete="off"></label><datalist id="zones">${['Europe/Moscow', 'Europe/Berlin', 'Asia/Yekaterinburg', 'UTC', 'America/New_York'].map((z) => opt(z, z)).join('')}</datalist><label class="switch"><input type="checkbox" name="enabled"${r.enabled ? ' checked' : ''}><span aria-hidden="true"></span>Расписание включено</label><p class="mobile-window" id="inline-window">${esc(windowNote(r))}</p><p class="form-error" role="alert"></p><div class="actions"><button class="btn primary" type="submit">${existing ? 'Сохранить изменения' : 'Создать правило'}</button>${link(existing ? rulePath(existing) : '/rules', 'Отмена', 'quiet')}</div></form><aside class="panel schedule-detail" id="preview">${preview(r)}</aside></div>`
+    `<div class="split rule-layout"><form class="panel editor" id="rule-form" data-id="${existing?.id || ''}"><h2>Параметры расписания</h2>${existing ? `<p class="target-line">${icon('folder')}${esc(folderName(f))} · ${localName(f)}</p><input type="hidden" name="folder" value="${f.id}">` : `<label>Узел и папка<select name="folder">${db.folders.map((f) => opt(f.id, folderName(f) + ' · ' + address(f), r.folder)).join('')}</select></label>`}<fieldset><legend>Дни начала окна</legend><div class="days">${DAYS.map((d, i) => `<label><input type="checkbox" name="day" value="${i + 1}" ${r.days.includes(i + 1) ? 'checked' : ''}><span>${d}</span></label>`).join('')}</div></fieldset><div class="field-pair">${timeInput('start', 'Начало окна', r.start)}${timeInput('end', 'Конец окна', r.end)}</div><label>Часовой пояс IANA<input name="zone" list="zones" required value="${attr(r.zone)}" autocomplete="off"></label><datalist id="zones">${['Europe/Moscow', 'Europe/Berlin', 'Asia/Yekaterinburg', 'UTC', 'America/New_York'].map((z) => opt(z, z)).join('')}</datalist><label class="switch"><input type="checkbox" name="enabled"${r.enabled ? ' checked' : ''}><span aria-hidden="true"></span>Расписание включено</label><p class="mobile-window" id="inline-window">${esc(windowNote(r))}</p><p class="form-error" role="alert"></p><div class="actions"><button class="btn primary" type="submit">${existing ? 'Сохранить изменения' : 'Создать правило'}</button>${link(existing ? rulePath(existing) : '/rules', 'Отмена', 'quiet')}</div></form><aside class="panel schedule-detail" id="preview">${preview(r)}</aside></div>`
   );
 }
 function verification(a) {
@@ -411,7 +796,7 @@ function filterFields(q, tab) {
     folder = q.get('folder') || '';
   return `<label>Узел<select name="node">${nodeOptions(node)}</select></label><label>Папка<select name="folder">${opt('', 'Все папки', folder)}${db.folders
     .filter((f) => !node || f.node === node)
-    .map((f) => opt(f.id, f.name + ' · ' + nodeBy(f.node).name, folder))
+    .map((f) => opt(f.id, folderName(f) + ' · ' + nodeBy(f.node).name, folder))
     .join('')}</select></label>${
     tab === 'commands'
       ? `<label>Результат<select name="status">${opt('', 'Все результаты', q.get('status'))}${Object.entries(
@@ -471,7 +856,7 @@ function auditTable(tab, q) {
       const f = folderBy(a.folder),
         ts = stamp(a.at ?? a.created),
         url = commands ? commandPath(a) : '/history/events/' + a.id;
-      return `<tr><td><strong class="mono">${ts.slice(11)}</strong><small>${ts.slice(0, 10)}</small></td><td>${link(url, commands ? (a.paused ? 'Приостановить' : 'Возобновить') : 'Обработка элемента завершена', 'cell-link')}<small>${commands ? (a.rule ? 'По расписанию · v' + a.version : 'Вручную') : 'ItemFinished'}</small></td><td>${esc(f.name)}<small>${localName(f)}</small></td>${commands ? `<td>${badge(a.status)}<small>${verification(a)}</small></td>` : ''}<td>${link(url, icon('diagonal'), 'iconbtn', `data-tip="Открыть запись" aria-label="Открыть запись ${ts}"`)}</td></tr>`;
+      return `<tr><td><strong class="mono">${ts.slice(11)}</strong><small>${ts.slice(0, 10)}</small></td><td>${link(url, commands ? (a.paused ? 'Приостановить' : 'Возобновить') : 'Обработка элемента завершена', 'cell-link')}<small>${commands ? (a.rule ? 'По расписанию · v' + a.version : 'Вручную') : 'ItemFinished'}</small></td><td>${esc(folderName(f))}<small>${localName(f)}</small></td>${commands ? `<td>${badge(a.status)}<small>${verification(a)}</small></td>` : ''}<td>${link(url, icon('diagonal'), 'iconbtn', `data-tip="Открыть запись" aria-label="Открыть запись ${ts}"`)}</td></tr>`;
     })
     .join(
       '',
@@ -502,7 +887,7 @@ function historyPage(tab, q) {
     .join('')}</nav>`;
   const selected = [
     nodeBy(q.get('node'))?.name,
-    folderBy(q.get('folder'))?.name,
+    folderName(folderBy(q.get('folder'))),
     LABEL[q.get('status')],
     q.has('from') || q.has('to') ? 'Задан период' : null,
   ].filter(Boolean);
@@ -515,7 +900,7 @@ function historyPage(tab, q) {
   );
 }
 function contextBlock(f) {
-  return `<div class="panel-label">${icon('folder')}${localName(f)}</div><h2 class="record-name">${esc(f.name)}</h2>${link(folderPath(f), 'Открыть папку ' + icon('arrow'))}<div class="hairline"></div>${link(scopedHistory(f), 'История этой папки ' + icon('arrow'))}`;
+  return `<div class="panel-label">${icon('folder')}${localName(f)}</div><h2 class="record-name">${esc(folderName(f))}</h2>${link(folderPath(f), 'Открыть папку ' + icon('arrow'))}<div class="hairline"></div>${link(scopedHistory(f), 'История этой папки ' + icon('arrow'))}`;
 }
 function attemptBody(a) {
   const items = [
@@ -633,10 +1018,23 @@ function placeTab() {
     height: selected.offsetHeight + 'px',
   });
 }
+function placeNav() {
+  const nav = $('.mast nav'),
+    selected = $('a[aria-current]', nav),
+    glass = $('.nav-glass', nav);
+  if (!selected || !glass || nav.offsetWidth === 0) return;
+  glass.style.transform = 'translateX(' + selected.offsetLeft + 'px)';
+  glass.style.width = selected.offsetWidth + 'px';
+  glass.style.height = selected.offsetHeight + 'px';
+  glass.style.top = selected.offsetTop + 'px';
+  glass.hidden = false;
+}
 function standardView(r) {
   const [s, id, sub] = r.parts;
   if (s === 'login' && r.parts.length === 1) return login();
   if (s === 'overview' && !id) return overview();
+  if (s === 'folders' && sub === 'appearance' && r.parts.length === 3 && folderBy(id))
+    return appearancePage(folderBy(id));
   if (s === 'folders' && !sub) {
     if (!id) return foldersPage(r.q);
     const f = folderBy(id);
@@ -675,6 +1073,12 @@ const STATE_TEXT = {
 };
 let loadTimer, toastTimer, tipOwner;
 function render(enter = true, restore = null) {
+  if (edgeDrag) {
+    const { board, pointer } = edgeDrag;
+    edgeDrag = null;
+    if (board.hasPointerCapture(pointer)) board.releasePointerCapture(pointer);
+  }
+  markFlight?.cancel();
   clearTimeout(loadTimer);
   closePop();
   hideTip();
@@ -726,7 +1130,7 @@ function render(enter = true, restore = null) {
     const heading = $('.title-a, .object-meta', main);
     heading?.after(banner);
     $$(
-      'button[data-act="resume"],button[data-act="toggle-rule"],button[data-act="delete-rule"],#rule-form button[type="submit"]',
+      'button[data-act="resume"],button[data-act="toggle-rule"],button[data-act="delete-rule"],#rule-form button[type="submit"],.quick-window button[type="submit"],.window-grip',
       main,
     ).forEach((el) => {
       el.setAttribute('aria-disabled', 'true');
@@ -740,6 +1144,7 @@ function render(enter = true, restore = null) {
     if (a.dataset.section === r.sec) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
+  placeNav();
   document.title = ($('h1', main)?.textContent || 'Обзор') + ' · Syncthing Control Center';
   if (enter) {
     main.classList.remove('enter');
@@ -853,15 +1258,15 @@ function validateRule(r, id) {
   return '';
 }
 function saveRule(form) {
-  const data = readRule(form),
-    old = ruleBy(form.dataset.id),
+  const old = ruleBy(form.dataset.id),
+    data = windowDraft(form),
     msg = validateRule(data, old?.id);
   if (msg) {
     $('.form-error', form).textContent = msg;
     return;
   }
   if (old && Object.keys(data).every((k) => String(old[k]) === String(data[k]))) {
-    go(rulePath(old));
+    if (!form.classList.contains('quick-window')) go(rulePath(old));
     toast('Изменений нет');
     return;
   }
@@ -870,13 +1275,36 @@ function saveRule(form) {
   else db.rules.push(rule);
   if (rule.enabled) enqueue(folderBy(rule.folder), rule);
   persist();
-  go(rulePath(rule), { replace: true });
+  if (form.classList.contains('quick-window')) {
+    render(false);
+    $('.quick-window [name=start]')?.focus({ preventScroll: true });
+    $('.quick-window')?.classList.add('just-saved');
+  } else go(rulePath(rule), { replace: true });
   toast(`Расписание сохранено · версия ${rule.version}`);
 }
 function onAction(el) {
   const act = el.dataset.act,
     id = el.dataset.id,
     r = ruleBy(id);
+  if (act === 'cancel-appearance') {
+    finishAppearance(folderBy(id));
+    return;
+  }
+  if (act === 'feature') {
+    preferences.featured = id;
+    storePreferences();
+    render(false);
+    $('.featured-tag')?.focus({ preventScroll: true });
+    toast('Папка закреплена на обзоре');
+    return;
+  }
+  if (act === 'undo-window') {
+    const form = el.closest('form');
+    form.reset();
+    updateWindow(form);
+    form.elements.start.focus({ preventScroll: true });
+    return;
+  }
   if (act === 'demo') {
     openPop(el, demoPanel());
     return;
@@ -963,7 +1391,7 @@ function onAction(el) {
     const f = folderBy(r.folder);
     confirmAction(
       'Удалить правило?',
-      `Автоматическое управление по этому правилу для «${f.name}» прекратится. Записи попыток сохранятся.`,
+      `Автоматическое управление по этому правилу для «${folderName(f)}» прекратится. Записи попыток сохранятся.`,
       'Удалить',
       () => {
         db.rules = db.rules.filter((x) => x !== r);
@@ -1060,6 +1488,11 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('change', (e) => {
   const el = e.target;
+  if (el.closest('#appearance-form') && el.name === 'glyph') {
+    const form = el.form;
+    form.elements.symbol.value = '';
+    updateSample(form);
+  }
   if (el.id === 'fixture') {
     db = seed(el.value === 'extended');
     persist();
@@ -1084,26 +1517,49 @@ document.addEventListener('change', (e) => {
         opt('', 'Все папки', '') +
         db.folders
           .filter((f) => !el.value || f.node === el.value)
-          .map((f) => opt(f.id, f.name + ' · ' + nodeBy(f.node).name, ''))
+          .map((f) => opt(f.id, folderName(f) + ' · ' + nodeBy(f.node).name, ''))
           .join('');
   }
-  if (el.closest('#rule-form') && el.name === 'folder')
+  if (el.closest('#rule-form') && el.name === 'folder') {
     $('#rule-form [name="enabled"]').checked = !activeFor(el.value);
+    updateWindow(el.form);
+  }
 });
 document.addEventListener('input', (e) => {
-  const form = e.target.closest('#rule-form');
-  if (form) {
-    const draft = readRule(form);
-    $('#preview').innerHTML = preview(draft);
-    $('#inline-window').textContent = windowNote(draft);
-    $('.form-error', form).textContent = '';
+  const el = e.target;
+  if (el.id === 'folder-search') {
+    replaceQuery({ search: el.value });
+    $('#inventory').innerHTML = inventory(current().q);
+    return;
   }
+  if (el.closest('#appearance-form')) {
+    if (el.name === 'symbol') {
+      const choices = $$('[name=glyph]', el.form);
+      if (el.value.trim())
+        choices.forEach((radio) => {
+          radio.checked = false;
+        });
+      else if (!choices.some((radio) => radio.checked))
+        choices.find(
+          (radio) => radio.value === (appearance(folderBy(el.form.dataset.id)).glyph || 'folder'),
+        ).checked = true;
+    }
+    updateSample(el.form);
+    $('.form-error', el.form).textContent = '';
+    return;
+  }
+  const form = el.closest('#rule-form,.quick-window');
+  if (form) updateWindow(form);
 });
 document.addEventListener('submit', (e) => {
   const form = e.target;
   if (form.closest('dialog')) return;
   e.preventDefault();
-  if (form.id === 'rule-form') {
+  if (form.id === 'appearance-form') {
+    saveAppearance(form);
+    return;
+  }
+  if (form.id === 'rule-form' || form.classList.contains('quick-window')) {
     if (current().q.get('view') !== 'stale') saveRule(form);
     return;
   }
@@ -1174,6 +1630,18 @@ document.addEventListener('focusout', (e) => {
   if (tipOwner === e.target) hideTip();
 });
 document.addEventListener('keydown', (e) => {
+  if (
+    e.key === '/' &&
+    $('#folder-search') &&
+    !e.metaKey &&
+    !e.ctrlKey &&
+    !e.altKey &&
+    !e.target.closest('input,textarea,select,[contenteditable],dialog')
+  ) {
+    e.preventDefault();
+    $('#folder-search').focus();
+    return;
+  }
   if (e.key === 'Escape') {
     if ($('.popover')) closePop(true);
     hideTip();
@@ -1188,7 +1656,11 @@ window.addEventListener('resize', () => {
   closePop();
   placeTab();
 });
-document.fonts.ready.then(placeTab);
+document.fonts.ready.then(() => {
+  placeTab();
+  placeNav();
+});
+new ResizeObserver(placeNav).observe($('.mast nav'));
 window.addEventListener('scroll', hideTip, { passive: true });
 history.scrollRestoration = 'manual';
 if (!history.state?.index)
@@ -1230,26 +1702,32 @@ function refreshResults() {
     const el = $('button[aria-disabled]', manual.closest('.panel'));
     if (el) {
       el.dataset.tip = reason;
-      el.nextElementSibling.textContent = reason;
     }
-    const factsPanel = $('.detail-grid .facts');
+    const factsPanel = $('.observation-panel .facts');
     if (factsPanel) {
       const values = $$('dd', factsPanel);
       values[1].textContent =
         f.paused === null ? 'Неизвестна' : f.paused ? 'Включена' : 'Выключена';
       values[3].textContent = time(f.observed);
     }
-    const material = $('.folder-well');
-    if (material) {
-      $('.folder-state', material).innerHTML = folderStatus(f);
-      $('.folder-bottom .micro', material).textContent = 'Конфигурация · ' + time(f.observed);
-    }
+    const status = $('[data-folder-status]');
+    if (status) status.innerHTML = folderStatus(f);
+    const hint = $('.folder-commands .hint');
+    if (hint) hint.textContent = reason || 'Папка на паузе. Доступно ручное возобновление.';
   }
   if (audit) audit.innerHTML = auditTable(current().parts[1], current().q);
   const { sec } = current();
   if (sec === 'overview' && !current().q.has('view')) {
     const temp = document.createElement('div');
     temp.innerHTML = overview();
+    if (featuredFolder().id === changed.folder) {
+      const panel = $('.folder-well', main),
+        next = $('.folder-well', temp);
+      if (panel && next) {
+        $('.folder-state', panel).innerHTML = $('.folder-state', next).innerHTML;
+        $('.folder-bottom dl', panel).innerHTML = $('.folder-bottom dl', next).innerHTML;
+      }
+    }
     const row = $('[data-kind="command"]', main),
       next = $('[data-kind="command"]', temp);
     if (row && next) {
@@ -1264,9 +1742,8 @@ function refreshResults() {
     $('.metric-grid').classList.add('updated');
   }
   if (sec === 'folders' && !manual) {
-    $$('.folder-row').forEach((row) => {
-      const f = folderBy(row.dataset.key.slice(4));
-      row.children[1].innerHTML = folderStatus(f);
+    $$('[data-fresh]').forEach((cell) => {
+      cell.innerHTML = folderStatus(folderBy(cell.dataset.fresh));
     });
   }
   if (manual && !resumeReason(folderBy(manual.dataset.manual))) {
