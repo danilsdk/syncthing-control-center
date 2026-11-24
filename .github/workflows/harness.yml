@@ -8,59 +8,129 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONUTF8: '1'
+  PYTHONPATH: ${{ github.workspace }}/backend
+
 jobs:
-  validate:
-    runs-on: ubuntu-latest
+  platforms:
+    name: Harness (${{ matrix.os }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: ubuntu-24.04, os: Linux, arch: x64}
+          - {runner: windows-2025, os: Windows, arch: x64}
+          - {runner: macos-26, os: Darwin, arch: arm64}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: '3.12'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.arch }}
+          package-manager-cache: false
       - name: Select trusted harness
         env:
           HARNESS_BASE: ${{ github.event.pull_request.base.sha }}
           HARNESS_BRANCH: ${{ github.head_ref }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            if git cat-file -e "$HARNESS_BASE:.harness/project.json" 2>/dev/null; then
-              git cat-file -e "$HARNESS_BASE:scripts/harness.py"
-              git show "$HARNESS_BASE:scripts/harness.py" > "$RUNNER_TEMP/harness.py"
-              echo "HARNESS_SCRIPT=$RUNNER_TEMP/harness.py" >> "$GITHUB_ENV"
-              echo "HARNESS_POLICY_REF=$HARNESS_BASE" >> "$GITHUB_ENV"
-              echo "HARNESS_BOOTSTRAP=false" >> "$GITHUB_ENV"
-            elif [ "$HARNESS_BRANCH" = "codex/h00-harness" ]; then
-              echo "HARNESS_SCRIPT=scripts/harness.py" >> "$GITHUB_ENV"
-              echo "HARNESS_POLICY_REF=" >> "$GITHUB_ENV"
-              echo "HARNESS_BOOTSTRAP=true" >> "$GITHUB_ENV"
-            else
-              echo "Base branch has no harness policy; merge H0 first." >&2
-              exit 1
-            fi
-          else
-            echo "HARNESS_SCRIPT=scripts/harness.py" >> "$GITHUB_ENV"
-            echo "HARNESS_POLICY_REF=" >> "$GITHUB_ENV"
-            echo "HARNESS_BOOTSTRAP=false" >> "$GITHUB_ENV"
-          fi
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import subprocess
+
+          script = Path("scripts/harness.py")
+          policy = ""
+          if os.environ["EVENT_NAME"] == "pull_request":
+              base = os.environ["HARNESS_BASE"]
+              exists = subprocess.run(
+                  ["git", "cat-file", "-e", f"{base}:.harness/project.json"],
+                  stderr=subprocess.DEVNULL,
+              ).returncode == 0
+              if exists:
+                  script = Path(os.environ["RUNNER_TEMP"]) / "harness.py"
+                  with script.open("wb") as output:
+                      subprocess.run(
+                          ["git", "show", f"{base}:scripts/harness.py"], stdout=output, check=True
+                      )
+                  policy = base
+              elif os.environ["HARNESS_BRANCH"] != "codex/h00-harness":
+                  raise SystemExit("Base branch has no harness policy; merge H0 first.")
+          with Path(os.environ["GITHUB_ENV"]).open("a", encoding="utf-8") as output:
+              output.write(f"HARNESS_SCRIPT={script}\nHARNESS_POLICY_REF={policy}\n")
+          PY
       - name: Validate structure
-        run: python3 "$HARNESS_SCRIPT" check
+        run: python "$HARNESS_SCRIPT" check
       - name: Check task scope against base policy
         if: github.event_name == 'pull_request'
         env:
           HARNESS_BRANCH: ${{ github.head_ref }}
           HARNESS_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          if [ "$HARNESS_BOOTSTRAP" = true ]; then
-            python3 "$HARNESS_SCRIPT" scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --committed-only
-          else
-            python3 "$HARNESS_SCRIPT" scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --policy-ref "$HARNESS_POLICY_REF" --committed-only
+          args=(scope --branch "$HARNESS_BRANCH" --base "$HARNESS_BASE" --committed-only)
+          if [[ -n "$HARNESS_POLICY_REF" ]]; then
+            args+=(--policy-ref "$HARNESS_POLICY_REF")
           fi
+          python "$HARNESS_SCRIPT" "${args[@]}"
+      - name: Report actual platform
+        run: python scripts/check_platform.py environment --os "${{ matrix.os }}" --arch "${{ matrix.arch }}"
       - name: Test harness
-        run: python3 "$HARNESS_SCRIPT" self-test
+        run: python "$HARNESS_SCRIPT" self-test
       - name: Prepare existing components
-        run: python3 "$HARNESS_SCRIPT" setup
+        run: python "$HARNESS_SCRIPT" setup
       - name: Validate existing components
-        run: python3 "$HARNESS_SCRIPT" product-checks
+        run: python "$HARNESS_SCRIPT" product-checks
+
+  macos-native:
+    name: macOS ARM64 native integration
+    runs-on: macos-26
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
+          architecture: arm64
+      - name: Install PostgreSQL 17 tools
+        run: |
+          if ! brew list --versions postgresql@17; then
+            brew install postgresql@17
+          fi
+      - name: Install backend dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r backend/requirements-dev.txt -e './backend[dev]'
+      - name: Run owned native Syncthing and PostgreSQL checks
+        run: .venv/bin/python scripts/check_platform.py native --pg-bin "$(brew --prefix postgresql@17)/bin"
+
+  validate:
+    runs-on: ubuntu-24.04
+    needs: [platforms, macos-native]
+    if: ${{ always() }}
+    timeout-minutes: 5
+    steps:
+      - name: Require every platform and the native integration
+        env:
+          PLATFORMS_RESULT: ${{ needs.platforms.result }}
+          NATIVE_RESULT: ${{ needs.macos-native.result }}
+        run: |
+          printf 'Platform matrix: %s\nmacOS native integration: %s\n' "$PLATFORMS_RESULT" "$NATIVE_RESULT"
+          test "$PLATFORMS_RESULT" = success && test "$NATIVE_RESULT" = success
