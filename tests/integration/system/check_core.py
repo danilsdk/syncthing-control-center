@@ -199,6 +199,7 @@ def run(args, report):
             stack.run("version", "--format", "{{.Server.Version}}").stdout.decode().strip()
         )
         report["compose"] = stack.run("compose", "version", "--short").stdout.decode().strip()
+        report["platform"] = stack.platform
         passed("linux_engine_and_empty_owned_project")
         report["phase"] = "build"
         stack.build()

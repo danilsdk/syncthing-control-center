@@ -237,6 +237,10 @@ class Runner:
         secret.chmod(0o444)
         pins = json.loads((ROOT / "deploy/compose/images.json").read_text())
         image = next(row for row in pins["images"] if row["tag"].startswith("postgres:"))
+        engine = self.command(
+            [*self.docker, "info", "--format", stack_tools.ENGINE_PLATFORM_FORMAT], timeout=25
+        )
+        platform = stack_tools.linux_platform(engine.stdout)
         port = free_port()
         self.command(
             [
@@ -250,7 +254,7 @@ class Runner:
                 "--label",
                 "io.scc.stage=a4-ci-pg",
                 "--platform",
-                "linux/amd64",
+                platform,
                 "--publish",
                 f"127.0.0.1:{port}:5432",
                 "--tmpfs",

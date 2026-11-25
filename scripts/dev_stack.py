@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+from functools import cached_property
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -23,6 +24,21 @@ DEFAULT_UI_PORT = 8080
 
 class StackError(Exception):
     """Only fixed operational messages; never include private command output."""
+
+
+ENGINE_PLATFORM_FORMAT = "{{.OSType}}/{{.Architecture}}"
+
+
+def linux_platform(engine):
+    platform = {
+        b"linux/x86_64": "linux/amd64",
+        b"linux/amd64": "linux/amd64",
+        b"linux/aarch64": "linux/arm64",
+        b"linux/arm64": "linux/arm64",
+    }.get(engine.strip())
+    if platform is None:
+        raise StackError("The core requires a Linux Docker Engine on amd64 or arm64")
+    return platform
 
 
 def docker_binary(explicit=None):
@@ -181,13 +197,16 @@ class Stack:
             raise StackError("Docker operation failed; private diagnostics retained in runtime")
         return result
 
+    @cached_property
+    def platform(self):
+        engine = self.run("info", "--format", ENGINE_PLATFORM_FORMAT, timeout=25)
+        return linux_platform(engine.stdout)
+
     def compose(self, *arguments, **kwargs):
+        self.env["SCC_DOCKER_PLATFORM"] = self.platform
         return self.run(*self.compose_args, *arguments, **kwargs)
 
     def preflight(self):
-        result = self.run("info", "--format", "{{.OSType}}", timeout=25)
-        if result.stdout.strip() != b"linux":
-            raise StackError("The core requires a running Linux Docker Engine")
         self.run("compose", "version", "--short", timeout=15)
         self.assert_owned()
         self.compose("config", "--quiet", timeout=20)

@@ -23,6 +23,25 @@ def stack_tools(tmp_path, monkeypatch):
     return module
 
 
+@pytest.mark.parametrize(
+    ("engine", "platform"),
+    [
+        (b"linux/x86_64\n", "linux/amd64"),
+        (b"linux/amd64\r\n", "linux/amd64"),
+        (b"linux/aarch64\n", "linux/arm64"),
+        (b"linux/arm64\r\n", "linux/arm64"),
+    ],
+)
+def test_selects_platform_from_docker_engine(stack_tools, engine, platform):
+    assert stack_tools.linux_platform(engine) == platform
+
+
+@pytest.mark.parametrize("engine", [b"windows/x86_64", b"linux/riscv64", b""])
+def test_rejects_unsupported_docker_engine(stack_tools, engine):
+    with pytest.raises(stack_tools.StackError, match="Linux Docker Engine"):
+        stack_tools.linux_platform(engine)
+
+
 def test_prepare_reuses_settings_and_refuses_a_different_port(stack_tools):
     first = stack_tools.prepare("scc-a4-test-12345678", 18000)
     directory = stack_tools.project_directory(first["project"])
