@@ -1,0 +1,143 @@
+# Проверки приложения A4.4b
+
+PR #7 остаётся draft. Workflow проверяет общий worker и production UI на amd64.
+H0 validate запускается отдельно. `format --check` отклоняет пять уже принятых
+файлов B (`tests/integration/executions/conftest.py`,
+`tests/integration/rules/conftest.py`, `tests/integration/rules/test_rules_api.py`,
+`tests/unit/reconciliation/test_decisions.py`, `tests/unit/scheduling/test_engine.py`).
+Format gate сохранён без исключений. Compose и Chromium запускаются первыми,
+поэтому их отчёт доступен и при последующем сбое форматирования.
+
+[application.yml](../../.github/workflows/application.yml) проверяет готовое ядро
+A0–A3/A4.2 на GitHub-hosted ubuntu-24.04 с Python 3.12.14. События — pull_request,
+push в main и workflow_dispatch. Никаких действующих repository secrets не нужно.
+Это отдельная проверка приложения, она не заменяет H0 validate и не меняет защиту main.
+
+Фактический [GitHub run 40375603158](https://github.com/danilsdk/syncthing-control-center/actions/runs/40375603158)
+на head 6ca38d6 прошёл: 458 offline, 190 настоящих SQL и 9 core; cleanup прошёл.
+Сводка с точными SHA, окружением, artifact digest и прежними failed-запусками —
+[github-core-2026-10-26.json](evidence/github-core-2026-10-26.json).
+Отдельное разрешённое исправление A1/A8 устранило конкурентное закрытие HTTPResponse;
+прежние тесты срока не ослаблены. A4 #7 остаётся draft до следующих подэтапов.
+
+Расширение A4.2b добавило настоящие T-02–T-04 в этот же core-check. Локально
+27.10.2026 прошли 469 offline и 12 core; 190 SQL в отдельном offline запуске
+были deselected. [Отчёт](../compose/evidence/transfer-2026-10-27.json) содержит
+файловые SHA256, наблюдение паузы с передачей по контрольной папке, восстановление
+четырёх конфигураций и cleanup. validate_core отвергает отсутствие любого из трёх
+сценариев, дубли названий и неуспешное восстановление даже при результате passed.
+Новый GitHub прогон и точный head публикуются в [PR #7](https://github.com/danilsdk/syncthing-control-center/pull/7);
+исторические 458/190/9 выше относятся к прежнему head, а не к этому расширению.
+
+Один вход [scripts/check_application.py](../../scripts/check_application.py)
+выполняет последовательно:
+
+1. Настоящий [core-check](../../tests/integration/system/check_core.py) включает build,
+   новая PG, миграции, API, два Syncthing, bootstrap/login/CSRF, история и restart/down/up,
+   передача/пауза/resume по SHA256 и восстановление всех demo folder configs.
+   A4.3 добавляет восемь сценариев общего worker: правила B1/B2, второй процесс,
+   ручное resume, restart, потеря singleton и остановка внутри A3, восстановление.
+   A4.4b добавляет сборку B3 и настоящий Chromium-сценарий через nginx. Проверяются
+   Origin/CSRF, логин, создание и изменение правила, подтверждённая пауза и
+   возобновление, история команд и событий, отключение правила и выход.
+   `validate_core` требует обе проверки A4.4b и прежние сценарии worker и передачи.
+2. Ruff check и format --check для backend/app, tests, обоих помощников A4 и image entrypoint.
+3. Проверку OpenAPI/DTO/документированного контракта.
+4. Unit/contract и интеграционные doubles с `-m "not postgres" -W error`.
+5. Все SQL-тесты shared/auth/registry/collection/rules/executions на новом PostgreSQL 18.6 из
+   закреплённого [образа](../compose/images.json). Шесть отдельных pytest-процессов
+   исключают конфликт одноимённых фикстур A2/A3.
+
+Принятые SQL-тесты B1/B2 выбирают частную БД через защищённую fixture, но не имеют
+маркера `postgres`. Runner запускает их полностью отдельными процессами в своей
+`scc_a03_tests`; они не смешиваются с offline-фазой и не теряются по marker.
+22.11 отдельный реальный SQL-прогон дал 228 тестов без skips: 99 + 7 + 34 + 69 + 6 + 13.
+Format gate по-прежнему блокирует SQL-фазу общего pipeline. Этот SQL-результат
+относится к отдельному прогону A4.3.
+
+PostgreSQL для SQL-тестов получает случайный пароль через file mount, отдельные
+три БД, tmpfs для данных и случайный host-порт только на 127.0.0.1. Рабочие SCC/PG/
+Compose-настройки удаляются из дочернего окружения. Его контейнер помечен UUID
+владельца; уничтожение проверяет labels. Core использует собственный уникальный
+Compose project, три named volumes и проверки владельца из A4.2. Общего prune нет.
+
+Публичный JUnit обязательно имеет тесты и не имеет ошибок, failures или skipped;
+отклонённые по marker тесты учитываются отдельным следующим набором. Реальный DB
+пароль удаляется из публикуемого SQL XML до проверки результата. Ненулевой exit
+code, отсутствие отчёта, пропуски и неуспешная очистка не дают зелёный результат.
+
+## Локальный запуск
+
+Нужны Python 3.12, зависимости backend/requirements-dev.txt с установленным
+backend dev-extra, Git, Node 22, работающий Linux Docker Engine с Compose/Buildx,
+зависимости B3 из `npm ci` и `npx playwright install chromium` в `frontend`.
+Для Linux используйте `npx playwright install --with-deps chromium`.
+Команды выполняются из корня checkout. Приватная папка и папка отчётов должны быть
+новыми, отдельными и расположенными вне дерева исходников; прежние не перезаписываются.
+
+PowerShell, после установки зависимостей по корневому README:
+
+```powershell
+$ciRoot = Join-Path $env:TEMP ("scc-application-" + [guid]::NewGuid().ToString("N"))
+python scripts/check_application.py run --work-dir "$ciRoot\private" --report-dir "$ciRoot\reports"
+```
+
+На Windows Docker Desktop находится автоматически, контекст по умолчанию desktop-linux.
+Для другой установки можно передать --docker и --context. На Linux используется
+текущий Docker context, глобальные настройки не изменяются:
+
+```bash
+ci_root="$(mktemp -d -t scc-application-XXXXXX)"
+python scripts/check_application.py run --work-dir "$ci_root/private" --report-dir "$ci_root/reports"
+```
+
+После успеха собственные контейнеры, тома, сети и приватная папка удаляются;
+образы/build cache и публичные отчёты сохраняются. После ошибки cleanup ресурсов
+выполняется в finally, локальная приватная папка остаётся для диагностики. Удалить
+её и повторить проверку очистки можно командой с теми же путями:
+
+```powershell
+python scripts/check_application.py cleanup --work-dir "$ciRoot\private" --report-dir "$ciRoot\reports"
+```
+
+Cleanup можно повторять; при отсутствии своей папки он ничего не удаляет.
+В GitHub отдельный always-step повторяет cleanup также после ошибки/отмены.
+При принудительном завершении job по timeout выполнение finally/always не
+гарантировано; GitHub-hosted runner временный. Собственные ресурсы не удаляются
+по одному лишь совпадению имени, при чужом owner операция завершается ошибкой.
+
+## Отчёты и воспроизводимость
+
+В artifacts по отдельному allowlist загружаются только summary.json, cleanup.json,
+offline.xml, postgres.xml и core.json; срок хранения 7 дней. Private папки, Docker
+inspect, stdout/stderr дочерних команд, credentials, конфигурации узлов и логи
+не включаются в upload. Логи доступны только локально в private/logs при ошибке.
+Core diagnostics.log не включён в artifact allowlist.
+
+Summary содержит SHA checkout, хеши фактических Git-visible исходников, Python,
+отдельные результаты SQL-групп/версии PG, backend/UI image IDs и cleanup.
+Core report также содержит версию Chromium и ID двух подтверждённых попыток.
+Незакоммиченная локальная проверка отличается от проверки точного SHA в GitHub;
+сравнивать нужно хеши исходников и состояние рабочей папки. CI на GitHub считается
+пройденным только после фактического workflow run, а не по наличию YAML.
+
+Actions закреплены полными SHA официальных релизов checkout 7.0.1, setup-python
+7.0.0, setup-node 7.1.0 и upload-artifact 7.0.2. persist-credentials выключен, permissions — contents:
+read, pull_request_target не используется. Actionlint 1.7.12 закреплён версией
+и SHA256 архива; необязательные shellcheck/pyflakes явно отключены.
+Официальный архив скачивается через GitHub release-assets API по ID 384924896
+без токена; SHA256 обязателен до распаковки. Curl повторяет только временные
+ошибки скачивания (не более 3 retries), с отдельными таймаутами соединения/попытки.
+Автоматического повтора тестов нет.
+
+Проверены официальные источники 2026-10-26:
+
+- [События workflow](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
+- [Фиксация Actions полным SHA](https://docs.github.com/en/actions/reference/security/secure-use).
+- [actions/checkout](https://github.com/actions/checkout), [setup-python](https://github.com/actions/setup-python).
+- [setup-node 7.1.0](https://github.com/actions/setup-node/releases/tag/v7.1.0).
+- [upload-artifact и retention](https://github.com/actions/upload-artifact).
+- [Actionlint 1.7.12 и контрольные суммы](https://github.com/rhysd/actionlint/releases/tag/v1.7.12).
+
+Результаты текущего этапа — в [журнале A4](../../docs/agent-log/a/A4.md).
+Полный системный T-11, ARM64/Mac и VPS входят в последующие этапы A4.

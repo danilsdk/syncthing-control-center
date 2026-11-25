@@ -1,0 +1,255 @@
+{
+  "stage": "A4.3",
+  "started_at": "2026-11-21T21:36:27.576550Z",
+  "result": "passed",
+  "checks": [
+    {
+      "name": "linux_engine_and_empty_owned_project",
+      "at": "2026-11-21T21:36:29.991517Z"
+    },
+    {
+      "name": "pinned_backend_image_built",
+      "at": "2026-11-21T21:36:43.022366Z"
+    },
+    {
+      "name": "clean_core_migration_readiness_and_no_automatic_administrator",
+      "at": "2026-11-21T21:37:01.508386Z"
+    },
+    {
+      "name": "real_cli_scrypt_login_csrf_and_two_sources_four_folder_mappings",
+      "at": "2026-11-21T21:37:05.937467Z"
+    },
+    {
+      "name": "real_A3_manual_pass_and_guarded_history_without_scheduler",
+      "at": "2026-11-21T21:37:08.645417Z",
+      "events": 50,
+      "node_probes": 2
+    },
+    {
+      "name": "api_restart_preserves_session_registry_and_history",
+      "at": "2026-11-21T21:37:13.038905Z"
+    },
+    {
+      "name": "down_up_preserves_database_demo_identity_and_source_reconciliation",
+      "at": "2026-11-21T21:37:41.516018Z"
+    },
+    {
+      "name": "T02_real_file_transfer_sha256",
+      "at": "2026-11-21T21:37:53.507162Z",
+      "file_name": "a4-transfer-7565cedb2c364ab2948f4dfd5fcf4c58.bin",
+      "bytes": 81920,
+      "sha256": "843d2c1a25fdc41837f8959de9107a3e11f3e62355e1633c4183f3622c0db391",
+      "elapsed_seconds": 1.5
+    },
+    {
+      "name": "T03_target_paused_new_file_absent_control_transfers",
+      "at": "2026-11-21T21:38:20.359990Z",
+      "absent_seconds": 9.407,
+      "absence_checks": 3,
+      "sentinel": {
+        "file_name": "a4-transfer-e4aad30ca7f746feb90b7124bd5d9d2f.bin",
+        "bytes": 81920,
+        "sha256": "8cedd1708812b5e68c5616f6afdf3a15f5a80c0ad73779a0ed6ee7d88f61d79a"
+      },
+      "control": {
+        "file_name": "a4-transfer-1af158760f7041bfad5cb6afbcd4d138.bin",
+        "bytes": 81920,
+        "sha256": "faf33c21e1c7f9f318be081bb0411aaf94224aae8e9182e6aa42bc5a23921ba5"
+      },
+      "config_paused": true,
+      "runtime": {
+        "available": false,
+        "error_code": "invalid_response"
+      },
+      "three_other_configs_unchanged": true
+    },
+    {
+      "name": "T04_adapter_resume_file_sha256_and_configuration_restored",
+      "at": "2026-11-21T21:38:33.262584Z",
+      "file_name": "a4-transfer-e4aad30ca7f746feb90b7124bd5d9d2f.bin",
+      "bytes": 81920,
+      "sha256": "8cedd1708812b5e68c5616f6afdf3a15f5a80c0ad73779a0ed6ee7d88f61d79a",
+      "elapsed_seconds": 5.266,
+      "four_original_configs_restored": true
+    },
+    {
+      "name": "explicit_bootstrap_cannot_overwrite_administrator",
+      "at": "2026-11-21T21:38:37.763037Z"
+    },
+    {
+      "name": "A43_protected_routes_B1_projection_and_real_rule_pause",
+      "at": "2026-11-21T21:38:57.204780Z"
+    },
+    {
+      "name": "A43_second_worker_rejected_before_runtime",
+      "at": "2026-11-21T21:39:01.771376Z",
+      "exit_code": 3
+    },
+    {
+      "name": "A43_rule_pause_positive_control_resume_and_sha256_transfer",
+      "at": "2026-11-21T21:39:24.675537Z"
+    },
+    {
+      "name": "A43_manual_resume_after_disabled_rule_is_observed",
+      "at": "2026-11-21T21:39:31.268691Z"
+    },
+    {
+      "name": "A43_worker_restart_recalculates_current_rule_and_preserves_history",
+      "at": "2026-11-21T21:39:48.840181Z"
+    },
+    {
+      "name": "A43_lock_loss_inside_A3_blocks_HTTP_SQL_commit_and_B2",
+      "at": "2026-11-21T21:40:04.290274Z"
+    },
+    {
+      "name": "A43_stop_inside_A3_is_graceful_and_blocks_new_operations",
+      "at": "2026-11-21T21:40:19.207592Z"
+    },
+    {
+      "name": "A43_recovery_history_and_four_folder_configuration_restored",
+      "at": "2026-11-21T21:40:35.332454Z"
+    },
+    {
+      "name": "file_secrets_private_ports_and_container_logs",
+      "at": "2026-11-21T21:40:36.841835Z"
+    }
+  ],
+  "project": "scc-a4-test-079b89ec8ead",
+  "docker": "29.9.2",
+  "compose": "5.6.1",
+  "phase": "file_secrets_private_ports_and_container_logs",
+  "backend_image_id": "sha256:e543ddd3f136cc9a186f311592687f8047b59ce45527ac02a39d1c3c7310d929",
+  "transfer": {
+    "resume": {
+      "file_name": "a4-transfer-e4aad30ca7f746feb90b7124bd5d9d2f.bin",
+      "bytes": 81920,
+      "sha256": "8cedd1708812b5e68c5616f6afdf3a15f5a80c0ad73779a0ed6ee7d88f61d79a",
+      "elapsed_seconds": 5.266
+    },
+    "restoration": {
+      "attempted": true,
+      "result": "passed"
+    }
+  },
+  "worker_transfer": {
+    "sha256": "cea76b16f9cd17ba898838a5e3dcafb139bfbdf053c9a1502f2999f203955bdf",
+    "bytes": 81920,
+    "control_transferred_during_pause": true
+  },
+  "worker": {
+    "singleton_rejected": true,
+    "loss_within_collection": true,
+    "stop_within_collection": true,
+    "configuration_restored": true,
+    "test_intervals_seconds": {
+      "observations": 1,
+      "reconciliation": 1
+    }
+  },
+  "cleanup": {
+    "containers": 0,
+    "volumes": 0,
+    "networks": 0,
+    "private_runtime_exists": false,
+    "build_cache_and_image_retained": true
+  },
+  "completed_at": "2026-11-21T21:40:42.856629Z",
+  "source_sha256_git_lf": {
+    "backend/app/main.py": "132f0c114927ae01a421d759cb6144e1bb328c6750956ed2b720dfa0308e2a41",
+    "backend/Dockerfile": "84942fb45abb16a41dfb4effaeeb4f5a4317cc5934008858b857d0a3a1ff7018",
+    "compose.yaml": "803b265e38005e4f2892f0aa69ef4049bdb6b55c823c1236efa42db8562b2c29",
+    "deploy/compose/image/entrypoint.py": "7e13f2b365ba343021741f169edb92df0ece300365a66b38bc42614f1b7439ff",
+    "deploy/compose/image/runtime.py": "47aa3a1a1a7f8f2c5f00e98d95a0af7f64c5bd9a5ff2311dd696626d97ec60f3",
+    "scripts/dev_stack.py": "da521a0adb52afdf2a4c89c702417480356a6d94f66541e71053c680b08fce39",
+    "scripts/check_application.py": "497bb4cafa5d2dbea15ceffdf0dfabf8652def0925ff50178a38902e147ec620",
+    "tests/integration/system/check_core.py": "0344638f3e3581fbb966fb12fc5f9eb8af53828cf32be8ff0cbc2029a20bb2bb",
+    "tests/integration/system/check_worker.py": "57bc4dac28f4711a348e6684a38c3d8943520c8f8ed37fe0420e8dcbd90e43be",
+    "tests/integration/system/worker_probe.py": "4b2c772d0221a296d26d806bb6d26d95e47ef8c8ab4bbf485fd86a28759a6787",
+    "tests/integration/system/test_ci_tools.py": "435371dd6c2c3088b4805845af14c5773ad8abb069ae0d99e8f20186f5d03ada",
+    "tests/integration/system/test_application_runtime.py": "bcf9aca4dbbd7167f714cf827a5ffb912dba106a3ee0aba6422b3491c025fe29"
+  },
+  "base": "ff52906a69cd9f78f740cf265824fb45a844b704",
+  "ordinary_merge": "431bd0d4508db0e50bb281103907eb9c8d74e630",
+  "source_identity": "Source hashes identify tested working-tree bytes; final published head is in PR #7.",
+  "targeted_system_bootstrap": {
+    "passed": 140,
+    "warnings_as_errors": true
+  },
+  "validate": {
+    "harness": 32,
+    "backend": 426,
+    "sql_skipped": 99,
+    "vitest": 10,
+    "playwright": 13
+  },
+  "independent_sql": {
+    "counts": {
+      "tests": 228,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    "groups": {
+      "shared": {
+        "tests": 99,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "auth": {
+        "tests": 7,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "registry": {
+        "tests": 34,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "collection": {
+        "tests": 69,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "rules": {
+        "tests": 6,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "executions": {
+        "tests": 13,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      }
+    },
+    "server_version": 180006,
+    "cleanup": {
+      "result": "passed",
+      "core_containers_volumes_networks": 0,
+      "postgres_containers": 0,
+      "private_removed": true
+    }
+  },
+  "application_pipeline": {
+    "result": "failed",
+    "phase": "format",
+    "owner": "B",
+    "files": [
+      "tests/integration/executions/conftest.py",
+      "tests/integration/rules/conftest.py",
+      "tests/integration/rules/test_rules_api.py",
+      "tests/unit/reconciliation/test_decisions.py",
+      "tests/unit/scheduling/test_engine.py"
+    ]
+  },
+  "remaining": [
+    "A4.4b UI and real browser E2E",
+    "A4.5 ARM64 Compose after A10/B6",
+    "independent review and human demo-config acceptance before merge"
+  ]
+}

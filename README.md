@@ -17,6 +17,15 @@ Syncthing — 2.1.7. После принятия карточек A10 начин
 прогон принятого коллектора A3. Порядок и обязанности описаны
 в [плане продолжения](docs/agent-tasks.md#порядок-a3-a10-b6-и-a4).
 
+Общая сборка A4 находится в [draft PR #7](https://github.com/danilsdk/syncthing-control-center/pull/7):
+PostgreSQL, миграции, API, два закрытых demo-узла, один worker для сбора событий
+и применения расписаний и production-сборка B3 на http://127.0.0.1:8080.
+Интерфейс и запросы к `/api` и `/health` используют один адрес.
+Полная приёмка ждёт A10/B6. Следующие пакеты работы
+и ограничения описаны в [плане A4](docs/design/a/deployment.md), запуск —
+в [инструкции стенда](deploy/compose/README.md). Старые результаты CI относятся
+к своим SHA; актуальные проверки публикуются в PR.
+
 **Harness H0 принят 28.10.2026:** [PR #1](https://github.com/danilsdk/syncthing-control-center/pull/1).
 Участники: A / playerboom — интеграция и данные; B / danilsdk — автоматизация,
 интерфейс и harness. Порядок работы — [docs/harness.md](docs/harness.md).
