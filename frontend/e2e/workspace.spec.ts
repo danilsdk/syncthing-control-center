@@ -62,9 +62,11 @@ const execution = {
 async function backend(page: Page) {
   const state = {
     loggedIn: true,
+    sessionNow: () => Date.now(),
     rules: [] as (typeof rule)[],
     stale: false,
     paused: true,
+    desiredPaused: false,
     mutationStatus: 200,
     logoutStatus: 204,
     history: [] as object[],
@@ -105,7 +107,7 @@ async function backend(page: Page) {
       return send({
         user: { id: "test-admin", login: "admin" },
         csrf_token: "public-test-token",
-        expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+        expires_at: new Date(state.sessionNow() + 3_600_000).toISOString(),
       });
     }
     if (!state.loggedIn) return fail(401, "authentication_required");
@@ -113,7 +115,7 @@ async function backend(page: Page) {
       return send({
         user: { id: "test-admin", login: "admin" },
         csrf_token: "public-test-token",
-        expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+        expires_at: new Date(state.sessionNow() + 3_600_000).toISOString(),
       });
     if (path === "/api/auth/logout") {
       if (state.logoutStatus === 204) state.loggedIn = false;
@@ -130,7 +132,7 @@ async function backend(page: Page) {
             actual_paused: state.paused,
             is_stale: state.stale,
             desired_paused: state.rules.some((item) => item.enabled)
-              ? false
+              ? state.desiredPaused
               : null,
             active_rule_id:
               state.rules.find((item) => item.enabled)?.id ?? null,
@@ -281,15 +283,17 @@ for (const { stale, expected } of [
     const state = await backend(page);
     state.rules = [{ ...rule }];
     state.paused = false;
+    state.desiredPaused = true;
     state.stale = stale;
     await page.goto("/#/folders");
     await expect(
       page.getByText("По расписанию сейчас", { exact: true }),
     ).toBeVisible();
     await page.getByRole("link", { name: "Правила", exact: true }).click();
-    await expect(
-      page.getByText(/В этом окне расписание разрешает синхронизацию/),
-    ).toBeVisible();
+    const currentSchedule = page.locator(".planner-aside section").filter({
+      has: page.getByRole("heading", { name: "Сейчас по правилу" }),
+    });
+    await expect(currentSchedule.getByText("Пауза", { exact: true })).toBeVisible();
     await page
       .getByRole("button", { name: "Отключить расписание", exact: true })
       .click();
@@ -788,4 +792,31 @@ test("analytics uses the selected period and distinguishes no samples from zero 
   await expect(page.getByText("Нет данных", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "7 дней" }).click();
   await expect.poll(() => span).toBe(7 * 86400000);
+});
+
+test("upcoming windows follow real local minutes across clock changes", async ({
+  page,
+}) => {
+  const state = await backend(page);
+  const berlin = { ...rule, timezone: "Europe/Berlin", days_of_week: [7] };
+  const firstWindow = page.locator(".next-windows li").first();
+
+  const spring = new Date("2027-03-27T12:00:00Z");
+  state.sessionNow = () => spring.getTime();
+  await page.clock.setFixedTime(spring);
+  state.rules = [{ ...berlin, start_time: "02:10", end_time: "02:20" }];
+  await page.goto("/#/rules/" + ruleId);
+  await expect(firstWindow).toContainText(/4\s+апр/);
+
+  state.rules = [{ ...berlin, start_time: "02:10", end_time: "03:20" }];
+  await page.reload();
+  await expect(firstWindow).toContainText(/28\s+мар/);
+
+  // At 02:30 on the first occurrence, the second 02:10 is still ahead.
+  const autumn = new Date("2027-10-31T00:30:00Z");
+  state.sessionNow = () => autumn.getTime();
+  await page.clock.setFixedTime(autumn);
+  state.rules = [{ ...berlin, start_time: "02:10", end_time: "02:20" }];
+  await page.reload();
+  await expect(firstWindow).toContainText(/31\s+окт/);
 });

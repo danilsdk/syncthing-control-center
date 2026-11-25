@@ -203,57 +203,116 @@ export function WeekBoard({
     </div>
   );
 }
-export function NextWindows({ rule }: { rule: RuleInput }) {
-  if (!rule.enabled || !rule.days_of_week.length)
-    return <p className="hint">Нет запланированных окон.</p>;
-  let dt: Record<string, string>;
-  try {
-    dt = Object.fromEntries(
-      new Intl.DateTimeFormat("en-GB", {
-        timeZone: rule.timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-      })
-        .formatToParts(new Date())
-        .map((p) => [p.type, p.value]),
+const MINUTE_MS = 60_000;
+const DAY_MS = 1_440 * MINUTE_MS;
+
+function localClock(timeZone: string) {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  return (instant: number) => {
+    const parts = Object.fromEntries(
+      formatter.formatToParts(instant).map(({ type, value }) => [type, value]),
     );
-  } catch {
+    return Date.UTC(
+      +parts.year,
+      +parts.month - 1,
+      +parts.day,
+      +parts.hour,
+      +parts.minute,
+    );
+  };
+}
+
+function nextWindowOnDate(
+  start: number,
+  end: number,
+  now: number,
+  wallTime: ReturnType<typeof localClock>,
+) {
+  const early = start - DAY_MS;
+  const late = end + DAY_MS;
+  const earlyOffset = wallTime(early) - early;
+  const lateOffset = wallTime(late) - late;
+  if (earlyOffset === lateOffset) return start - earlyOffset > now;
+
+  // Check real minutes around a clock change with the same half-open
+  // local interval as B1, including a repeated hour or a skipped midnight.
+  const first = start - Math.max(earlyOffset, lateOffset);
+  const after = end - Math.min(earlyOffset, lateOffset);
+  let wasInside = false;
+  for (let instant = first; instant < after; instant += MINUTE_MS) {
+    const local = wallTime(instant);
+    const inside = local >= start && local < end;
+    if (inside && !wasInside && instant > now) return true;
+    wasInside = inside;
+  }
+  return false;
+}
+
+export function NextWindows({ rule }: { rule: RuleInput }) {
+  const start = minute(rule.start_time);
+  const end = minute(rule.end_time);
+  const empty = <p className="hint">Нет запланированных окон.</p>;
+  if (
+    !rule.enabled ||
+    !rule.days_of_week.length ||
+    !Number.isFinite(start + end) ||
+    start === end
+  )
+    return empty;
+
+  let wallTime: ReturnType<typeof localClock>;
+  try {
+    wallTime = localClock(rule.timezone);
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
     return <p className="hint">Проверьте часовой пояс.</p>;
   }
+
+  const now = Date.now();
+  const localDate = Math.floor(wallTime(now) / DAY_MS) * DAY_MS;
+  const overnight = end < start;
   const dates: Date[] = [];
-  for (let i = 0; i <= 21 && dates.length < 3; i++) {
-    const date = new Date(Date.UTC(+dt.year, +dt.month - 1, +dt.day + i));
-    if (
-      rule.days_of_week.includes(date.getUTCDay() || 7) &&
-      (i > 0 || rule.start_time.slice(0, 5) > dt.hour + ":" + dt.minute)
-    )
-      dates.push(date);
+  for (let i = overnight ? -1 : 0; i <= 28 && dates.length < 3; i++) {
+    const midnight = localDate + i * DAY_MS;
+    const date = new Date(midnight);
+    if (!rule.days_of_week.includes(date.getUTCDay() || 7)) continue;
+    const from = midnight + start * MINUTE_MS;
+    const to = midnight + end * MINUTE_MS + (overnight ? DAY_MS : 0);
+    if (nextWindowOnDate(from, to, now, wallTime)) dates.push(date);
   }
+  if (!dates.length) return empty;
   return (
-    <ol className="next-windows">
-      {dates.map((d) => (
-        <li key={d.getTime()}>
-          <div className="day-stamp">{days[(d.getUTCDay() || 7) - 1]}</div>
-          <div>
-            <strong>
-              {d.toLocaleDateString("ru", {
-                timeZone: "UTC",
-                day: "numeric",
-                month: "short",
-              })}
-            </strong>
-            <small>
-              {rule.start_time.slice(0, 5)} — {rule.end_time.slice(0, 5)}{" "}
-              {rule.end_time < rule.start_time ? " · +1 день" : ""}
-            </small>
-          </div>
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol className="next-windows">
+        {dates.map((d) => (
+          <li key={d.getTime()}>
+            <div className="day-stamp">{days[(d.getUTCDay() || 7) - 1]}</div>
+            <div>
+              <strong>
+                {d.toLocaleDateString("ru", {
+                  timeZone: "UTC",
+                  day: "numeric",
+                  month: "short",
+                })}
+              </strong>
+              <small>
+                {clock(start)} — {clock(end)}
+                {overnight ? " · +1 день" : ""}
+              </small>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className="hint">Время по расписанию · {rule.timezone}</p>
+    </>
   );
 }
 export function WindowNote({ form }: { form: RuleInput }) {

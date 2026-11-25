@@ -390,12 +390,11 @@ function RuleForm(
               <section className="panel">
                 <h2>Сейчас по правилу</h2>
                 <p>
-                  {selected.enabled && f
-                    ? desired(f.desired_paused)
+                  {selected.enabled
+                    ? desired(
+                        f?.active_rule_id === selected.id ? f.desired_paused : null,
+                      )
                     : "Расписание выключено"}
-                </p>
-                <p className="hint">
-                  В этом окне расписание разрешает синхронизацию.
                 </p>
                 {f && (
                   <PageLink to={folderPath(f)} className="text-link">
