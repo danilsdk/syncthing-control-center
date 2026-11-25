@@ -1,6 +1,6 @@
 import type {
-  AnalyticsQuery,
   AnalyticsSummary,
+  AnalyticsQuery,
   EventQuery,
   Execution,
   ExecutionQuery,
@@ -129,6 +129,8 @@ export class MockProvider implements Provider {
     const items = this.executions.filter(
       (item) =>
         (!query.status || item.status === query.status) &&
+        (!query.folder_id || item.folder_id === query.folder_id) &&
+        (!query.source || item.source === query.source) &&
         (!query.node_id || item.node_id === query.node_id) &&
         (!query.from || item.created_at >= query.from) &&
         (!query.to || item.created_at < query.to),
@@ -161,9 +163,20 @@ export class MockProvider implements Provider {
       offset,
     });
   }
-  async analytics(query: AnalyticsQuery): Promise<AnalyticsSummary> {
-    const start = Date.parse(query.from);
-    const end = Date.parse(query.to);
+  async analytics(query: AnalyticsQuery = {}): Promise<AnalyticsSummary> {
+    const dayMs = 86_400_000;
+    const now = Date.now();
+    const from = query.from || new Date(now - dayMs).toISOString();
+    const to = query.to || new Date(now).toISOString();
+    const start = Date.parse(from);
+    const end = Date.parse(to);
+    if (!(end > start && end - start <= 31 * dayMs)) {
+      throw new ProviderError(
+        "Некорректный период аналитики.",
+        "invalid_period",
+        422,
+      );
+    }
     const attempts = this.executions.filter(
       (attempt) =>
         (!query.node_id || attempt.node_id === query.node_id) &&
@@ -219,7 +232,6 @@ export class MockProvider implements Provider {
       };
     };
     const daily: AnalyticsSummary["daily"] = [];
-    const dayMs = 86_400_000;
     for (let day = Math.floor(start / dayMs) * dayMs; day < end; day += dayMs) {
       daily.push({
         date: new Date(day).toISOString().slice(0, 10),
@@ -227,8 +239,8 @@ export class MockProvider implements Provider {
       });
     }
     return {
-      from: query.from,
-      to: query.to,
+      from,
+      to,
       node_id: query.node_id ?? null,
       source: query.source ?? null,
       ...metrics(start, end),

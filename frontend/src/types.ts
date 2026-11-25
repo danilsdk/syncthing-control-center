@@ -121,13 +121,6 @@ export interface ApiMetrics {
   success_ratio: number | null;
 }
 
-export interface AnalyticsQuery {
-  from: string;
-  to: string;
-  node_id?: string;
-  source?: Execution["source"];
-}
-
 export interface Page<T> {
   items: T[];
   total: number;
@@ -159,7 +152,7 @@ export interface Provider {
   listExecutions(query?: ExecutionQuery): Promise<Page<Execution>>;
   listEvents(query?: EventQuery): Promise<Page<SyncEvent>>;
   getExecution(id: string): Promise<Execution>;
-  analytics(query: AnalyticsQuery): Promise<AnalyticsSummary>;
+  analytics(query?: AnalyticsQuery): Promise<AnalyticsSummary>;
   resume(folderId: string): Promise<Execution>;
 }
 
@@ -183,7 +176,13 @@ interface HistoryQuery {
   node_id?: string;
 }
 
+export type AnalyticsQuery = Pick<HistoryQuery, "from" | "to" | "node_id"> & {
+  source?: Execution["source"];
+};
+
 export interface ExecutionQuery extends HistoryQuery {
+  folder_id?: string;
+  source?: "rule" | "manual";
   status?: ExecutionStatus | "";
 }
 

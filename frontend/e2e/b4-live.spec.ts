@@ -225,7 +225,7 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
     actual_paused: true,
     is_stale: false,
   });
-  await page.getByRole("button", { name: "История", exact: true }).click();
+  await page.getByRole("link", { name: "История", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Узел", exact: true })
     .selectOption(nodeId);
@@ -233,23 +233,26 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
     .getByRole("combobox", { name: "Результат", exact: true })
     .selectOption("applied");
   await expect(
-    page.getByRole("row").filter({
-      has: page.getByText(confirmedExecutionId.slice(0, 8), { exact: true }),
-    }),
+    page
+      .getByRole("table", { name: "Попытки команд" })
+      .getByRole("row")
+      .filter({
+        has: page.locator(`a[href="#/history/commands/${confirmedExecutionId}"]`),
+      }),
   ).toContainText("Подтверждено");
-  await page.getByRole("button", { name: "Аналитика", exact: true }).click();
+  await page.getByRole("link", { name: "Аналитика", exact: true }).click();
+  await page.getByText("Фильтры аналитики", { exact: true }).click();
   await page
     .getByRole("combobox", { name: "Узел", exact: true })
     .selectOption(nodeId);
   await page
     .getByRole("combobox", { name: "Источник команд" })
     .selectOption("rule");
-  await page.getByRole("button", { name: "Применить", exact: true }).click();
   await expect(
-    page.getByRole("region", { name: "Доля подтверждённых команд" }),
-  ).toContainText(/[1-9]\d* подтверждено/);
+    page.getByRole("region", { name: "Подтверждение команд" }),
+  ).toContainText(/[1-9]\d* из [1-9]\d* попыток с определённым исходом/);
   await expect(
-    page.getByRole("region", { name: "Доля успешных проверок API" }),
+    page.getByRole("region", { name: "Наблюдаемая доступность" }),
   ).toContainText(/из [1-9]\d* проверок/);
   await expect(
     page.getByRole("table", { name: "Дневные показатели UTC" }),

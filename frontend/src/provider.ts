@@ -1,6 +1,6 @@
 import type {
-  AnalyticsQuery,
   AnalyticsSummary,
+  AnalyticsQuery,
   EventQuery,
   Execution,
   ExecutionQuery,
@@ -145,9 +145,7 @@ export class ApiProvider implements Provider {
     return this.historyPage<SyncEvent>("/api/events", query);
   }
   getExecution(id: string) {
-    return this.request<Execution>(
-      `/api/executions/${encodeURIComponent(id)}`,
-    );
+    return this.request<Execution>(`/api/executions/${encodeURIComponent(id)}`);
   }
   createRule(input: RuleInput) {
     return this.request<Rule>("/api/rules", {
@@ -181,13 +179,16 @@ export class ApiProvider implements Provider {
       { method: "DELETE" },
     );
   }
-  analytics(query: AnalyticsQuery) {
-    const params = new URLSearchParams({ from: query.from, to: query.to });
+  analytics(query: AnalyticsQuery = {}) {
+    const to = new Date();
+    const from = new Date(to.getTime() - 86_400_000);
+    const params = new URLSearchParams({
+      from: query.from || from.toISOString(),
+      to: query.to || to.toISOString(),
+    });
     if (query.node_id) params.set("node_id", query.node_id);
     if (query.source) params.set("source", query.source);
-    return this.request<AnalyticsSummary>(
-      `/api/analytics/summary?${params}`,
-    );
+    return this.request<AnalyticsSummary>(`/api/analytics/summary?${params}`);
   }
   async resume(folderId: string) {
     const key = this.resumeKeys.get(folderId) ?? crypto.randomUUID();
