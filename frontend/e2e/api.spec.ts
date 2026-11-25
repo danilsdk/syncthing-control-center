@@ -27,7 +27,7 @@ test("real API: create rule, observe confirmed result and event, disable, logout
   await expect(
     page.getByRole("button", { name: "Отключить расписание", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "История", exact: true }).click();
+  await page.getByRole("link", { name: "История", exact: true }).click();
   await expect(async () => {
     await page.getByRole("button", { name: "Обновить", exact: true }).click();
     await expect(page.getByRole("table")).toContainText("Подтверждено");
@@ -37,7 +37,7 @@ test("real API: create rule, observe confirmed result and event, disable, logout
     path: "test-results/real-api-history.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "События Syncthing" }).click();
+  await page.getByRole("link", { name: "События Syncthing" }).click();
   const events = page.getByRole("table", { name: "События Syncthing" });
   await expect(events).toContainText("Обработка элемента завершена");
   await expect(events).toContainText("Demo documents");
@@ -46,7 +46,7 @@ test("real API: create rule, observe confirmed result and event, disable, logout
     label: "E2E B",
   });
   await expect(page.getByText("Событий пока нет")).toBeVisible();
-  await page.getByRole("button", { name: "Правила", exact: true }).click();
+  await page.getByRole("link", { name: "Правила", exact: true }).click();
   await page
     .getByRole("button", { name: "Отключить расписание", exact: true })
     .click();

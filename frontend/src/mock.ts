@@ -1,5 +1,6 @@
 import type {
   AnalyticsSummary,
+  AnalyticsQuery,
   EventQuery,
   Execution,
   ExecutionQuery,
@@ -128,6 +129,8 @@ export class MockProvider implements Provider {
     const items = this.executions.filter(
       (item) =>
         (!query.status || item.status === query.status) &&
+        (!query.folder_id || item.folder_id === query.folder_id) &&
+        (!query.source || item.source === query.source) &&
         (!query.node_id || item.node_id === query.node_id) &&
         (!query.from || item.created_at >= query.from) &&
         (!query.to || item.created_at < query.to),
@@ -160,17 +163,37 @@ export class MockProvider implements Provider {
       offset,
     });
   }
-  async analytics(): Promise<AnalyticsSummary> {
+  async analytics(query: AnalyticsQuery = {}): Promise<AnalyticsSummary> {
+    const from = query.from || new Date(Date.now() - 86400000).toISOString(),
+      to = query.to || new Date().toISOString();
+    const counts = {
+      applied: 0,
+      failed: 0,
+      unknown: 0,
+      cancelled: 0,
+      pending: 0,
+    };
+    for (const a of this.executions) {
+      const time = a.status === "pending" ? a.created_at : a.completed_at;
+      if (
+        time &&
+        time >= from &&
+        time < to &&
+        (!query.node_id || a.node_id === query.node_id)
+      )
+        counts[a.status]++;
+    }
+    const known = counts.applied + counts.failed;
     return {
-      from: new Date(Date.now() - 86_400_000).toISOString(),
-      to: this.now,
+      from,
+      to,
       commands: {
-        applied: 0,
-        failed: 0,
-        unknown: 1,
-        cancelled: 0,
-        pending_created: 0,
-        success_ratio: null,
+        applied: counts.applied,
+        failed: counts.failed,
+        unknown: counts.unknown,
+        cancelled: counts.cancelled,
+        pending_created: counts.pending,
+        success_ratio: known ? counts.applied / known : null,
       },
       api_checks: {
         successful_checks: 0,
