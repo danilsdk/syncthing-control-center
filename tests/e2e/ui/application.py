@@ -6,6 +6,7 @@ Never loaded by the product entry point. No Syncthing or personal files are used
 import threading
 from contextlib import asynccontextmanager
 
+from app.api.analytics import router as analytics_router
 from app.api.events import router as events_router
 from app.api.executions import router as executions_router
 from app.api.rules import router as rules_router
@@ -21,7 +22,7 @@ from app.contracts.interfaces import (
 from app.contracts.types import mask_to_days, time_to_hhmm
 from app.db import Database
 from app.main import create_app, run_worker
-from app.models import ManagedNode, SyncEvent
+from app.models import ManagedNode, StatusSnapshot, SyncEvent
 from app.reconciliation.service import ReconciliationRuntime
 from app.registry.admin import create_administrator
 from app.registry.service import RegistryService
@@ -137,6 +138,18 @@ def create_test_app():
             folder = registry.folders(node.id, limit=1, offset=0).items[0]
             system = factory.for_node(node.id).read_system()
             with database.session() as session:
+                session.add_all(
+                    [
+                        StatusSnapshot(
+                            node_id=node.id,
+                            scope="node",
+                            observed_at=system.observed_at,
+                            success=success,
+                            error_code=None if success else "unreachable",
+                        )
+                        for success in (True, False, True)
+                    ]
+                )
                 session.add(
                     SyncEvent(
                         node_id=node.id,
@@ -152,7 +165,7 @@ def create_test_app():
     app = create_app(
         settings,
         database,
-        routers=[rules_router, executions_router, events_router],
+        routers=[rules_router, executions_router, events_router, analytics_router],
         adapters=factory,
         registry=registry,
     )

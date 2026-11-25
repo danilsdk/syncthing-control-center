@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DailyMetrics, formatRatio } from "./analytics";
 import {
   Badge,
   ResourceNotice,
@@ -23,10 +24,12 @@ import { Icon } from "./icons";
 function Dates({
   from,
   to,
+  maxDays,
   apply,
 }: {
   from: string;
   to: string;
+  maxDays?: number;
   apply: (from: string, to: string) => void;
 }) {
   const [a, setA] = useState(from.slice(0, 16)),
@@ -39,14 +42,23 @@ function Dates({
         e.preventDefault();
         if (a && b && a >= b)
           return setError("Начало периода должно быть раньше конца.");
+        const start = a ? a + ":00Z" : "";
+        const end = b ? b + ":00Z" : "";
+        if (
+          maxDays !== undefined &&
+          Date.parse(end) - Date.parse(start) > maxDays * 86_400_000
+        ) {
+          return setError(`Максимальный период — ${maxDays} сутки.`);
+        }
         setError("");
-        apply(a ? a + ":00Z" : "", b ? b + ":00Z" : "");
+        apply(start, end);
       }}
     >
       <label>
         С (UTC)
         <input
           type="datetime-local"
+          required={maxDays !== undefined}
           value={a}
           onChange={(e) => setA(e.target.value)}
         />
@@ -55,6 +67,7 @@ function Dates({
         До (UTC, не включая)
         <input
           type="datetime-local"
+          required={maxDays !== undefined}
           value={b}
           onChange={(e) => setB(e.target.value)}
         />
@@ -318,25 +331,36 @@ export function Analytics({
     from = query.get("from") ?? "",
     to = query.get("to") ?? "",
     node = query.get("node_id") ?? "";
+  const requestedSource = query.get("source");
+  const source =
+    requestedSource === "rule" || requestedSource === "manual"
+      ? requestedSource
+      : undefined;
   const period = query.get("period") ?? "24h";
-  const load = useCallback(() => {
+  const defaults = useMemo(() => {
     const end = new Date();
-    const span = period === "30d" ? 30 : period === "7d" ? 7 : 1;
-    const start = new Date(end.getTime() - span * 86400000);
-    return provider.analytics({
-      from: from || start.toISOString(),
-      to: to || end.toISOString(),
-      node_id: node,
-    });
-  }, [provider, from, to, node, period]);
+    const days = period === "30d" ? 30 : period === "7d" ? 7 : 1;
+    return {
+      from: new Date(end.getTime() - days * 86_400_000).toISOString(),
+      to: end.toISOString(),
+    };
+  }, [period, revision]);
+  const load = useCallback(
+    () =>
+      provider.analytics({
+        from: from || defaults.from,
+        to: to || defaults.to,
+        node_id: node,
+        source,
+      }),
+    [provider, from, to, node, source, defaults],
+  );
   const resource = useResource(load, revision, onFailure),
     s = resource.data;
   function indicator(value: number | null) {
     return (
       <>
-        <div className="metric">
-          {value === null ? "Нет данных" : Math.round(value * 100) + "%"}
-        </div>
+        <div className="metric">{formatRatio(value)}</div>
         <div
           className={"ratio " + (value === null ? "no-denominator" : "")}
           aria-hidden="true"
@@ -378,27 +402,41 @@ export function Analytics({
         open={period === "custom" || undefined}
       >
         <summary>
-          Период и узел <Icon name="down" />
+          Фильтры аналитики <Icon name="down" />
         </summary>
         <div className="panel audit-controls">
-          <label>
-            Узел
-            <select
-              value={node}
-              onChange={(e) => update({ node_id: e.target.value })}
-            >
-              <option value="">Все узлы</option>
-              {nodes.map((n) => (
-                <option key={n.id} value={n.id}>
-                  {n.display_name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="filter-line">
+            <label>
+              Узел
+              <select
+                value={node}
+                onChange={(e) => update({ node_id: e.target.value })}
+              >
+                <option value="">Все узлы</option>
+                {nodes.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.display_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Источник команд
+              <select
+                value={source ?? ""}
+                onChange={(e) => update({ source: e.target.value })}
+              >
+                <option value="">Все команды</option>
+                <option value="rule">По расписанию</option>
+                <option value="manual">Ручные</option>
+              </select>
+            </label>
+          </div>
           <Dates
-            key={from + to}
-            from={from}
-            to={to}
+            key={[period, from, to].join()}
+            from={from || defaults.from}
+            to={to || defaults.to}
+            maxDays={31}
             apply={(a, b) => update({ from: a, to: b, period: "custom" })}
           />
         </div>
@@ -407,8 +445,11 @@ export function Analytics({
       {s && (
         <>
           <div className="metric-grid">
-            <section className="panel metric-card">
-              <div className="panel-label">
+            <section
+              className="panel metric-card"
+              aria-labelledby="command-metric"
+            >
+              <div className="panel-label" id="command-metric">
                 <Icon name="check" />
                 Подтверждение команд
               </div>
@@ -438,8 +479,11 @@ export function Analytics({
                 ))}
               </dl>
             </section>
-            <section className="panel metric-card">
-              <div className="panel-label">
+            <section
+              className="panel metric-card"
+              aria-labelledby="api-metric"
+            >
+              <div className="panel-label" id="api-metric">
                 <Icon name="pulse" />
                 Наблюдаемая доступность
               </div>
@@ -462,6 +506,7 @@ export function Analytics({
               </dl>
             </section>
           </div>
+          <DailyMetrics daily={s.daily} />
           <details className="explain">
             <summary>
               Как считаются показатели <Icon name="down" />

@@ -759,39 +759,62 @@ test("a conflicting window keeps the draft until the administrator compares vers
     .toMatchObject({ expected_version: 2, end_time: "21:00" });
 });
 
-test("analytics uses the selected period and distinguishes no samples from zero percent", async ({
+test("analytics keeps B3 period controls and applies the B4 command source filter", async ({
   page,
 }) => {
   await backend(page);
   let span = 0;
+  let source: string | null = null;
+  const commands = {
+    applied: 0,
+    failed: 1,
+    unknown: 4,
+    cancelled: 0,
+    pending_created: 0,
+    success_ratio: 0,
+  };
+  const api_checks = {
+    successful_checks: 0,
+    total_checks: 0,
+    success_ratio: null,
+  };
   await page.route("**/api/analytics/summary?*", (route) => {
     const q = new URL(route.request().url()).searchParams;
     span = Date.parse(q.get("to")!) - Date.parse(q.get("from")!);
+    source = q.get("source");
     return route.fulfill({
       json: {
         from: q.get("from"),
         to: q.get("to"),
-        commands: {
-          applied: 0,
-          failed: 1,
-          unknown: 4,
-          cancelled: 0,
-          pending_created: 0,
-          success_ratio: 0,
-        },
-        api_checks: {
-          successful_checks: 0,
-          total_checks: 0,
-          success_ratio: null,
-        },
+        node_id: q.get("node_id"),
+        source,
+        commands,
+        api_checks,
+        daily: [{ date: q.get("from")!.slice(0, 10), commands, api_checks }],
       },
     });
   });
   await page.goto("/#/analytics");
-  await expect(page.getByText("0%", { exact: true })).toBeVisible();
-  await expect(page.getByText("Нет данных", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Подтверждение команд" }).getByText(/^0\s*%$/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Наблюдаемая доступность" }).getByText("Нет данных"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("table", { name: "Дневные показатели UTC" }),
+  ).toBeVisible();
+  await page.getByText("Фильтры аналитики", { exact: true }).click();
+  await page.getByRole("combobox", { name: "Источник команд" }).selectOption("manual");
+  await expect.poll(() => source).toBe("manual");
   await page.getByRole("button", { name: "7 дней" }).click();
-  await expect.poll(() => span).toBe(7 * 86400000);
+  await expect.poll(() => span).toBe(7 * 86_400_000);
+  await expect(page).toHaveURL(/source=manual/);
+  await page.getByLabel("С (UTC)", { exact: true }).fill("2026-01-01T00:00");
+  await page.getByLabel("До (UTC, не включая)", { exact: true }).fill("2026-02-02T00:00");
+  await page.getByRole("button", { name: "Применить период" }).click();
+  await expect(page.getByRole("alert")).toContainText("Максимальный период — 31 сутки.");
+  expect(span).toBe(7 * 86_400_000);
 });
 
 test("upcoming windows follow real local minutes across clock changes", async ({
