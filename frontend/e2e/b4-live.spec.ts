@@ -169,10 +169,27 @@ test("live stand: a browser rule pauses Syncthing, is confirmed in history and e
       timeout: 10_000,
     });
     expect(resume.status()).toBe(202);
-    await expect.poll(folder, { timeout: 75_000 }).toMatchObject({
-      actual_paused: false,
-      is_stale: false,
-    });
+    const { id: resumeId } = await read<Execution>(resume);
+    await expect
+      .poll(
+        async () => {
+          const attempt = await read<Execution>(
+            await api.get(`/api/executions/${resumeId}`, { timeout: 10_000 }),
+          );
+          const restored =
+            (attempt.status === "applied" &&
+              attempt.observed_paused === false &&
+              !!attempt.verified_at) ||
+            (attempt.status === "cancelled" && attempt.error_code === "already_resumed");
+          return { attempt, restored, folder: restored ? await folder() : undefined };
+        },
+        { timeout: 75_000, message: "Confirm the demo folder restoration" },
+      )
+      .toMatchObject({
+        attempt: { folder_id: folderId, source: "manual", desired_paused: false },
+        restored: true,
+        folder: { actual_paused: false, is_stale: false, present: true },
+      });
   });
 
   const [response] = await Promise.all([
