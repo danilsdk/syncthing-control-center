@@ -46,7 +46,7 @@ jobs:
           HARNESS_BRANCH: ${{ github.head_ref }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          python -I -S - <<'PY'
+          python -I -S -X utf8 - <<'PY'
           import os
           from pathlib import Path
           import subprocess
@@ -72,7 +72,7 @@ jobs:
               output.write(f"HARNESS_SCRIPT={script}\nHARNESS_POLICY_REF={policy}\n")
           PY
       - name: Validate structure
-        run: python -I -S "$HARNESS_SCRIPT" check
+        run: python -I -S -X utf8 "$HARNESS_SCRIPT" check
       - name: Check task scope against base policy
         if: github.event_name == 'pull_request'
         env:
@@ -83,17 +83,17 @@ jobs:
           if [[ -n "$HARNESS_POLICY_REF" ]]; then
             args+=(--policy-ref "$HARNESS_POLICY_REF")
           fi
-          python -I -S "$HARNESS_SCRIPT" "${args[@]}"
+          python -I -S -X utf8 "$HARNESS_SCRIPT" "${args[@]}"
       - name: Report actual platform
         run: python scripts/check_platform.py environment --os "${{ matrix.os }}" --arch "${{ matrix.arch }}"
       - name: Test harness
-        run: python -I -S "$HARNESS_SCRIPT" self-test
+        run: python -I -S -X utf8 "$HARNESS_SCRIPT" self-test
       - name: Prepare existing components
-        run: python -I "$HARNESS_SCRIPT" setup
+        run: python -I -X utf8 "$HARNESS_SCRIPT" setup
       - name: Validate existing components
         env:
           PYTHONPATH: ${{ github.workspace }}/backend
-        run: python -I "$HARNESS_SCRIPT" product-checks
+        run: python -I -X utf8 "$HARNESS_SCRIPT" product-checks
 
   macos-native:
     name: macOS ARM64 native integration
