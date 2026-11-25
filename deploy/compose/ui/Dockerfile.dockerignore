@@ -7,4 +7,6 @@
 !frontend/vite.config.ts
 !frontend/src/
 !frontend/src/**
+!frontend/public/
+!frontend/public/**
 **/.env*

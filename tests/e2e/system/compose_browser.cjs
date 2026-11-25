@@ -22,6 +22,7 @@ async function verify({ origin, password, folderId, nodeId, pause, resume }) {
     });
 
     const button = (name) => page.getByRole("button", { name, exact: true });
+    const link = (name) => page.getByRole("link", { name, exact: true });
     const heading = (name) => page.getByRole("heading", { name, exact: true });
     const label = (name) => page.getByLabel(name, { exact: true });
 
@@ -29,6 +30,9 @@ async function verify({ origin, password, folderId, nodeId, pause, resume }) {
     const ready = await page.request.get(origin + "/health/ready");
     assert.equal(ready.status(), 200);
     assert.deepEqual(await ready.json(), { status: "ok" });
+    const fontLicense = await page.request.get(origin + "/licenses/Inter-OFL.txt");
+    assert.equal(fontLicense.status(), 200);
+    assert.match(await fontLicense.text(), /SIL OPEN FONT LICENSE/);
     const home = await page.goto(origin + "/#/rules");
     assert.equal(home.status(), 200);
     await expect(heading("Войти в систему")).toBeVisible();
@@ -36,7 +40,7 @@ async function verify({ origin, password, folderId, nodeId, pause, resume }) {
     await label("Логин").fill("admin");
     await label("Пароль").fill(password);
     await button("Войти").click();
-    await expect(heading("Правила синхронизации")).toBeVisible();
+    await expect(heading("Правила")).toBeVisible();
     const session = (await context.cookies(origin)).find((cookie) => cookie.name === "scc_session");
     assert.ok(session?.httpOnly);
     assert.equal(session.sameSite, "Lax");
@@ -104,7 +108,7 @@ async function verify({ origin, password, folderId, nodeId, pause, resume }) {
 
     phase = "update_browser_rule";
     await page.reload();
-    await button("Изменить").click();
+    await link("Изменить").click();
     await fillWindow(resume);
     const rulePath = "/api/rules/" + pausedRule.id;
     const resumedRule = await saveRule("PATCH", rulePath, "Сохранить изменения");
@@ -113,21 +117,23 @@ async function verify({ origin, password, folderId, nodeId, pause, resume }) {
     const resumeExecution = await confirmExecution(resumedRule, false);
 
     phase = "browser_history";
-    await button("История").click();
-    const commands = page.getByRole("table", { name: "Попытки применения команд" });
-    for (const [id, goal] of [[pauseExecution, "пауза"], [resumeExecution, "возобновить"]]) {
-      const row = commands.getByRole("row").filter({ hasText: id.slice(0, 8) });
+    await link("История").click();
+    const commands = page.getByRole("table", { name: "Попытки команд" });
+    for (const [id, goal] of [[pauseExecution, "приостановить"], [resumeExecution, "возобновить"]]) {
+      const row = commands.getByRole("row").filter({
+        has: page.locator(`a[href="#/history/commands/${id}"]`),
+      });
       await expect(row).toContainText("Цель: " + goal);
       await expect(row).toContainText("Подтверждено");
       await expect(row).toContainText("demo-a");
     }
-    await button("События Syncthing").click();
+    await link("События Syncthing").click();
     await page.getByRole("combobox", { name: "Узел", exact: true }).selectOption(nodeId);
     const events = page.getByRole("table", { name: "События Syncthing" });
     await expect(events.getByRole("row").filter({ hasText: "demo-a" }).first()).toBeVisible();
 
     phase = "disable_and_logout";
-    await button("Правила").click();
+    await link("Правила").click();
     const disabled = await saveRule("PATCH", rulePath, "Отключить расписание");
     assert.equal(disabled.enabled, false);
     await button("Выйти").click();

@@ -143,7 +143,7 @@ export interface Provider {
   listExecutions(query?: ExecutionQuery): Promise<Page<Execution>>;
   listEvents(query?: EventQuery): Promise<Page<SyncEvent>>;
   getExecution(id: string): Promise<Execution>;
-  analytics(): Promise<AnalyticsSummary>;
+  analytics(query?: AnalyticsQuery): Promise<AnalyticsSummary>;
   resume(folderId: string): Promise<Execution>;
 }
 
@@ -167,7 +167,11 @@ interface HistoryQuery {
   node_id?: string;
 }
 
+export type AnalyticsQuery = Pick<HistoryQuery, "from" | "to" | "node_id">;
+
 export interface ExecutionQuery extends HistoryQuery {
+  folder_id?: string;
+  source?: "rule" | "manual";
   status?: ExecutionStatus | "";
 }
 
