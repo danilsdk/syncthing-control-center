@@ -46,6 +46,44 @@ test("real API: create rule, observe confirmed result and event, disable, logout
     label: "E2E B",
   });
   await expect(page.getByText("Событий пока нет")).toBeVisible();
+  await page.getByRole("link", { name: "Аналитика", exact: true }).click();
+  const commands = page.getByRole("region", {
+    name: "Подтверждение команд",
+  });
+  const probes = page.getByRole("region", {
+    name: "Наблюдаемая доступность",
+  });
+  await expect(commands).toContainText(/100\s*%/);
+  await expect(probes).toContainText("2 из 3 проверок API");
+  await expect(
+    page.getByRole("table", { name: "Дневные показатели UTC" }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/analytics-desktop.png",
+    fullPage: true,
+  });
+  await page.getByText("Фильтры аналитики", { exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Источник команд" })
+    .selectOption("manual");
+  await expect(commands).toContainText("Нет данных");
+  await expect(probes).toContainText("2 из 3 проверок API");
+  await page
+    .getByRole("combobox", { name: "Узел", exact: true })
+    .selectOption({ label: "E2E B" });
+  await expect(probes).toContainText("Нет данных");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    page.getByRole("table", { name: "Дневные показатели UTC" }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page.screenshot({
+    path: "test-results/analytics-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("link", { name: "Правила", exact: true }).click();
   await page
     .getByRole("button", { name: "Отключить расписание", exact: true })
@@ -60,4 +98,8 @@ test("real API: create rule, observe confirmed result and event, disable, logout
   const response = await page.request.get("/api/rules");
   expect(response.status()).toBe(401);
   expect((await page.request.get("/api/events")).status()).toBe(401);
+  const analytics = await page.request.get("/api/analytics/summary", {
+    params: { from: "2026-11-19T00:00:00Z", to: "2026-11-20T00:00:00Z" },
+  });
+  expect(analytics.status()).toBe(401);
 });

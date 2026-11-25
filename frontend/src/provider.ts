@@ -187,6 +187,7 @@ export class ApiProvider implements Provider {
       to: query.to || to.toISOString(),
     });
     if (query.node_id) params.set("node_id", query.node_id);
+    if (query.source) params.set("source", query.source);
     return this.request<AnalyticsSummary>(`/api/analytics/summary?${params}`);
   }
   async resume(folderId: string) {

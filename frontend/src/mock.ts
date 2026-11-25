@@ -164,42 +164,87 @@ export class MockProvider implements Provider {
     });
   }
   async analytics(query: AnalyticsQuery = {}): Promise<AnalyticsSummary> {
-    const from = query.from || new Date(Date.now() - 86400000).toISOString(),
-      to = query.to || new Date().toISOString();
-    const counts = {
-      applied: 0,
-      failed: 0,
-      unknown: 0,
-      cancelled: 0,
-      pending: 0,
-    };
-    for (const a of this.executions) {
-      const time = a.status === "pending" ? a.created_at : a.completed_at;
-      if (
-        time &&
-        time >= from &&
-        time < to &&
-        (!query.node_id || a.node_id === query.node_id)
-      )
-        counts[a.status]++;
+    const dayMs = 86_400_000;
+    const now = Date.now();
+    const from = query.from || new Date(now - dayMs).toISOString();
+    const to = query.to || new Date(now).toISOString();
+    const start = Date.parse(from);
+    const end = Date.parse(to);
+    if (!(end > start && end - start <= 31 * dayMs)) {
+      throw new ProviderError(
+        "Некорректный период аналитики.",
+        "invalid_period",
+        422,
+      );
     }
-    const known = counts.applied + counts.failed;
+    const attempts = this.executions.filter(
+      (attempt) =>
+        (!query.node_id || attempt.node_id === query.node_id) &&
+        (!query.source || attempt.source === query.source),
+    );
+    const metrics = (from: number, to: number) => {
+      const within = (value: string | null) => {
+        if (value === null) return false;
+        const time = Date.parse(value);
+        return time >= from && time < to;
+      };
+      const counts = {
+        applied: 0,
+        failed: 0,
+        unknown: 0,
+        cancelled: 0,
+        pending: 0,
+      };
+      for (const attempt of attempts) {
+        if (
+          within(
+            attempt.status === "pending"
+              ? attempt.created_at
+              : attempt.completed_at,
+          )
+        ) {
+          counts[attempt.status] += 1;
+        }
+      }
+      const { applied, failed, unknown, cancelled, pending } = counts;
+      const probes = this.nodes.filter(
+        (node) =>
+          (!query.node_id || node.id === query.node_id) &&
+          within(node.last_checked_at),
+      );
+      const successful = probes.filter(
+        (node) => node.api_status === "ok",
+      ).length;
+      return {
+        commands: {
+          applied,
+          failed,
+          unknown,
+          cancelled,
+          pending_created: pending,
+          success_ratio: applied + failed ? applied / (applied + failed) : null,
+        },
+        api_checks: {
+          successful_checks: successful,
+          total_checks: probes.length,
+          success_ratio: probes.length ? successful / probes.length : null,
+        },
+      };
+    };
+    const daily: AnalyticsSummary["daily"] = [];
+    for (let day = Math.floor(start / dayMs) * dayMs; day < end; day += dayMs) {
+      daily.push({
+        date: new Date(day).toISOString().slice(0, 10),
+        ...metrics(Math.max(day, start), Math.min(day + dayMs, end)),
+      });
+    }
     return {
       from,
       to,
-      commands: {
-        applied: counts.applied,
-        failed: counts.failed,
-        unknown: counts.unknown,
-        cancelled: counts.cancelled,
-        pending_created: counts.pending,
-        success_ratio: known ? counts.applied / known : null,
-      },
-      api_checks: {
-        successful_checks: 0,
-        total_checks: 0,
-        success_ratio: null,
-      },
+      node_id: query.node_id ?? null,
+      source: query.source ?? null,
+      ...metrics(start, end),
+      daily,
     };
   }
   private syncFolder(id: string) {
