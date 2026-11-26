@@ -1,0 +1,125 @@
+{
+  "application_commit": "17c689afbb5009f940a24b718cd78b6a61ec1d1d",
+  "platform": "linux/arm64",
+  "observation_interval_seconds": 30,
+  "reconciliation_interval_seconds": 15,
+  "started_at": "2026-11-26T17:46:03.305Z",
+  "finished_at": "2026-11-26T17:48:56.214Z",
+  "folder_id": "42d9e935-a8ac-4fb6-8d30-9124af71cc77",
+  "syncthing_folder_id": "scc-a4-shared",
+  "outage": {
+    "stopped_at": "2026-11-26T17:46:54.634Z",
+    "first_failed_probe": "2026-11-26T17:47:24.820621Z",
+    "restarted_at": "2026-11-26T17:47:55.696Z",
+    "failed_probe_while_v3_active": true,
+    "demo_b_available": true,
+    "sent_v3_before_and_after_restart": 0
+  },
+  "desired_state_while_offline": [
+    {
+      "version": 3,
+      "start_time": "18:46",
+      "end_time": "22:46",
+      "days_of_week": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "timezone": "Europe/Moscow",
+      "desired_paused": false
+    },
+    {
+      "version": 4,
+      "start_time": "02:46",
+      "end_time": "03:46",
+      "days_of_week": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "timezone": "Europe/Moscow",
+      "desired_paused": true
+    }
+  ],
+  "attempts": [
+    {
+      "id": "d063b398-9365-4a64-b995-4284c6b64ea2",
+      "source": "rule",
+      "rule_version": 1,
+      "desired_paused": true,
+      "observed_paused": true,
+      "status": "applied",
+      "sent_at": "2026-11-26T17:46:09.186069Z",
+      "verified_at": "2026-11-26T17:46:09.230209Z"
+    },
+    {
+      "id": "343f8fd0-586f-4b69-96e4-6ca1727349bd",
+      "source": "rule",
+      "rule_version": 2,
+      "desired_paused": false,
+      "observed_paused": false,
+      "status": "applied",
+      "sent_at": "2026-11-26T17:46:24.387541Z",
+      "verified_at": "2026-11-26T17:46:24.423423Z"
+    },
+    {
+      "id": "0b2b2229-4dd1-4343-90a7-b3c827bae2f8",
+      "source": "rule",
+      "rule_version": 4,
+      "desired_paused": true,
+      "observed_paused": true,
+      "status": "applied",
+      "sent_at": "2026-11-26T17:48:10.245543Z",
+      "verified_at": "2026-11-26T17:48:10.285558Z"
+    },
+    {
+      "id": "586af6bb-1a46-435d-a903-e21e63b4d07e",
+      "source": "manual",
+      "rule_version": null,
+      "desired_paused": false,
+      "observed_paused": false,
+      "status": "applied",
+      "sent_at": "2026-11-26T17:48:40.562961Z",
+      "verified_at": "2026-11-26T17:48:40.654864Z"
+    }
+  ],
+  "recovered_config_observed_at": "2026-11-26T17:48:25.289933Z",
+  "final_folder_unpaused_without_rule": true,
+  "analytics": {
+    "from": "2026-11-26T17:46:03.305000Z",
+    "to": "2026-11-26T17:48:55.452000Z",
+    "commands": {
+      "applied": 4,
+      "failed": 0,
+      "unknown": 0,
+      "cancelled": 0,
+      "pending_created": 0,
+      "success_ratio": 1
+    },
+    "api_checks": {
+      "successful_checks": 3,
+      "total_checks": 5,
+      "success_ratio": 0.6
+    }
+  },
+  "empty_period": {
+    "from": "2026-11-25T17:46:03.305000Z",
+    "to": "2026-11-26T16:46:03.305000Z",
+    "both_ratios_null": true,
+    "browser_cards_show_no_data": true
+  },
+  "cleanup": {
+    "container": 0,
+    "volume": 0,
+    "network": 0,
+    "private_runtime_exists": false
+  }
+}

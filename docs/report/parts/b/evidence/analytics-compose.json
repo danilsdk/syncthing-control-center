@@ -2,6 +2,15 @@
   "main_commit_with_identical_tree": "17c689afbb5009f940a24b718cd78b6a61ec1d1d",
   "review_head": "ef4e06b80447f6db266d01b6d9f4ed6f9a29efe8",
   "platform": "linux/arm64",
+  "compose_intervals_seconds": {
+    "observation": 1,
+    "reconciliation": 1
+  },
+  "browser_period": {
+    "route": "/#/analytics",
+    "period": "custom",
+    "query_fields": ["from", "to", "node_id"]
+  },
   "macos": "26.1",
   "components": [
     "PostgreSQL",
