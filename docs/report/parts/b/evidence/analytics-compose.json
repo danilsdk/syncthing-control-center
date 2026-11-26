@@ -1,0 +1,123 @@
+{
+  "main_commit_with_identical_tree": "17c689afbb5009f940a24b718cd78b6a61ec1d1d",
+  "review_head": "ef4e06b80447f6db266d01b6d9f4ed6f9a29efe8",
+  "platform": "linux/arm64",
+  "macos": "26.1",
+  "components": [
+    "PostgreSQL",
+    "Syncthing demo-a",
+    "Syncthing demo-b",
+    "SCC worker",
+    "Chromium"
+  ],
+  "http_status": {
+    "anonymous": 401,
+    "administrator": 200
+  },
+  "summary": {
+    "from": "2026-11-26T14:01:14.726953Z",
+    "to": "2026-11-26T14:01:27.193801Z",
+    "node_id": "6a1aa9ba-d63c-4f70-8440-a709316a36d6",
+    "source": null,
+    "commands": {
+      "applied": 2,
+      "failed": 0,
+      "unknown": 0,
+      "cancelled": 0,
+      "pending_created": 0,
+      "success_ratio": 1.0
+    },
+    "api_checks": {
+      "successful_checks": 9,
+      "total_checks": 9,
+      "success_ratio": 1.0
+    },
+    "daily": [
+      {
+        "date": "2026-11-26",
+        "commands": {
+          "applied": 2,
+          "failed": 0,
+          "unknown": 0,
+          "cancelled": 0,
+          "pending_created": 0,
+          "success_ratio": 1.0
+        },
+        "api_checks": {
+          "successful_checks": 9,
+          "total_checks": 9,
+          "success_ratio": 1.0
+        }
+      }
+    ]
+  },
+  "empty_period": {
+    "from": "2026-11-24T14:01:14.726953Z",
+    "to": "2026-11-25T14:01:14.726953Z",
+    "node_id": "6a1aa9ba-d63c-4f70-8440-a709316a36d6",
+    "source": null,
+    "commands": {
+      "applied": 0,
+      "failed": 0,
+      "unknown": 0,
+      "cancelled": 0,
+      "pending_created": 0,
+      "success_ratio": null
+    },
+    "api_checks": {
+      "successful_checks": 0,
+      "total_checks": 0,
+      "success_ratio": null
+    },
+    "daily": [
+      {
+        "date": "2026-11-24",
+        "commands": {
+          "applied": 0,
+          "failed": 0,
+          "unknown": 0,
+          "cancelled": 0,
+          "pending_created": 0,
+          "success_ratio": null
+        },
+        "api_checks": {
+          "successful_checks": 0,
+          "total_checks": 0,
+          "success_ratio": null
+        }
+      },
+      {
+        "date": "2026-11-25",
+        "commands": {
+          "applied": 0,
+          "failed": 0,
+          "unknown": 0,
+          "cancelled": 0,
+          "pending_created": 0,
+          "success_ratio": null
+        },
+        "api_checks": {
+          "successful_checks": 0,
+          "total_checks": 0,
+          "success_ratio": null
+        }
+      }
+    ]
+  },
+  "restoration": {
+    "remaining_rules": 0,
+    "demo_folder_configurations_restored": 4,
+    "manual_attempt": {
+      "id": "1fb9bbdc-c405-448e-afc9-37db991eea3b",
+      "status": "applied",
+      "observed_paused": false,
+      "verified_at": "2026-11-26T14:01:24.024094Z"
+    }
+  },
+  "cleanup": {
+    "containers": 0,
+    "volumes": 0,
+    "networks": 0,
+    "private_runtime_exists": false
+  }
+}
