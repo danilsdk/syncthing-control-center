@@ -15,6 +15,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app import __version__
+from app.api.analytics import router as analytics_router
 from app.api.auth import PrivateApiHeadersMiddleware, protected_router, public_router, require_admin
 from app.api.events import router as events_router
 from app.api.executions import router as executions_router
@@ -253,7 +254,7 @@ def create_app(
     protected.include_router(nodes_router)
     protected.include_router(folders_router)
     # Explicit routers remain supported for existing module tests and consumers.
-    defaults = (events_router, rules_router, executions_router)
+    defaults = (events_router, rules_router, executions_router, analytics_router)
     for router in defaults:
         if all(router is not supplied for supplied in routers):
             protected.include_router(router)
