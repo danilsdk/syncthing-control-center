@@ -1,0 +1,135 @@
+{
+  "source_commit": "98ad53d6f474c0f9022d164324657a93d4564297",
+  "unchanged_compose": true,
+  "started_at_utc": "2026-11-26T10:24:52.398Z",
+  "finished_at_utc": "2026-11-26T10:28:38.298Z",
+  "platform": "linux/aarch64",
+  "docker": "29.0.1",
+  "compose": "2.40.3-desktop.1",
+  "syncthing": "syncthing v2.1.7",
+  "chromium": "158.0.8127.18",
+  "baseline": {
+    "folder_id": "0c2cad4b-8642-401d-a404-e0f53b92fd62",
+    "syncthing_folder_id": "scc-a4-shared",
+    "actual_paused": false,
+    "config_observed_at": "2026-11-26T10:24:54.313790Z",
+    "rules": 0
+  },
+  "windows": {
+    "timezone": "Europe/Moscow",
+    "days_of_week": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "v1": [
+      "17:24",
+      "18:24"
+    ],
+    "v2": [
+      "12:24",
+      "14:24"
+    ],
+    "v3": [
+      "17:24",
+      "18:24"
+    ],
+    "v4": [
+      "19:24",
+      "20:24"
+    ]
+  },
+  "attempts_before_cleanup": [
+    {
+      "id": "cd28a5d6-fb8c-408f-9ce3-33f57a0300e5",
+      "folder_id": "0c2cad4b-8642-401d-a404-e0f53b92fd62",
+      "rule_id": "28ca333d-e354-4dab-a08c-8eb0e501ab1a",
+      "rule_version": 1,
+      "source": "rule",
+      "status": "applied",
+      "desired_paused": true,
+      "observed_paused": true,
+      "restart_required": false,
+      "created_at": "2026-11-26T10:25:35.788462Z",
+      "sent_at": "2026-11-26T10:25:35.794623Z",
+      "verified_at": "2026-11-26T10:25:35.839643Z",
+      "completed_at": "2026-11-26T10:25:35.839647Z"
+    },
+    {
+      "id": "a11e5831-99d7-446c-9cda-1f3a251ff7e9",
+      "folder_id": "0c2cad4b-8642-401d-a404-e0f53b92fd62",
+      "rule_id": "28ca333d-e354-4dab-a08c-8eb0e501ab1a",
+      "rule_version": 2,
+      "source": "rule",
+      "status": "applied",
+      "desired_paused": false,
+      "observed_paused": false,
+      "restart_required": false,
+      "created_at": "2026-11-26T10:26:21.263665Z",
+      "sent_at": "2026-11-26T10:26:21.268926Z",
+      "verified_at": "2026-11-26T10:26:21.320073Z",
+      "completed_at": "2026-11-26T10:26:21.320076Z"
+    },
+    {
+      "id": "2d1d60df-6e99-4b10-9150-09c0328efea2",
+      "folder_id": "0c2cad4b-8642-401d-a404-e0f53b92fd62",
+      "rule_id": "28ca333d-e354-4dab-a08c-8eb0e501ab1a",
+      "rule_version": 4,
+      "source": "rule",
+      "status": "applied",
+      "desired_paused": true,
+      "observed_paused": true,
+      "restart_required": false,
+      "created_at": "2026-11-26T10:27:52.239619Z",
+      "sent_at": "2026-11-26T10:27:52.244704Z",
+      "verified_at": "2026-11-26T10:27:52.295330Z",
+      "completed_at": "2026-11-26T10:27:52.295333Z"
+    }
+  ],
+  "outage": {
+    "stop_at_utc": "2026-11-26T10:26:37.203Z",
+    "first_failed_check_at": "2026-11-26T10:27:06.866855Z",
+    "failed_check_after_v3_at": "2026-11-26T10:27:37.138827Z",
+    "v3_saved_at": "2026-11-26T10:27:08.764126Z",
+    "v4_saved_at": "2026-11-26T10:27:38.437953Z",
+    "last_confirmed_unpaused_at": "2026-11-26T10:26:36.495846Z",
+    "demo_b_available": true,
+    "v3_sent": false,
+    "restart_at_utc": "2026-11-26T10:27:38.544Z",
+    "first_observed_available_at": "2026-11-26T10:28:07.561173Z",
+    "fresh_paused_at": "2026-11-26T10:28:07.579747Z",
+    "same_worker": true
+  },
+  "authenticated_analytics_http_status": 404,
+  "cleanup_before_teardown": {
+    "rules": 0,
+    "manual_attempt": {
+      "id": "a3eb5f4d-0e99-489c-bc28-2440fb63816f",
+      "folder_id": "0c2cad4b-8642-401d-a404-e0f53b92fd62",
+      "rule_id": null,
+      "rule_version": null,
+      "source": "manual",
+      "status": "applied",
+      "desired_paused": false,
+      "observed_paused": false,
+      "restart_required": false,
+      "created_at": "2026-11-26T10:28:09.045215Z",
+      "sent_at": "2026-11-26T10:28:22.782508Z",
+      "verified_at": "2026-11-26T10:28:22.836988Z",
+      "completed_at": "2026-11-26T10:28:22.836992Z"
+    },
+    "final_config_observed_at": "2026-11-26T10:28:37.985339Z",
+    "final_actual_paused": false,
+    "final_desired_paused": null
+  },
+  "teardown_after_analytics_rehearsal": {
+    "container": 0,
+    "volume": 0,
+    "network": 0,
+    "private_runtime_removed": true
+  }
+}

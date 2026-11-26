@@ -1,0 +1,22 @@
+{
+  "source_commit": "98ad53d6f474c0f9022d164324657a93d4564297",
+  "composition": "Same private Compose data; temporary API entry point calls create_app(settings(), routers=[analytics_router])",
+  "checked_at_utc": "2026-11-26T10:29:07.375Z",
+  "http_status": 200,
+  "from": "2026-11-26T10:24:52.398000Z",
+  "to": "2026-11-26T10:28:38.298000Z",
+  "commands": {
+    "applied": 4,
+    "failed": 0,
+    "unknown": 0,
+    "cancelled": 0,
+    "pending_created": 0,
+    "success_ratio": 1
+  },
+  "api_checks": {
+    "successful_checks": 14,
+    "total_checks": 16,
+    "success_ratio": 0.875
+  },
+  "empty_period_shows_no_data_for_both_metrics": true
+}
